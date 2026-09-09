@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind CSS v4 is configured in CSS rather than a `tailwind.config.js`.
+ * Everything declared in `@theme` becomes a Tailwind utility, so the brand
+ * colours below are usable as `bg-brand-blue`, `text-brand-navy`, etc.
+ *
+ * Values sampled from the final brand files in /public/brand.
+ */
+@theme {
+  --color-brand-blue: #09d5e3;
+  --color-brand-green: #0ade8d;
+  --color-brand-navy: #0a1433;
+  --color-brand-gray: #9ca5ae;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: var(--color-brand-navy);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
