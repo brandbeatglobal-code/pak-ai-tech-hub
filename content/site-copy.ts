@@ -55,6 +55,36 @@ export type WorksWithItem = {
   confirmed: boolean;
 };
 
+/**
+ * Category ids used by the marketplace filter.
+ *
+ * Only industries that actually have a product appear here. Banking & Finance,
+ * Manufacturing, Logistics and Real Estate are deliberately absent — adding a
+ * filter for them would show an empty grid. Add one when a product ships.
+ */
+export type ProductCategory =
+  | "cross-industry"
+  | "healthcare"
+  | "agriculture"
+  | "education"
+  | "retail";
+
+export type CategoryFilter = {
+  /** "all" is the reset option; every other id must match a ProductCategory. */
+  id: ProductCategory | "all";
+  label: string;
+};
+
+export type Product = {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  description: string;
+  price: string;
+  /** Individual product pages do not exist yet. */
+  href: string;
+};
+
 export type FooterColumn = {
   heading: string;
   links: NavLink[];
@@ -229,6 +259,128 @@ export const siteCopy = {
       },
     ] satisfies WorksWithItem[],
     pendingLabel: "Partner to be announced",
+  },
+
+  marketplace: {
+    meta: {
+      title: "Marketplace — PAKAI TechHub",
+      description:
+        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+    },
+    hero: {
+      headline: "Every AI product your business needs, in one place",
+      subhead:
+        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+      primaryCta: { label: "Start free trial", href: "/pricing" },
+      secondaryCta: { label: "How it works", href: "/#how-it-works" },
+    },
+    products: {
+      heading: "Our products",
+      filterLegend: "Filter products by category",
+      /**
+       * Announced to screen readers when the filter changes the grid. Kept as
+       * strings with a {count} placeholder rather than a function so the whole
+       * block stays serializable across the server/client boundary — and so a
+       * translator can reorder the sentence.
+       */
+      resultCountOne: "1 product shown",
+      resultCountOther: "{count} products shown",
+      emptyMessage: "No products in this category yet.",
+      trainingBadge: "Training included",
+      categories: [
+        { id: "all", label: "All" },
+        { id: "healthcare", label: "Healthcare" },
+        { id: "agriculture", label: "Agriculture" },
+        { id: "education", label: "Education" },
+        { id: "retail", label: "Retail" },
+        { id: "cross-industry", label: "Cross-Industry" },
+      ] satisfies CategoryFilter[],
+      items: [
+        {
+          id: "chatbot",
+          name: "TechHub Chatbot",
+          category: "cross-industry",
+          description:
+            "Multi-channel AI customer service for web, WhatsApp, and SMS. 24/7 support in Urdu & English.",
+          price: "from PKR 15,000/mo",
+          href: "#",
+        },
+        {
+          id: "analytics",
+          name: "TechHub Analytics",
+          category: "cross-industry",
+          description:
+            "Predictive analytics dashboard with real-time insights and AI recommendations.",
+          price: "from PKR 25,000/mo",
+          href: "#",
+        },
+        {
+          id: "content",
+          name: "TechHub Content",
+          category: "cross-industry",
+          description:
+            "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
+          price: "from PKR 10,000/mo",
+          href: "#",
+        },
+        {
+          id: "crm",
+          name: "TechHub CRM",
+          category: "cross-industry",
+          description:
+            "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
+          price: "from PKR 20,000/mo",
+          href: "#",
+        },
+        {
+          id: "health",
+          name: "TechHub Health",
+          category: "healthcare",
+          description:
+            "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
+          price: "from PKR 50,000/mo",
+          href: "#",
+        },
+        {
+          id: "agri",
+          name: "TechHub Agri",
+          category: "agriculture",
+          description:
+            "Crop monitoring, yield prediction, and soil analysis for farmers.",
+          price: "from PKR 20,000/mo",
+          href: "#",
+        },
+        {
+          id: "edu",
+          name: "TechHub Edu",
+          category: "education",
+          description:
+            "Adaptive learning, automated grading, and student engagement prediction.",
+          price: "from PKR 15,000/mo",
+          href: "#",
+        },
+        {
+          id: "retail",
+          name: "TechHub Retail",
+          category: "retail",
+          description:
+            "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
+          price: "from PKR 25,000/mo",
+          href: "#",
+        },
+      ] satisfies Product[],
+    },
+    partners: {
+      heading: "Marketplace partners",
+      /*
+       * The partner list itself is shared with the homepage `worksWith`
+       * section, so both stay in step. The same constraint applies here: only
+       * confirmed partners get a name and a link. Do not add a named partner
+       * until that partnership is confirmed the way KladAI's was.
+       */
+      intro:
+        "Third-party AI products available alongside our own, billed and managed in one place.",
+    },
   },
 
   founder: {

@@ -86,7 +86,12 @@ export default function Home() {
       </section>
 
       {/* 4. How it works */}
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+      {/* The marketplace hero links here as /#how-it-works. scroll-mt clears
+          the sticky nav so the heading is not hidden behind it on arrival. */}
+      <section
+        id="how-it-works"
+        className="mx-auto w-full max-w-6xl scroll-mt-28 px-4 py-20 sm:px-6 lg:px-8"
+      >
         <Reveal>
           <h2 className={sectionHeading}>{howItWorks.heading}</h2>
           <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
