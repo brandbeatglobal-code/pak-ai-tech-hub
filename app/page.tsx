@@ -86,7 +86,12 @@ export default function Home() {
       </section>
 
       {/* 4. How it works */}
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+      {/* The marketplace hero links here as /#how-it-works. scroll-mt clears
+          the sticky nav so the heading is not hidden behind it on arrival. */}
+      <section
+        id="how-it-works"
+        className="mx-auto w-full max-w-6xl scroll-mt-28 px-4 py-20 sm:px-6 lg:px-8"
+      >
         <Reveal>
           <h2 className={sectionHeading}>{howItWorks.heading}</h2>
           <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
@@ -247,20 +252,17 @@ export default function Home() {
         <Reveal>
           <h2 className={sectionHeading}>{founder.heading}</h2>
           {/*
-            NEEDS REAL FOUNDER BIO — do not invent one.
-
-            Name, title and bio below are placeholders held in
-            content/site-copy.ts. Replace them with the real founder's details
-            before launch; do not generate a plausible-sounding substitute.
+            Deliberately lighter than the founder card on /about: no initials
+            mark, smaller type, plain shadow. The about page is where the team
+            is introduced properly — this is a summary that points there.
           */}
-          <article className="mt-10 max-w-3xl rounded-2xl border border-dashed border-brand-gray/50 bg-white p-8 shadow-sm sm:p-10">
-            <p className="text-xs font-semibold tracking-wide text-brand-navy/65 uppercase">
-              {founder.placeholderNotice}
-            </p>
-            <h3 className="mt-4 text-xl font-bold tracking-tight text-brand-navy">
+          <article className="mt-10 max-w-3xl rounded-2xl border border-black/5 bg-white p-8 shadow-sm sm:p-10">
+            <h3 className="text-xl font-bold tracking-tight text-brand-navy">
               {founder.name}
             </h3>
-            <p className="mt-1 text-sm font-medium text-brand-navy/65">{founder.title}</p>
+            <p className="mt-1 text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
+              {founder.title}
+            </p>
             <p className="mt-5 leading-relaxed text-brand-navy/70">{founder.bio}</p>
           </article>
         </Reveal>

@@ -38,6 +38,15 @@ export type ValueCard = {
   body: string;
 };
 
+/**
+ * Compact label + one-liner, lighter than a ValueCard. Used by the pricing
+ * page's "what's included" strip and the About page's value badges.
+ */
+export type ValueBadge = {
+  label: string;
+  body: string;
+};
+
 export type Industry = {
   name: string;
   /**
@@ -55,12 +64,6 @@ export type WorksWithItem = {
   confirmed: boolean;
 };
 
-/** Compact label + one-liner, used for the About page value badges. */
-export type ValueBadge = {
-  label: string;
-  body: string;
-};
-
 export type TeamMember = {
   /**
    * Only set where a real person has been confirmed. Roles that are still
@@ -70,6 +73,43 @@ export type TeamMember = {
   role: string;
   roleDetail?: string;
   bio: string;
+};
+
+/**
+ * Category ids used by the marketplace filter.
+ *
+ * Only industries that actually have a product appear here. Banking & Finance,
+ * Manufacturing, Logistics and Real Estate are deliberately absent — adding a
+ * filter for them would show an empty grid. Add one when a product ships.
+ */
+export type ProductCategory =
+  | "cross-industry"
+  | "healthcare"
+  | "agriculture"
+  | "education"
+  | "retail";
+
+export type CategoryFilter = {
+  /** "all" is the reset option; every other id must match a ProductCategory. */
+  id: ProductCategory | "all";
+  label: string;
+};
+
+export type Product = {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  description: string;
+  /**
+   * The bare amount, e.g. "PKR 15,000/mo" — no "from" prefix baked in.
+   *
+   * The marketplace cards prepend `marketplace.products.pricePrefix`; the
+   * pricing table shows the amount on its own. Keeping the number in one
+   * place means the two pages cannot quote different prices.
+   */
+  price: string;
+  /** Individual product pages do not exist yet. */
+  href: string;
 };
 
 export type FooterColumn = {
@@ -248,19 +288,199 @@ export const siteCopy = {
     pendingLabel: "Partner to be announced",
   },
 
+  marketplace: {
+    meta: {
+      title: "Marketplace — PAKAI TechHub",
+      description:
+        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+    },
+    hero: {
+      headline: "Every AI product your business needs, in one place",
+      subhead:
+        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+      primaryCta: { label: "Start free trial", href: "/pricing" },
+      secondaryCta: { label: "How it works", href: "/#how-it-works" },
+    },
+    products: {
+      heading: "Our products",
+      filterLegend: "Filter products by category",
+      /**
+       * Announced to screen readers when the filter changes the grid. Kept as
+       * strings with a {count} placeholder rather than a function so the whole
+       * block stays serializable across the server/client boundary — and so a
+       * translator can reorder the sentence.
+       */
+      resultCountOne: "1 product shown",
+      resultCountOther: "{count} products shown",
+      emptyMessage: "No products in this category yet.",
+      trainingBadge: "Training included",
+      /** Prepended to `Product.price` on the marketplace cards only. */
+      pricePrefix: "from",
+      categories: [
+        { id: "all", label: "All" },
+        { id: "healthcare", label: "Healthcare" },
+        { id: "agriculture", label: "Agriculture" },
+        { id: "education", label: "Education" },
+        { id: "retail", label: "Retail" },
+        { id: "cross-industry", label: "Cross-Industry" },
+      ] satisfies CategoryFilter[],
+      items: [
+        {
+          id: "chatbot",
+          name: "TechHub Chatbot",
+          category: "cross-industry",
+          description:
+            "Multi-channel AI customer service for web, WhatsApp, and SMS. 24/7 support in Urdu & English.",
+          price: "PKR 15,000/mo",
+          href: "#",
+        },
+        {
+          id: "analytics",
+          name: "TechHub Analytics",
+          category: "cross-industry",
+          description:
+            "Predictive analytics dashboard with real-time insights and AI recommendations.",
+          price: "PKR 25,000/mo",
+          href: "#",
+        },
+        {
+          id: "content",
+          name: "TechHub Content",
+          category: "cross-industry",
+          description:
+            "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
+          price: "PKR 10,000/mo",
+          href: "#",
+        },
+        {
+          id: "crm",
+          name: "TechHub CRM",
+          category: "cross-industry",
+          description:
+            "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
+          price: "PKR 20,000/mo",
+          href: "#",
+        },
+        {
+          id: "health",
+          name: "TechHub Health",
+          category: "healthcare",
+          description:
+            "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
+          price: "PKR 50,000/mo",
+          href: "#",
+        },
+        {
+          id: "agri",
+          name: "TechHub Agri",
+          category: "agriculture",
+          description:
+            "Crop monitoring, yield prediction, and soil analysis for farmers.",
+          price: "PKR 20,000/mo",
+          href: "#",
+        },
+        {
+          id: "edu",
+          name: "TechHub Edu",
+          category: "education",
+          description:
+            "Adaptive learning, automated grading, and student engagement prediction.",
+          price: "PKR 15,000/mo",
+          href: "#",
+        },
+        {
+          id: "retail",
+          name: "TechHub Retail",
+          category: "retail",
+          description:
+            "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
+          price: "PKR 25,000/mo",
+          href: "#",
+        },
+      ] satisfies Product[],
+    },
+    partners: {
+      heading: "Marketplace partners",
+      /*
+       * The partner list itself is shared with the homepage `worksWith`
+       * section, so both stay in step. The same constraint applies here: only
+       * confirmed partners get a name and a link. Do not add a named partner
+       * until that partnership is confirmed the way KladAI's was.
+       */
+      intro:
+        "Third-party AI products available alongside our own, billed and managed in one place.",
+    },
+  },
+
+  pricing: {
+    meta: {
+      title: "Pricing — PAKAI TechHub",
+      description:
+        "One price per product, shown upfront. No custom quotes, no setup fees, no surprises.",
+    },
+    hero: {
+      headline: "Simple, transparent pricing",
+      subhead:
+        "One price per product, shown upfront. No custom quotes, no setup fees, no surprises.",
+      primaryCta: { label: "Browse AI products", href: "/marketplace" },
+      secondaryCta: { label: "Talk to us", href: "/contact" },
+    },
+    included: {
+      heading: "What's included, with every product",
+      items: [
+        {
+          label: "7-day free trial",
+          body: "Try before you subscribe, no card required to start.",
+        },
+        {
+          label: "Training included",
+          body: "Every product comes with AI Academy access.",
+        },
+        { label: "Real support", body: "24/7 support, not a chatbot loop." },
+      ] satisfies ValueBadge[],
+    },
+    table: {
+      heading: "Product pricing",
+      /*
+       * The rows are rendered from `marketplace.products` — the same array the
+       * marketplace page uses. Do not restate product names, categories or
+       * prices here; change them at the source and both pages follow.
+       */
+      columns: {
+        product: "Product",
+        category: "Category",
+        price: "Price",
+        training: "Training",
+      },
+      /** Training ships with every product, so every row reads the same. */
+      trainingIncludedLabel: "Included",
+      caption:
+        "Monthly price per product. Every product includes a 7-day free trial and AI Academy training.",
+    },
+    biggerNeeds: {
+      /*
+       * A routing statement, not a quote. Do not add enterprise or government
+       * price points or contract terms here — those are handled directly.
+       */
+      body: "Need something custom? Enterprise and government pricing is handled directly.",
+      cta: { label: "Contact us", href: "/contact" },
+    },
+    closingCta: {
+      heading: "Ready to start?",
+      cta: { label: "Browse AI products", href: "/marketplace" },
+    },
+  },
+
+  /*
+   * Real founder details, supplied by the team. This is the single source for
+   * founder copy — any other page that shows the founder should read from
+   * here rather than repeating the values, so the two cannot drift apart.
+   */
   founder: {
     heading: "Who is behind PAKAI TechHub",
-    /*
-     * NEEDS REAL FOUNDER BIO — do not invent one.
-     *
-     * Every value below is a placeholder. Replace `name`, `title` and `bio`
-     * with the real founder's details before this page goes live. Do not
-     * generate a plausible-sounding name, title or biography to fill the gap.
-     */
-    name: "[Founder name]",
-    title: "[Founder title]",
-    bio: "[Founder bio — 2-3 sentences covering background, why PAKAI TechHub was started, and relevant experience. To be supplied by the team.]",
-    placeholderNotice: "Founder details to be added.",
+    name: "NK",
+    title: "Founder & CEO",
+    bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
   },
 
   academy: {
