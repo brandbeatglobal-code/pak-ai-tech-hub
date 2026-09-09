@@ -191,7 +191,7 @@ export default function AboutPage() {
                     {team.founder.name}
                   </h3>
                   <p className="mt-1 text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-                    {team.founder.role}
+                    {team.founder.title}
                   </p>
                 </div>
               </div>
