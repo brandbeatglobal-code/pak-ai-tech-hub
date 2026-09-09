@@ -15,6 +15,8 @@ type MarketplaceProductsProps = {
     emptyMessage: string;
     resultCountOne: string;
     resultCountOther: string;
+    /** Prepended to the stored amount, which has no "from" baked in. */
+    pricePrefix: string;
   };
 };
 
@@ -143,7 +145,9 @@ export function MarketplaceProducts({
                   {product.description}
                 </p>
 
-                <p className="mt-5 text-sm font-bold text-brand-navy">{product.price}</p>
+                <p className="mt-5 text-sm font-bold text-brand-navy">
+                  {labels.pricePrefix} {product.price}
+                </p>
 
                 <p className="mt-3 inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-brand-navy/65">
                   <span

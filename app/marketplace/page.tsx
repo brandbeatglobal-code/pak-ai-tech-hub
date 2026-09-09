@@ -72,6 +72,7 @@ export default function MarketplacePage() {
                 emptyMessage: products.emptyMessage,
                 resultCountOne: products.resultCountOne,
                 resultCountOther: products.resultCountOther,
+                pricePrefix: products.pricePrefix,
               }}
             />
           </Reveal>
