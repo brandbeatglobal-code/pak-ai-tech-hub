@@ -112,6 +112,21 @@ export type Product = {
   href: string;
 };
 
+export type TrainingTier = {
+  /** Position in the progression, rendered as the step marker. */
+  step: string;
+  name: string;
+  audience: string;
+  duration: string;
+  format: string;
+  price: string;
+};
+
+export type Curriculum = {
+  industry: string;
+  topics: string[];
+};
+
 export type AudienceTile = {
   segment: string;
   /** Reach figure for that segment. */
@@ -571,7 +586,8 @@ export const siteCopy = {
     ...founder,
   },
 
-  academy: {
+  /** Homepage teaser that points at the Academy page. */
+  academyTeaser: {
     heading: "Every product comes with training.",
     body:
       "Get certified through TechHub Academy — workshops, courses, and certifications included with your subscription.",
@@ -738,6 +754,116 @@ export const siteCopy = {
     closingCta: {
       heading: "Questions about PAKAI TechHub?",
       cta: { label: "Contact us", href: "/contact" },
+    },
+  },
+
+  academy: {
+    meta: {
+      title: "Academy — PAKAI TechHub",
+      description:
+        "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
+    },
+    hero: {
+      headline: "AI training for every level of your team",
+      subhead:
+        "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
+      primaryCta: { label: "Start free trial", href: "/pricing" },
+      secondaryCta: { label: "Talk to us", href: "/contact" },
+    },
+    tiers: {
+      heading: "Training tiers",
+      intro:
+        "Five levels, each building on the one before it. Start where your team is.",
+      freeLabel: "Free",
+      items: [
+        {
+          step: "1",
+          name: "AI Awareness",
+          audience: "Business Owners",
+          duration: "1 Day",
+          format: "Online",
+          price: "Free",
+        },
+        {
+          step: "2",
+          name: "AI Basics",
+          audience: "Managers",
+          duration: "2 Days",
+          format: "Workshop",
+          price: "PKR 10,000/person",
+        },
+        {
+          step: "3",
+          name: "AI Practitioner",
+          audience: "IT Staff",
+          duration: "5 Days",
+          format: "Bootcamp",
+          price: "PKR 30,000/person",
+        },
+        {
+          step: "4",
+          name: "AI Champion",
+          audience: "Tech Leads",
+          duration: "10 Days",
+          format: "Certification",
+          price: "PKR 75,000/person",
+        },
+        {
+          step: "5",
+          name: "AI Master Trainer",
+          audience: "Instructors",
+          duration: "30 Days",
+          format: "Intensive",
+          price: "PKR 150,000/person",
+        },
+      ] satisfies TrainingTier[],
+    },
+    curricula: {
+      heading: "Industry curricula",
+      /*
+       * Training coverage and product coverage are different things, so this
+       * list deliberately does not match the industries on /marketplace.
+       * Banking & Finance has curriculum here without a marketplace product
+       * yet — that is accurate to the source material. Do not "correct" it to
+       * mirror the product list.
+       */
+      items: [
+        {
+          industry: "Banking & Finance",
+          topics: ["Fraud Detection", "Credit Risk AI", "Loan Bots", "Compliance"],
+        },
+        {
+          industry: "Healthcare",
+          topics: ["Diagnostics", "Patient Triage", "EHR Analysis", "Drug AI"],
+        },
+        {
+          industry: "Retail & E-commerce",
+          topics: ["Demand Forecasting", "Dynamic Pricing", "Recommendations"],
+        },
+        {
+          industry: "Agriculture",
+          topics: ["Crop Health", "Yield Prediction", "Soil Analysis"],
+        },
+        {
+          industry: "Education",
+          topics: ["Adaptive Learning", "Auto Grading", "Engagement AI"],
+        },
+      ] satisfies Curriculum[],
+    },
+    delivery: {
+      heading: "How training is delivered",
+      items: [
+        "Online Platform (Self-paced)",
+        "Corporate On-Site Training",
+        "Weekly Webinars",
+        "In-Person Workshops",
+        "AI Sandbox Environment",
+        "Lifetime Alumni Network",
+      ],
+    },
+    closingCta: {
+      heading: "Ready to build AI skills on your team?",
+      cta: { label: "Start free trial", href: "/pricing" },
     },
   },
 

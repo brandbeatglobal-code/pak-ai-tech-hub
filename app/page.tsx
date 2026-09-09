@@ -36,7 +36,7 @@ export default function Home() {
     worksWith,
     founder,
     resources,
-    academy,
+    academyTeaser,
     finalCta,
   } = siteCopy;
 
@@ -363,16 +363,16 @@ export default function Home() {
       <section className={container}>
         <Reveal>
           <div className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-14">
-            <h2 className={`max-w-2xl ${sectionHeading}`}>{academy.heading}</h2>
+            <h2 className={`max-w-2xl ${sectionHeading}`}>{academyTeaser.heading}</h2>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-              {academy.body}
+              {academyTeaser.body}
             </p>
             <HoverScale className="mt-9">
               <Link
-                href={academy.cta.href}
+                href={academyTeaser.cta.href}
                 className="inline-flex items-center justify-center rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
               >
-                {academy.cta.label}
+                {academyTeaser.cta.label}
               </Link>
             </HoverScale>
           </div>
