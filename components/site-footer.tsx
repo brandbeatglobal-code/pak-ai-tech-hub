@@ -20,7 +20,7 @@ export function SiteFooter() {
                 className="h-10 w-auto"
               />
             </Link>
-            <p className="mt-4 max-w-xs text-sm text-brand-gray">{brand.tagline}</p>
+            <p className="mt-4 max-w-xs text-sm text-brand-navy/65">{brand.tagline}</p>
           </div>
 
           {footer.columns.map((column) => (
@@ -50,7 +50,7 @@ export function SiteFooter() {
             height={504}
             className="h-8 w-auto"
           />
-          <p className="text-sm text-brand-gray">{footer.copyright}</p>
+          <p className="text-sm text-brand-navy/65">{footer.copyright}</p>
         </div>
       </div>
     </footer>

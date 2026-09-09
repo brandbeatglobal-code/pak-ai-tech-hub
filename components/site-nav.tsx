@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { HoverScale } from "@/components/motion/hover-scale";
 import { siteCopy } from "@/content/site-copy";
 
 /**
@@ -50,12 +51,14 @@ export function SiteNav() {
         </ul>
 
         <div className="ml-auto flex items-center md:ml-0">
-          <Link
-            href={nav.cta.href}
-            className="rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            {nav.cta.label}
-          </Link>
+          <HoverScale>
+            <Link
+              href={nav.cta.href}
+              className="rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              {nav.cta.label}
+            </Link>
+          </HoverScale>
         </div>
       </nav>
 

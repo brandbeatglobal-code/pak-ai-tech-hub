@@ -11,10 +11,33 @@
   --color-brand-blue: #09d5e3;
   --color-brand-green: #0ade8d;
   --color-brand-navy: #0a1433;
+
+  /*
+   * brand-gray is 2.5:1 against white, so it fails WCAG AA as body text on a
+   * light background. It is kept here as a brand token and used for borders
+   * and dividers; muted text uses `text-brand-navy/65` (5.7:1) instead.
+   */
   --color-brand-gray: #9ca5ae;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /*
+   * Display sizes for h1/h2. Geist is a variable grotesk, so the largest
+   * sizes are set tighter than Tailwind's defaults to keep headlines feeling
+   * set rather than stretched.
+   */
+  --text-display: 3rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+
+  --text-display-lg: 3.75rem;
+  --text-display-lg--line-height: 1.03;
+  --text-display-lg--letter-spacing: -0.035em;
+
+  --text-display-xl: 4.5rem;
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.04em;
 }
 
 :root {
@@ -25,4 +48,34 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/*
+ * Reduced-motion guard.
+ *
+ * The animated components also check `useReducedMotion()` in JS so no work is
+ * scheduled, but these rules are the backstop: `!important` beats the inline
+ * styles Motion writes, and CSS applies before hydration, so a reveal can
+ * never leave content stuck at `opacity: 0` for someone who asked for less
+ * movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  [data-motion-loop] {
+    transform: none !important;
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -36,10 +36,35 @@ app/                 App Router routes
   pricing/           Placeholder route
   about/             Placeholder route
   contact/           Placeholder route
-components/          Shared UI (nav, footer, placeholder shell)
+components/          Shared UI (nav, footer, placeholder shell, tabs)
+  motion/            Animation primitives (see below)
 content/site-copy.ts All user-facing copy
 public/brand/        Final brand assets
 ```
+
+## Motion
+
+Animation uses [Motion](https://motion.dev) (the `motion` package). The
+primitives in `components/motion/` are the only client components that exist
+purely for animation; everything else stays a server component.
+
+| Component | Does |
+| --- | --- |
+| `Reveal` | Fades and slides a block in the first time it enters the viewport |
+| `HeroBackdrop` | Slow looping gradient mesh behind the hero |
+| `SectionGlow` | Soft blurred gradient shapes behind a section |
+| `HoverLift` | Card lift and shadow on hover/focus |
+| `HoverScale` | Slight scale on buttons and links |
+
+Two rules keep this safe:
+
+- **No layout shift.** Reveals animate `opacity` and `transform` only, so every
+  block occupies its final space from first paint. Measured CLS is 0.
+- **Reduced motion is respected twice.** Each component checks
+  `useReducedMotion()` so no animation is scheduled, and a `!important` block in
+  `app/globals.css` forces `[data-reveal]` to its final state regardless — which
+  also covers the window before hydration. A `<noscript>` rule in the root
+  layout does the same when JavaScript is off.
 
 ## Copy
 

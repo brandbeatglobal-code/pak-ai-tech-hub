@@ -27,6 +27,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+          Scroll-reveal blocks start at opacity 0 and are animated in by
+          Motion. With JavaScript disabled that never happens, so force them
+          to their final state.
+        */}
+        <noscript>
+          <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         <SiteNav />
         <main className="flex-1">{children}</main>
