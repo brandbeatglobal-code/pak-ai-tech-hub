@@ -117,6 +117,24 @@ export type FooterColumn = {
   links: NavLink[];
 };
 
+/**
+ * Founder details, supplied by the team.
+ *
+ * THIS IS THE ONLY PLACE FOUNDER CONTENT SHOULD BE WRITTEN.
+ *
+ * Both pages that show the founder read from this object — the homepage (`/`)
+ * as a compact summary card, the About page (`/about`) as the fuller team
+ * card with an initials mark. The two differ in presentation only. To change
+ * the name, title or bio, change it here; do not restate any of it in
+ * `siteCopy.founder`, `siteCopy.about.team.founder`, or a component, or the
+ * pages will drift apart the way they previously did.
+ */
+const founder = {
+  name: "NK",
+  title: "Founder & CEO",
+  bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
+};
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -471,16 +489,10 @@ export const siteCopy = {
     },
   },
 
-  /*
-   * Real founder details, supplied by the team. This is the single source for
-   * founder copy — any other page that shows the founder should read from
-   * here rather than repeating the values, so the two cannot drift apart.
-   */
+  /** Homepage founder section. Values come from the shared `founder` source. */
   founder: {
     heading: "Who is behind PAKAI TechHub",
-    name: "NK",
-    title: "Founder & CEO",
-    bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
+    ...founder,
   },
 
   academy: {
@@ -584,12 +596,11 @@ export const siteCopy = {
     },
     team: {
       heading: "Our team",
-      /** Confirmed person, supplied by the team. */
-      founder: {
-        name: "NK",
-        role: "Founder & CEO",
-        bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
-      } satisfies TeamMember,
+      /**
+       * The same object the homepage renders — see the shared `founder` source
+       * at the top of this file. Do not re-declare the values here.
+       */
+      founder,
       /**
        * Open roles. These are intentionally name-less until a hire is
        * confirmed — do not invent a name, the way partner names are not
