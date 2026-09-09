@@ -13,6 +13,24 @@ export type NavLink = {
   href: string;
 };
 
+/**
+ * Which existing list a top-level nav item's dropdown is built from.
+ *
+ * The panel rows are *derived* — marketplace categories come from
+ * `marketplace.products.categories`, academy rows from `academy.tiers.items`.
+ * Nothing about a category or a tier is restated here, so adding one in its
+ * own list puts it in the nav with no second edit and no chance of the two
+ * drifting apart.
+ *
+ * Items with no `menu` are plain links. Pricing and About have no sub-content
+ * to show, so they stay that way — do not invent panel rows for them.
+ */
+export type NavMenuSource = "marketplace" | "academy";
+
+export type NavItem = NavLink & {
+  menu?: NavMenuSource;
+};
+
 export type Step = {
   number: string;
   title: string;
@@ -113,6 +131,11 @@ export type Product = {
 };
 
 export type TrainingTier = {
+  /**
+   * Stable slug. Used as the anchor on /academy and as the nav dropdown's
+   * link target, so it must not change once published.
+   */
+  id: string;
   /** Position in the progression, rendered as the step marker. */
   step: string;
   name: string;
@@ -185,14 +208,31 @@ export const siteCopy = {
   },
 
   nav: {
-    links: [
-      { label: "Marketplace", href: "/marketplace" },
-      { label: "Academy", href: "/academy" },
+    items: [
+      { label: "Marketplace", href: "/marketplace", menu: "marketplace" },
+      { label: "Academy", href: "/academy", menu: "academy" },
       { label: "Pricing", href: "/pricing" },
       { label: "About", href: "/about" },
-    ] satisfies NavLink[],
+    ] satisfies NavItem[],
+    /**
+     * Chrome for the two dropdown panels. The rows themselves are derived from
+     * the marketplace and academy source lists — only the wrapper copy lives
+     * here.
+     */
+    menus: {
+      marketplace: {
+        heading: "Browse by category",
+        viewAll: "All products",
+        /** {count} is substituted with the real number of products. */
+        countOne: "1 product",
+        countOther: "{count} products",
+      },
+      academy: {
+        heading: "Training tiers",
+        viewAll: "All tiers",
+      },
+    },
     cta: { label: "Start free trial", href: "/pricing" },
-    openMenuLabel: "Open navigation",
   },
 
   hero: {
@@ -211,6 +251,17 @@ export const siteCopy = {
 
   audience: {
     heading: "Who PAKAI TechHub is built for",
+    intro:
+      "Four segments, one platform — the same products, priced and supported for the size of the team using them.",
+    /*
+     * Caption for the illustration beside the tiles.
+     *
+     * Deliberately generic. It describes the subject of an illustrative
+     * graphic, not a place PAKAI operates from or a customer it serves — do
+     * not change it to name a city, an office or a client, and keep it
+     * generic if the artwork is ever swapped for a licensed stock photo.
+     */
+    figureCaption: "AI for modern business",
     /*
      * Segment reach figures supplied by the team. This section stands in for
      * the customer-logo band a mature site would have — we do not have named
@@ -239,6 +290,29 @@ export const siteCopy = {
         body: "Compliance-ready deployment, data sovereignty guaranteed.",
       },
     ] satisfies AudienceTile[],
+  },
+
+  /**
+   * Full-width banner introducing the platform as a whole.
+   *
+   * Every claim in `body` is one the site already makes elsewhere — own
+   * products plus vetted partner tools (`offering`), PKR pricing and Urdu
+   * support (`trustStrip`, `whyPakai`), training with every subscription
+   * (`pricing.included`). Do not add a new claim here; add it to the section
+   * that owns it first.
+   */
+  flagship: {
+    eyebrow: "The PAKAI TechHub platform",
+    headline: "One place to find, try, and run AI",
+    body: "Our own products and vetted partner tools in a single marketplace — priced in PKR, supported in Urdu, with AI Academy training attached to every subscription.",
+    primaryCta: { label: "Browse AI products", href: "/marketplace" },
+    secondaryCta: { label: "See how it works", href: "#how-it-works" },
+    /**
+     * The three-up row under the banner is rendered from `offering.tabs` —
+     * same labels, same one-liners, linking down to that section. Do not
+     * retype them here.
+     */
+    linksLabel: "What's on the platform",
   },
 
   howItWorks: {
@@ -777,6 +851,7 @@ export const siteCopy = {
       freeLabel: "Free",
       items: [
         {
+          id: "awareness",
           step: "1",
           name: "AI Awareness",
           audience: "Business Owners",
@@ -785,6 +860,7 @@ export const siteCopy = {
           price: "Free",
         },
         {
+          id: "basics",
           step: "2",
           name: "AI Basics",
           audience: "Managers",
@@ -793,6 +869,7 @@ export const siteCopy = {
           price: "PKR 10,000/person",
         },
         {
+          id: "practitioner",
           step: "3",
           name: "AI Practitioner",
           audience: "IT Staff",
@@ -801,6 +878,7 @@ export const siteCopy = {
           price: "PKR 30,000/person",
         },
         {
+          id: "champion",
           step: "4",
           name: "AI Champion",
           audience: "Tech Leads",
@@ -809,6 +887,7 @@ export const siteCopy = {
           price: "PKR 75,000/person",
         },
         {
+          id: "master-trainer",
           step: "5",
           name: "AI Master Trainer",
           audience: "Instructors",

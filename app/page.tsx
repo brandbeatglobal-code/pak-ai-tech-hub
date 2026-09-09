@@ -6,6 +6,8 @@ import { HoverScale } from "@/components/motion/hover-scale";
 import { Reveal } from "@/components/motion/reveal";
 import { SectionGlow } from "@/components/motion/section-glow";
 import { OfferingTabs } from "@/components/offering-tabs";
+import { FlagshipArt } from "@/components/visuals/flagship-art";
+import { SkylineArt } from "@/components/visuals/skyline-art";
 import { siteCopy } from "@/content/site-copy";
 
 /** Shared heading treatment, so every section headline carries the same weight. */
@@ -28,6 +30,7 @@ export default function Home() {
     hero,
     trustStrip,
     audience,
+    flagship,
     howItWorks,
     stats,
     offering,
@@ -45,15 +48,17 @@ export default function Home() {
       {/* 1. Hero */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
+        {/* Centred, matching the reference layout: the homepage headline is
+            the one place on the site that gets the full width of the column. */}
         <div className="relative mx-auto w-full max-w-6xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-36">
-          <Reveal className="max-w-3xl">
+          <Reveal className="mx-auto max-w-4xl text-center">
             <h1 className="text-[2.75rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg lg:text-display-xl">
               {hero.headline}
             </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
+            <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
               {hero.subhead}
             </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <HoverScale>
                 <Link
                   href={hero.primaryCta.href}
@@ -110,33 +115,127 @@ export default function Home() {
       <section className={container}>
         <Reveal>
           <h2 className={sectionHeading}>{audience.heading}</h2>
-          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {audience.tiles.map((tile) => (
-              <HoverLift
-                key={tile.segment}
-                as="li"
-                className="flex flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
-              >
-                <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-                  {tile.segment}
-                </h3>
-                {/* Sized so the longest count ("10,000+ businesses") stays on
-                    one line in the four-column row — measured at 172px against
-                    191px available. At text-xl it needed exactly the available
-                    width and wrapped, leaving the row ragged. */}
-                <p className="mt-4 bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
-                  {tile.count}
-                </p>
-                <p className="mt-4 text-sm leading-relaxed text-brand-navy/70">
-                  {tile.body}
-                </p>
-              </HoverLift>
-            ))}
-          </ul>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+            {audience.intro}
+          </p>
+
+          {/* Tiles left, illustration right — the reference's text-and-image
+              band, with segment reach standing in for customer logos. */}
+          <div className="mt-12 grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:gap-10">
+            <ul className="grid gap-5 sm:grid-cols-2">
+              {audience.tiles.map((tile) => (
+                <HoverLift
+                  key={tile.segment}
+                  as="li"
+                  className="flex flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+                >
+                  <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
+                    {tile.segment}
+                  </h3>
+                  <p className="mt-4 bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
+                    {tile.count}
+                  </p>
+                  <p className="mt-4 text-sm leading-relaxed text-brand-navy/70">
+                    {tile.body}
+                  </p>
+                </HoverLift>
+              ))}
+            </ul>
+
+            {/*
+              Illustration, not a photograph — see the note in
+              components/visuals/skyline-art.tsx for why, and for what to do
+              when a licensed stock photo is available. The caption stays
+              generic either way.
+            */}
+            <figure className="flex flex-col">
+              <div className="aspect-[4/3] overflow-hidden rounded-3xl border border-black/5 sm:aspect-[16/9] lg:aspect-auto lg:min-h-64 lg:flex-1">
+                <SkylineArt className="h-full w-full" />
+              </div>
+              <figcaption className="mt-3 text-sm text-brand-navy/65">
+                {audience.figureCaption}
+              </figcaption>
+            </figure>
+          </div>
         </Reveal>
       </section>
 
-      {/* 4. How it works */}
+      {/* 4. Flagship platform banner */}
+      {/*
+        Full-width dark band introducing the platform as a whole. The three-up
+        row underneath is rendered from `offering.tabs` and links down to that
+        section, so the banner previews what is on the platform without
+        restating it.
+      */}
+      <section className="relative isolate overflow-hidden bg-brand-navy">
+        <div className="mx-auto w-full max-w-6xl px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
+          <Reveal>
+            <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+              <div>
+                <p className="text-xs font-bold tracking-[0.18em] text-brand-green uppercase">
+                  {flagship.eyebrow}
+                </p>
+                <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-display">
+                  {flagship.headline}
+                </h2>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/70">
+                  {flagship.body}
+                </p>
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                  <HoverScale>
+                    <Link
+                      href={flagship.primaryCta.href}
+                      className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy transition-opacity hover:opacity-90"
+                    >
+                      {flagship.primaryCta.label}
+                    </Link>
+                  </HoverScale>
+                  <HoverScale>
+                    <Link
+                      href={flagship.secondaryCta.href}
+                      className="inline-flex items-center justify-center rounded-full border border-white/25 px-6 py-3 text-base font-semibold text-white transition-colors hover:border-white/60"
+                    >
+                      {flagship.secondaryCta.label}
+                    </Link>
+                  </HoverScale>
+                </div>
+              </div>
+
+              {/* Generated artwork, extending the hero's gradient mesh into a
+                  single form. Decorative — see visuals/flagship-art.tsx.
+                  Capped below lg: stacked under the text it would otherwise
+                  run to the full column width and swamp the banner. */}
+              <FlagshipArt className="mx-auto h-auto w-full max-w-sm lg:max-w-none" />
+            </div>
+
+            <div className="mt-16 border-t border-white/10 pt-10">
+              <h3 className="sr-only">{flagship.linksLabel}</h3>
+              <ul className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+                {offering.tabs.map((tab) => (
+                  <li key={tab.id}>
+                    <Link href="#what-you-get" className="group block">
+                      <span className="flex items-center gap-2 text-base font-bold text-white">
+                        {tab.label}
+                        <span
+                          aria-hidden
+                          className="transition-transform duration-200 group-hover:translate-x-1"
+                        >
+                          &rarr;
+                        </span>
+                      </span>
+                      <span className="mt-2 block text-sm leading-relaxed text-white/70">
+                        {tab.headline}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 5. How it works */}
       {/* The marketplace hero links here as /#how-it-works. scroll-mt clears
           the sticky nav so the heading is not hidden behind it on arrival. */}
       <section
@@ -165,7 +264,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. Stats bar */}
+      {/* 6. Stats bar */}
       <section aria-label="PAKAI TechHub at a glance" className="bg-brand-navy">
         <Reveal>
           <dl className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-16 text-center sm:grid-cols-3 sm:px-6 lg:px-8">
@@ -186,15 +285,17 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* 6. Tabbed offering */}
-      <section className={container}>
+      {/* 7. Tabbed offering */}
+      {/* The flagship banner's three-up row links here. scroll-mt clears the
+          sticky nav so the heading is not hidden behind it on arrival. */}
+      <section id="what-you-get" className={`scroll-mt-28 ${container}`}>
         <Reveal>
           <h2 className={sectionHeading}>{offering.heading}</h2>
           <OfferingTabs tabs={offering.tabs} />
         </Reveal>
       </section>
 
-      {/* 7. Why PAKAI TechHub */}
+      {/* 8. Why PAKAI TechHub */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="left" />
         <div className={`relative ${container}`}>
@@ -220,7 +321,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. Industries */}
+      {/* 9. Industries */}
       <section className={container}>
         <Reveal>
           <h2 className={sectionHeading}>{industries.heading}</h2>
@@ -245,7 +346,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* 9. Works with */}
+      {/* 10. Works with */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="right" />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
@@ -301,7 +402,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 10. Founder */}
+      {/* 11. Founder */}
       <section className={container}>
         <Reveal>
           <h2 className={sectionHeading}>{founder.heading}</h2>
@@ -322,7 +423,7 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* 11. Resources */}
+      {/* 12. Resources */}
       {/*
         Honest empty state. Each card shows only the kind of resource the slot
         will hold — no headline, author, date or thumbnail, because no article
@@ -335,63 +436,77 @@ export default function Home() {
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
               {resources.intro}
             </p>
-            <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {resources.slots.map((slot) => (
-                <li
-                  key={slot.category}
-                  className="flex flex-col rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 p-8"
-                >
-                  {/* Decorative placeholder where a cover image will sit. */}
-                  <span
-                    aria-hidden
-                    className="block h-28 rounded-2xl bg-gradient-to-br from-brand-blue/10 to-brand-green/10"
-                  />
-                  <h3 className="mt-6 text-sm font-bold tracking-wide text-brand-navy uppercase">
-                    {slot.category}
-                  </h3>
-                  <p className="mt-2 text-sm text-brand-navy/65">
-                    {resources.comingSoonLabel}
-                  </p>
-                </li>
-              ))}
+            {/* One featured slot beside two smaller ones, matching the
+                reference's insights band. Still an empty state — the shape
+                changed, the honesty did not. */}
+            <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
+              {resources.slots.map((slot, index) => {
+                const featured = index === 0;
+                return (
+                  <li
+                    key={slot.category}
+                    className={`flex flex-col rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 p-8 ${
+                      featured ? "sm:col-span-2 lg:row-span-2" : ""
+                    }`}
+                  >
+                    {/* Decorative placeholder where a cover image will sit. */}
+                    <span
+                      aria-hidden
+                      className={`block rounded-2xl bg-gradient-to-br from-brand-blue/10 to-brand-green/10 ${
+                        featured ? "min-h-44 flex-1" : "h-28"
+                      }`}
+                    />
+                    <h3 className="mt-6 text-sm font-bold tracking-wide text-brand-navy uppercase">
+                      {slot.category}
+                    </h3>
+                    <p className="mt-2 text-sm text-brand-navy/65">
+                      {resources.comingSoonLabel}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           </Reveal>
         </div>
       </section>
 
-      {/* 12. Academy teaser */}
+      {/* 13. Closing pair — academy teaser and final CTA, side by side */}
+      {/* The reference closes on two cards rather than one full-bleed band;
+          the gradient moves onto the right-hand card so the page still ends
+          on the brand colours. */}
       <section className={container}>
         <Reveal>
-          <div className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-14">
-            <h2 className={`max-w-2xl ${sectionHeading}`}>{academyTeaser.heading}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-              {academyTeaser.body}
-            </p>
-            <HoverScale className="mt-9">
-              <Link
-                href={academyTeaser.cta.href}
-                className="inline-flex items-center justify-center rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                {academyTeaser.cta.label}
-              </Link>
-            </HoverScale>
-          </div>
-        </Reveal>
-      </section>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="flex flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-12">
+              <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
+                {academyTeaser.heading}
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-brand-navy/70">
+                {academyTeaser.body}
+              </p>
+              <HoverScale className="mt-auto self-start pt-9">
+                <Link
+                  href={academyTeaser.cta.href}
+                  className="inline-flex items-center justify-center rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  {academyTeaser.cta.label}
+                </Link>
+              </HoverScale>
+            </div>
 
-      {/* 13. Final CTA */}
-      <section className="bg-gradient-to-r from-brand-blue to-brand-green">
-        <Reveal>
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-9 px-4 py-24 text-center sm:px-6 lg:px-8">
-            <h2 className={`max-w-2xl ${sectionHeading}`}>{finalCta.heading}</h2>
-            <HoverScale>
-              <Link
-                href={finalCta.cta.href}
-                className="inline-flex items-center justify-center rounded-full bg-brand-navy px-8 py-3 text-base font-semibold text-white shadow-lg shadow-brand-navy/20 transition-opacity hover:opacity-90"
-              >
-                {finalCta.cta.label}
-              </Link>
-            </HoverScale>
+            <div className="flex flex-col rounded-3xl bg-gradient-to-br from-brand-blue to-brand-green p-8 shadow-sm sm:p-12">
+              <h2 className="max-w-sm text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
+                {finalCta.heading}
+              </h2>
+              <HoverScale className="mt-auto self-start pt-9">
+                <Link
+                  href={finalCta.cta.href}
+                  className="inline-flex items-center justify-center rounded-full bg-brand-navy px-8 py-3 text-base font-semibold text-white shadow-lg shadow-brand-navy/20 transition-opacity hover:opacity-90"
+                >
+                  {finalCta.cta.label}
+                </Link>
+              </HoverScale>
+            </div>
           </div>
         </Reveal>
       </section>

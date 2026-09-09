@@ -20,8 +20,26 @@ export const metadata: Metadata = {
 const sectionHeading =
   "text-3xl font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display";
 
-export default function MarketplacePage() {
+/**
+ * `?category=<id>` preselects a filter, which is what the nav dropdown's
+ * category rows link to. Anything unrecognised falls back to "all" rather than
+ * rendering an empty grid.
+ */
+function resolveCategory(value: string | string[] | undefined) {
+  const requested = Array.isArray(value) ? value[0] : value;
+  const known = marketplace.products.categories.some(
+    (category) => category.id === requested,
+  );
+  return known && requested ? requested : "all";
+}
+
+export default async function MarketplacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { hero, products, partners } = marketplace;
+  const initialCategory = resolveCategory((await searchParams).category);
 
   return (
     <>
@@ -63,9 +81,16 @@ export default function MarketplacePage() {
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
           <Reveal>
             <h2 className={sectionHeading}>{products.heading}</h2>
+            {/*
+              Keyed on the resolved category so arriving from the nav dropdown
+              while already on this page resets the filter. Without it the
+              route would not remount and the grid would ignore the new param.
+            */}
             <MarketplaceProducts
+              key={initialCategory}
               products={products.items}
               categories={products.categories}
+              initialCategory={initialCategory}
               labels={{
                 filterLegend: products.filterLegend,
                 trainingBadge: products.trainingBadge,

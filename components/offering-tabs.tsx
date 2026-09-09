@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
+import { FeatureVisual } from "@/components/visuals/feature-visual";
 import type { OfferingTab } from "@/content/site-copy";
 
 type OfferingTabsProps = {
@@ -124,27 +125,45 @@ export function OfferingTabs({ tabs }: OfferingTabsProps) {
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.26, ease: "easeOut" }}
           >
-            <h3 className="max-w-2xl text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
-              {activeTab.headline}
-            </h3>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-              {activeTab.body}
-            </p>
-            <motion.span initial={false} whileHover="hover" className="mt-6 inline-flex">
-              <Link
-                href={activeTab.link.href}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-navy underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
-              >
-                {activeTab.link.label}
+            {/*
+              Text left, supporting visual right. The visual is decorative and
+              abstract — see components/visuals/feature-visual.tsx. It sits in
+              a fixed-ratio box so switching tabs cannot change the panel
+              height and shift the page.
+            */}
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
+              <div>
+                <h3 className="max-w-2xl text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
+                  {activeTab.headline}
+                </h3>
+                <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+                  {activeTab.body}
+                </p>
                 <motion.span
-                  aria-hidden
-                  variants={{ hover: { x: prefersReducedMotion ? 0 : 4 } }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  initial={false}
+                  whileHover="hover"
+                  className="mt-6 inline-flex"
                 >
-                  &rarr;
+                  <Link
+                    href={activeTab.link.href}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-navy underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
+                  >
+                    {activeTab.link.label}
+                    <motion.span
+                      aria-hidden
+                      variants={{ hover: { x: prefersReducedMotion ? 0 : 4 } }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                    >
+                      &rarr;
+                    </motion.span>
+                  </Link>
                 </motion.span>
-              </Link>
-            </motion.span>
+              </div>
+
+              <div className="order-first aspect-[4/3] w-full rounded-3xl bg-brand-navy/[0.03] p-6 lg:order-none">
+                <FeatureVisual variant={activeTab.id} className="h-full w-full" />
+              </div>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>

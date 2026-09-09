@@ -9,6 +9,12 @@ import type { CategoryFilter, Product } from "@/content/site-copy";
 type MarketplaceProductsProps = {
   products: Product[];
   categories: CategoryFilter[];
+  /**
+   * Category to start on, from the `?category=` search param. The page
+   * validates it against `categories` before passing it here, so an unknown
+   * value arrives as "all" rather than an empty grid.
+   */
+  initialCategory: string;
   labels: {
     filterLegend: string;
     trainingBadge: string;
@@ -35,9 +41,10 @@ type MarketplaceProductsProps = {
 export function MarketplaceProducts({
   products,
   categories,
+  initialCategory,
   labels,
 }: MarketplaceProductsProps) {
-  const [selected, setSelected] = useState<string>("all");
+  const [selected, setSelected] = useState<string>(initialCategory);
   const groupName = useId();
 
   const visible = useMemo(
