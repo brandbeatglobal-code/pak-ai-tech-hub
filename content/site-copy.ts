@@ -112,6 +112,26 @@ export type Product = {
   href: string;
 };
 
+export type AudienceTile = {
+  segment: string;
+  /** Reach figure for that segment. */
+  count: string;
+  body: string;
+};
+
+/** Placeholder card for a resource that does not exist yet. */
+export type ResourceSlot = {
+  /** Kind of resource this slot will hold, e.g. "Guide". */
+  category: string;
+};
+
+export type SocialLink = {
+  label: string;
+  /** One of the ids handled by components/social-icons.tsx. */
+  icon: "linkedin" | "x" | "instagram";
+  href: string;
+};
+
 export type FooterColumn = {
   heading: string;
   links: NavLink[];
@@ -148,10 +168,44 @@ export const siteCopy = {
       "Browse, buy, and deploy AI tools built for Pakistani businesses — with training and support included.",
     primaryCta: { label: "Browse AI products", href: "/marketplace" },
     secondaryCta: { label: "Start free trial", href: "/pricing" },
+    /** Same trial terms the pricing page states — not a new claim. */
+    reassurance: "7-day free trial, no card required.",
   },
 
   trustStrip: {
     items: ["Lahore HQ", "PKR pricing", "Urdu support", "Data kept in Pakistan"],
+  },
+
+  audience: {
+    heading: "Who PAKAI TechHub is built for",
+    /*
+     * Segment reach figures supplied by the team. This section stands in for
+     * the customer-logo band a mature site would have — we do not have named
+     * customers to show, so do not add logos, names or "trusted by" claims
+     * here until real ones are confirmed.
+     */
+    tiles: [
+      {
+        segment: "SMEs",
+        count: "5.3M+ businesses",
+        body: "Affordable, self-serve AI tools sized for small teams.",
+      },
+      {
+        segment: "Mid-Market",
+        count: "10,000+ businesses",
+        body: "Multi-product bundles with dedicated onboarding support.",
+      },
+      {
+        segment: "Enterprise",
+        count: "2,500+ businesses",
+        body: "Custom deployment, priority support, volume pricing.",
+      },
+      {
+        segment: "Government",
+        count: "500+ entities",
+        body: "Compliance-ready deployment, data sovereignty guaranteed.",
+      },
+    ] satisfies AudienceTile[],
   },
 
   howItWorks: {
@@ -166,11 +220,33 @@ export const siteCopy = {
   },
 
   stats: {
+    /*
+     * The product count must match what /marketplace and /pricing actually
+     * list — currently 8. If a product ships, change it in all three places
+     * (the two pages read from `marketplace.products`, so in practice that
+     * means adding the product there and updating this number).
+     */
     items: [
-      { value: "14+", label: "Products" },
+      { value: "8", label: "Products" },
       { value: "8", label: "Industries" },
       { value: "24/7", label: "Support" },
     ] satisfies Stat[],
+  },
+
+  resources: {
+    heading: "Resources",
+    intro: "Guides and updates on AI adoption in Pakistan — coming soon.",
+    /*
+     * Deliberately empty slots. Each card shows only the kind of resource it
+     * will hold. Do not add headlines, authors, dates or thumbnails until
+     * real articles exist — an empty state is honest, a fabricated one is not.
+     */
+    comingSoonLabel: "Coming soon",
+    slots: [
+      { category: "Guide" },
+      { category: "Case study" },
+      { category: "Webinar" },
+    ] satisfies ResourceSlot[],
   },
 
   offering: {
@@ -514,9 +590,25 @@ export const siteCopy = {
       },
       {
         heading: "Get started",
-          links: [{ label: "Start free trial", href: "/pricing" }],
+        links: [{ label: "Start free trial", href: "/pricing" }],
       },
     ] satisfies FooterColumn[],
+    connect: {
+      heading: "Connect",
+      handle: "@pakaitechub",
+      /*
+       * NEEDS REAL PROFILE URLS — do not invent them.
+       *
+       * Every href below is "#". Replace each with the real profile URL once
+       * the accounts are confirmed; do not guess a URL from the handle, and do
+       * not add a network we do not actually have an account on.
+       */
+      links: [
+        { label: "LinkedIn", icon: "linkedin", href: "#" },
+        { label: "X", icon: "x", href: "#" },
+        { label: "Instagram", icon: "instagram", href: "#" },
+      ] satisfies SocialLink[],
+    },
     copyright: `© ${new Date().getFullYear()} PAKAI TechHub. All rights reserved.`,
   },
 
