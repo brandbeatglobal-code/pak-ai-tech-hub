@@ -23,10 +23,36 @@ export type Stat = {
   label: string;
 };
 
-export type Product = {
+export type OfferingTab = {
+  /** Stable key used for tab/panel ids and as the React key. */
+  id: string;
+  /** Short label shown on the tab itself. */
+  label: string;
+  headline: string;
+  body: string;
+  link: NavLink;
+};
+
+export type ValueCard = {
+  headline: string;
+  body: string;
+};
+
+export type Industry = {
   name: string;
+  /**
+   * Only set where a real product exists for that industry. The remaining
+   * industries stay name-only on purpose — see the note in `industries`.
+   */
+  description?: string;
+};
+
+export type WorksWithItem = {
+  /** Confirmed partners have a name; unconfirmed slots stay descriptive. */
+  name?: string;
   description: string;
-  price: string;
+  href?: string;
+  confirmed: boolean;
 };
 
 export type FooterColumn = {
@@ -90,42 +116,134 @@ export const siteCopy = {
     ] satisfies Stat[],
   },
 
-  featuredProducts: {
-    heading: "Featured products",
-    products: [
+  offering: {
+    heading: "What you get with PAKAI TechHub",
+    /**
+     * Tab 2 deliberately avoids naming any marketplace partner. Do not add
+     * CustomGPT, BotPenguin, TruBot or any other vendor here until that
+     * partnership is confirmed the same way KladAI's was — see `worksWith`.
+     */
+    tabs: [
       {
-        name: "TechHub Chatbot",
-        description:
-          "Multi-channel AI customer service for web, WhatsApp, and SMS. 24/7 support in Urdu & English.",
-        price: "from PKR 15,000/mo",
+        id: "own-products",
+        label: "Own AI Products",
+        headline: "Ready to deploy, built in-house",
+        body: "TechHub Chatbot, Analytics, Content, and CRM — built by our team, priced in PKR, with training included from day one.",
+        link: { label: "Learn more", href: "#" },
       },
       {
-        name: "TechHub Analytics",
-        description:
-          "Predictive analytics dashboard with real-time insights and AI recommendations.",
-        price: "from PKR 25,000/mo",
+        id: "marketplace",
+        label: "Marketplace",
+        headline: "Browse trusted AI tools from our partners",
+        body: "Access vetted third-party AI products alongside our own — one marketplace, one bill, one place to manage them all.",
+        link: { label: "Learn more", href: "#" },
       },
       {
-        name: "TechHub CRM",
-        description:
-          "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
-        price: "from PKR 20,000/mo",
+        id: "industry-solutions",
+        label: "Industry Solutions",
+        headline: "Built for how Pakistani industries actually work",
+        body: "Healthcare, agriculture, education, and retail solutions shaped around local workflows, language, and pricing — not generic global tools retrofitted for Pakistan.",
+        link: { label: "Learn more", href: "#" },
       },
-    ] satisfies Product[],
+    ] satisfies OfferingTab[],
+  },
+
+  whyPakai: {
+    heading: "Why PAKAI TechHub",
+    cards: [
+      {
+        headline: "Affordable by design",
+        body: "Custom AI in Pakistan can cost PKR 5-50M. We built a marketplace instead, so most businesses pay a fraction of that.",
+      },
+      {
+        headline: "No-code, no confusion",
+        body: "Every product is built to be used by a business owner, not an engineer.",
+      },
+      {
+        headline: "Built here, not imported",
+        body: "Urdu and regional language support, Lahore infrastructure, PKR pricing from the start.",
+      },
+      {
+        headline: "Training comes standard",
+        body: "Every subscription includes AI Academy access, so your team learns to use it, not just switch it on.",
+      },
+      {
+        headline: "Transparent pricing, always",
+        body: "One price, shown upfront. No custom quotes, no hidden fees.",
+      },
+    ] satisfies ValueCard[],
   },
 
   industries: {
     heading: "Built for Pakistani industries",
+    /**
+     * Descriptions come straight from the existing product portfolio. The last
+     * four industries are name-only because no product exists for them yet —
+     * do not write a description for them until one does.
+     */
     items: [
-      "Healthcare",
-      "Agriculture",
-      "Education",
-      "Retail",
-      "Banking & Finance",
-      "Manufacturing",
-      "Logistics",
-      "Real Estate",
-    ],
+      {
+        name: "Healthcare",
+        description: "Patient triage, diagnostics, and EHR analysis for hospitals.",
+      },
+      {
+        name: "Agriculture",
+        description: "Crop monitoring, yield prediction, and soil analysis.",
+      },
+      {
+        name: "Education",
+        description: "Adaptive learning, grading, and engagement prediction.",
+      },
+      {
+        name: "Retail",
+        description: "Customer behavior, demand forecasting, and dynamic pricing.",
+      },
+      { name: "Banking & Finance" },
+      { name: "Manufacturing" },
+      { name: "Logistics" },
+      { name: "Real Estate" },
+    ] satisfies Industry[],
+  },
+
+  worksWith: {
+    heading: "Works with",
+    /**
+     * Only confirmed partners get a name and a link. Unconfirmed slots stay as
+     * descriptive labels — do not invent a brand name for them.
+     */
+    items: [
+      {
+        name: "KladAI",
+        description:
+          "An autonomous AI agent that handles documents, data, research, and presentations — available now through the PAKAI TechHub marketplace.",
+        href: "https://kladai.com",
+        confirmed: true,
+      },
+      {
+        description: "AI chat assistant",
+        confirmed: false,
+      },
+      {
+        description: "AI content generator",
+        confirmed: false,
+      },
+    ] satisfies WorksWithItem[],
+    pendingLabel: "Partner to be announced",
+  },
+
+  founder: {
+    heading: "Who is behind PAKAI TechHub",
+    /*
+     * NEEDS REAL FOUNDER BIO — do not invent one.
+     *
+     * Every value below is a placeholder. Replace `name`, `title` and `bio`
+     * with the real founder's details before this page goes live. Do not
+     * generate a plausible-sounding name, title or biography to fill the gap.
+     */
+    name: "[Founder name]",
+    title: "[Founder title]",
+    bio: "[Founder bio — 2-3 sentences covering background, why PAKAI TechHub was started, and relevant experience. To be supplied by the team.]",
+    placeholderNotice: "Founder details to be added.",
   },
 
   academy: {
