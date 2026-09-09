@@ -1,0 +1,14 @@
+import type { Metadata } from "next";
+
+import { PlaceholderPage } from "@/components/placeholder-page";
+import { siteCopy } from "@/content/site-copy";
+
+const copy = siteCopy.placeholders.pages.contact;
+
+export const metadata: Metadata = {
+  title: `${copy.title} — ${siteCopy.brand.name}`,
+};
+
+export default function ContactPage() {
+  return <PlaceholderPage title={copy.title} />;
+}
