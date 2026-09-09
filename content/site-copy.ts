@@ -55,6 +55,23 @@ export type WorksWithItem = {
   confirmed: boolean;
 };
 
+/** Compact label + one-liner, used for the About page value badges. */
+export type ValueBadge = {
+  label: string;
+  body: string;
+};
+
+export type TeamMember = {
+  /**
+   * Only set where a real person has been confirmed. Roles that are still
+   * open stay name-less — do not invent a name to fill a card.
+   */
+  name?: string;
+  role: string;
+  roleDetail?: string;
+  bio: string;
+};
+
 export type FooterColumn = {
   heading: string;
   links: NavLink[];
@@ -281,6 +298,124 @@ export const siteCopy = {
       },
     ] satisfies FooterColumn[],
     copyright: `© ${new Date().getFullYear()} PAKAI TechHub. All rights reserved.`,
+  },
+
+  about: {
+    meta: {
+      title: "About — PAKAI TechHub",
+      description:
+        "Founded in Lahore in 2026 to close the gap between what AI can do and what most Pakistani businesses can actually access.",
+    },
+    hero: {
+      headline: "Making AI something every Pakistani business can use",
+      subhead:
+        "Founded in Lahore in 2026 to close the gap between what AI can do and what most Pakistani businesses can actually access.",
+      primaryCta: { label: "Browse AI products", href: "/marketplace" },
+      secondaryCta: { label: "Get in touch", href: "/contact" },
+    },
+    story: {
+      heading: "Our story",
+      body: "PAKAI TechHub was born from a simple observation: Pakistan's 5.3 million+ businesses are hungry for AI but can't access it. Custom solutions cost PKR 5-50M, and no marketplace exists where businesses can discover, buy, and deploy AI tools easily. We built PAKAI TechHub to bridge this gap — making AI affordable, accessible, and actionable for every Pakistani business.",
+    },
+    different: {
+      heading: "What makes us different",
+      body: "We're not just another software house. We're Pakistan's first AI product marketplace — a unified platform where businesses of all sizes can browse, try, buy, and learn AI tools tailored to their industry. With a training-first approach, we don't just sell AI — we teach you how to use it.",
+    },
+    facts: {
+      label: "Company facts",
+      items: [
+        "Lahore HQ, Punjab",
+        "Remote teams in Karachi & Islamabad",
+        "Founded 2026",
+        "SECP-registered (Pvt.) Ltd.",
+        "AI / SaaS / B2B",
+      ],
+    },
+    values: {
+      heading: "Our values",
+      /**
+       * Deliberately terser than the homepage `whyPakai` cards — this is a
+       * quick-glance badge row, not a second telling of the same argument.
+       */
+      items: [
+        { label: "Accessibility", body: "AI for every budget" },
+        { label: "Simplicity", body: "No-code, easy to use" },
+        { label: "Local Focus", body: "Urdu support, Lahore HQ" },
+        { label: "Training First", body: "Every product + training" },
+        { label: "Transparency", body: "Clear pricing, no tricks" },
+        { label: "Innovation", body: "First to market, always" },
+      ] satisfies ValueBadge[],
+    },
+    marketNumbers: {
+      heading: "Pakistan by the numbers",
+      /**
+       * Market context figures supplied by the team. Each is split into a
+       * value and a label to fit the stat-strip treatment; do not add a figure
+       * here that the team has not provided.
+       */
+      items: [
+        { value: "207M+", label: "Telecom subscribers" },
+        { value: "166M+", label: "Internet users" },
+        { value: "5.3M+", label: "SMEs" },
+        { value: "$3.23B", label: "AI market by 2030" },
+        { value: "$5B", label: "IT exports" },
+        { value: "10%", label: "AI-skilled workforce" },
+      ] satisfies Stat[],
+    },
+    team: {
+      heading: "Our team",
+      /** Confirmed person, supplied by the team. */
+      founder: {
+        name: "NK",
+        role: "Founder & CEO",
+        bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
+      } satisfies TeamMember,
+      /**
+       * Open roles. These are intentionally name-less until a hire is
+       * confirmed — do not invent a name, the way partner names are not
+       * invented in `worksWith`.
+       */
+      openRolesLabel: "Role open",
+      roles: [
+        {
+          role: "CTO",
+          roleDetail: "Chief Technology Officer",
+          bio: "Full-stack engineer & AI specialist. Building scalable AI platforms.",
+        },
+        {
+          role: "Head of Sales",
+          roleDetail: "Sales & Partnerships",
+          bio: "B2B sales expert driving enterprise and SME customer acquisition.",
+        },
+        {
+          role: "Head of Academy",
+          roleDetail: "Training & Education",
+          bio: "AI educator building Pakistan's premier AI training curriculum.",
+        },
+      ] satisfies TeamMember[],
+      keyHires: {
+        heading: "Key hires (Phase 1)",
+        items: [
+          "2 Full-Stack Developers",
+          "1 AI/ML Engineer",
+          "1 UI/UX Designer",
+          "2 Marketing Specialists",
+        ],
+      },
+      advisory: {
+        heading: "Advisory board",
+        items: [
+          "Industry Advisor (Banking)",
+          "Industry Advisor (Healthcare)",
+          "Tech Advisor (AI/ML)",
+          "Business Advisor (Growth)",
+        ],
+      },
+    },
+    closingCta: {
+      heading: "Questions about PAKAI TechHub?",
+      cta: { label: "Contact us", href: "/contact" },
+    },
   },
 
   /** Placeholder routes so nav links resolve while the real pages are built. */
