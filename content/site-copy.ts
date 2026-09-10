@@ -1,9 +1,9 @@
 /**
  * Single source of truth for every string rendered on the site.
  *
- * Keep all user-facing copy here rather than inline in JSX. Urdu translations
- * are planned, so the shape of this file is intended to be duplicated per
- * locale later (e.g. `site-copy.ur.ts`) without touching any component.
+ * Keep all user-facing copy here rather than inline in JSX. Translations are
+ * planned, so the shape of this file is intended to be duplicated per locale
+ * later (e.g. `site-copy.ur.ts`) without touching any component.
  *
  * English only for now.
  */
@@ -119,11 +119,17 @@ export type Product = {
   category: ProductCategory;
   description: string;
   /**
-   * The bare amount, e.g. "PKR 15,000/mo" — no "from" prefix baked in.
+   * The bare amount, e.g. "$55/mo" — no "from" prefix baked in.
    *
    * The marketplace cards prepend `marketplace.products.pricePrefix`; the
    * pricing table shows the amount on its own. Keeping the number in one
-   * place means the two pages cannot quote different prices.
+   * place means the two pages cannot quote different prices.   *
+   * INTERIM DISPLAY PRICING. These figures were converted from the original
+   * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
+   * a placeholder for a marketplace where providers set their own prices, and
+   * they will be replaced wholesale once provider-set pricing exists. Do not
+   * treat them as negotiated or quoted amounts, and do not add a currency
+   * switcher on top of them — this is one hard-coded currency, not a rate.
    */
   price: string;
   /** Individual product pages do not exist yet. */
@@ -142,6 +148,15 @@ export type TrainingTier = {
   audience: string;
   duration: string;
   format: string;
+  /**
+   * Per-person amount.   *
+   * INTERIM DISPLAY PRICING. These figures were converted from the original
+   * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
+   * a placeholder for a marketplace where providers set their own prices, and
+   * they will be replaced wholesale once provider-set pricing exists. Do not
+   * treat them as negotiated or quoted amounts, and do not add a currency
+   * switcher on top of them — this is one hard-coded currency, not a rate.
+   */
   price: string;
 };
 
@@ -152,8 +167,6 @@ export type Curriculum = {
 
 export type AudienceTile = {
   segment: string;
-  /** Reach figure for that segment. */
-  count: string;
   body: string;
 };
 
@@ -190,21 +203,21 @@ export type FooterColumn = {
 const founder = {
   name: "NK",
   title: "Founder & CEO",
-  bio: "Visionary leader driving AI adoption across Pakistan. Customer care operations expert.",
+  bio: "Visionary leader driving AI adoption worldwide. Customer care operations expert.",
 };
 
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
-    tagline: "AI for Every Business in Pakistan",
-    logoAlt: "PAKAI TechHub — AI for Every Business in Pakistan",
+    tagline: "AI for every business, everywhere.",
+    logoAlt: "PAKAI TechHub — AI for every business, everywhere.",
     brandmarkAlt: "PAKAI TechHub",
   },
 
   meta: {
-    title: "PAKAI TechHub — AI for every business in Pakistan",
+    title: "PAKAI TechHub — AI for every business, everywhere.",
     description:
-      "Browse, buy, and deploy AI tools built for Pakistani businesses — with training and support included.",
+      "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
   },
 
   nav: {
@@ -258,9 +271,9 @@ export const siteCopy = {
   },
 
   hero: {
-    headline: "AI for every business in Pakistan",
+    headline: "One place to find, try, and run AI",
     subhead:
-      "Browse, buy, and deploy AI tools built for Pakistani businesses — with training and support included.",
+      "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
     primaryCta: { label: "Browse AI products", href: "/marketplace" },
     secondaryCta: { label: "Start free trial", href: "/pricing" },
     /** Same trial terms the pricing page states — not a new claim. */
@@ -268,13 +281,18 @@ export const siteCopy = {
   },
 
   trustStrip: {
-    items: ["Lahore HQ", "PKR pricing", "Urdu support", "Data kept in Pakistan"],
+    items: [
+      "Every product reviewed",
+      "Free trials included",
+      "Providers worldwide",
+      "New products added regularly",
+    ],
   },
 
   audience: {
     heading: "Who PAKAI TechHub is built for",
     intro:
-      "Four segments, one platform — the same products, priced and supported for the size of the team using them.",
+      "A marketplace has two sides. PAKAI TechHub is built for both of them.",
     /*
      * Caption for the illustration beside the tiles.
      *
@@ -285,31 +303,23 @@ export const siteCopy = {
      */
     figureCaption: "AI for modern business",
     /*
-     * Segment reach figures supplied by the team. This section stands in for
-     * the customer-logo band a mature site would have — we do not have named
-     * customers to show, so do not add logos, names or "trusted by" claims
-     * here until real ones are confirmed.
+     * The two sides of the marketplace, not market segments.
+     *
+     * This previously held four reach figures for Pakistani market segments
+     * (SMEs, Mid-Market, Enterprise, Government). Those were removed with the
+     * global rebrand: they described one country's market, and there is no
+     * worldwide equivalent the team has supplied. Do not substitute invented
+     * global figures, and do not add logos, names or "trusted by" claims here
+     * until real ones are confirmed.
      */
     tiles: [
       {
-        segment: "SMEs",
-        count: "5.3M+ businesses",
-        body: "Affordable, self-serve AI tools sized for small teams.",
+        segment: "For businesses",
+        body: "Find AI tools, try them free, and put them to work — no procurement headaches.",
       },
       {
-        segment: "Mid-Market",
-        count: "10,000+ businesses",
-        body: "Multi-product bundles with dedicated onboarding support.",
-      },
-      {
-        segment: "Enterprise",
-        count: "2,500+ businesses",
-        body: "Custom deployment, priority support, volume pricing.",
-      },
-      {
-        segment: "Government",
-        count: "500+ entities",
-        body: "Compliance-ready deployment, data sovereignty guaranteed.",
+        segment: "For AI providers",
+        body: "List your product, reach customers worldwide, and pay commission only when you make a sale.",
       },
     ] satisfies AudienceTile[],
   },
@@ -318,15 +328,18 @@ export const siteCopy = {
    * Full-width banner introducing the platform as a whole.
    *
    * Every claim in `body` is one the site already makes elsewhere — own
-   * products plus vetted partner tools (`offering`), PKR pricing and Urdu
-   * support (`trustStrip`, `whyPakai`), training with every subscription
-   * (`pricing.included`). Do not add a new claim here; add it to the section
-   * that owns it first.
+   * products plus vetted partner tools (`offering`), review before listing
+   * and a free trial on every listing (`about.different`), training with
+   * every subscription (`pricing.included`). Do not add a new claim here;
+   * add it to the section that owns it first.
+   *
+   * The headline must NOT repeat the hero's. The hero owns "One place to
+   * find, try, and run AI"; this banner sits on the same page.
    */
   flagship: {
     eyebrow: "The PAKAI TechHub platform",
-    headline: "One place to find, try, and run AI",
-    body: "Our own products and vetted partner tools in a single marketplace — priced in PKR, supported in Urdu, with AI Academy training attached to every subscription.",
+    headline: "A marketplace built on trust",
+    body: "Our own products and vetted partner tools in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
     primaryCta: { label: "Browse AI products", href: "/marketplace" },
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
     /**
@@ -364,7 +377,7 @@ export const siteCopy = {
 
   resources: {
     heading: "Resources",
-    intro: "Guides and updates on AI adoption in Pakistan — coming soon.",
+    intro: "Guides and updates on putting AI to work — coming soon.",
     /*
      * Deliberately empty slots. Each card shows only the kind of resource it
      * will hold. Do not add headlines, authors, dates or thumbnails until
@@ -390,7 +403,7 @@ export const siteCopy = {
         id: "own-products",
         label: "Own AI Products",
         headline: "Ready to deploy, built in-house",
-        body: "TechHub Chatbot, Analytics, Content, and CRM — built by our team, priced in PKR, with training included from day one.",
+        body: "TechHub Chatbot, Analytics, Content, and CRM — built by our team, with training included from day one.",
         link: { label: "Learn more", href: "#" },
       },
       {
@@ -403,8 +416,8 @@ export const siteCopy = {
       {
         id: "industry-solutions",
         label: "Industry Solutions",
-        headline: "Built for how Pakistani industries actually work",
-        body: "Healthcare, agriculture, education, and retail solutions shaped around local workflows, language, and pricing — not generic global tools retrofitted for Pakistan.",
+        headline: "Built for how your industry actually works",
+        body: "Healthcare, agriculture, education, and retail solutions shaped around the way those industries actually run — not generic tools bent to fit.",
         link: { label: "Learn more", href: "#" },
       },
     ] satisfies OfferingTab[],
@@ -415,15 +428,15 @@ export const siteCopy = {
     cards: [
       {
         headline: "Affordable by design",
-        body: "Custom AI in Pakistan can cost PKR 5-50M. We built a marketplace instead, so most businesses pay a fraction of that.",
+        body: "Custom-built AI puts it out of reach for most businesses. We built a marketplace instead — subscribe to what you need, at a published price.",
       },
       {
         headline: "No-code, no confusion",
         body: "Every product is built to be used by a business owner, not an engineer.",
       },
       {
-        headline: "Built here, not imported",
-        body: "Urdu and regional language support, Lahore infrastructure, PKR pricing from the start.",
+        headline: "Reviewed before it lists",
+        body: "Every product is evaluated by our team before it goes live, so the marketplace is a shortlist rather than a directory.",
       },
       {
         headline: "Training comes standard",
@@ -437,7 +450,7 @@ export const siteCopy = {
   },
 
   industries: {
-    heading: "Built for Pakistani industries",
+    heading: "Industries we cover",
     /**
      * Descriptions come straight from the existing product portfolio. The last
      * four industries are name-only because no product exists for them yet —
@@ -535,8 +548,8 @@ export const siteCopy = {
           name: "TechHub Chatbot",
           category: "cross-industry",
           description:
-            "Multi-channel AI customer service for web, WhatsApp, and SMS. 24/7 support in Urdu & English.",
-          price: "PKR 15,000/mo",
+            "Multi-channel AI customer service for web, WhatsApp, and SMS. Available around the clock.",
+          price: "$55/mo",
           href: "#",
         },
         {
@@ -545,7 +558,7 @@ export const siteCopy = {
           category: "cross-industry",
           description:
             "Predictive analytics dashboard with real-time insights and AI recommendations.",
-          price: "PKR 25,000/mo",
+          price: "$90/mo",
           href: "#",
         },
         {
@@ -554,7 +567,7 @@ export const siteCopy = {
           category: "cross-industry",
           description:
             "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
-          price: "PKR 10,000/mo",
+          price: "$35/mo",
           href: "#",
         },
         {
@@ -563,7 +576,7 @@ export const siteCopy = {
           category: "cross-industry",
           description:
             "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
-          price: "PKR 20,000/mo",
+          price: "$70/mo",
           href: "#",
         },
         {
@@ -572,7 +585,7 @@ export const siteCopy = {
           category: "healthcare",
           description:
             "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
-          price: "PKR 50,000/mo",
+          price: "$180/mo",
           href: "#",
         },
         {
@@ -581,7 +594,7 @@ export const siteCopy = {
           category: "agriculture",
           description:
             "Crop monitoring, yield prediction, and soil analysis for farmers.",
-          price: "PKR 20,000/mo",
+          price: "$70/mo",
           href: "#",
         },
         {
@@ -590,7 +603,7 @@ export const siteCopy = {
           category: "education",
           description:
             "Adaptive learning, automated grading, and student engagement prediction.",
-          price: "PKR 15,000/mo",
+          price: "$55/mo",
           href: "#",
         },
         {
@@ -599,7 +612,7 @@ export const siteCopy = {
           category: "retail",
           description:
             "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
-          price: "PKR 25,000/mo",
+          price: "$90/mo",
           href: "#",
         },
       ] satisfies Product[],
@@ -740,22 +753,22 @@ export const siteCopy = {
     meta: {
       title: "About — PAKAI TechHub",
       description:
-        "Founded in Lahore in 2026 to close the gap between what AI can do and what most Pakistani businesses can actually access.",
+        "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
     },
     hero: {
-      headline: "Making AI something every Pakistani business can use",
+      headline: "Making AI something every business can use",
       subhead:
-        "Founded in Lahore in 2026 to close the gap between what AI can do and what most Pakistani businesses can actually access.",
+        "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
       primaryCta: { label: "Browse AI products", href: "/marketplace" },
       secondaryCta: { label: "Get in touch", href: "/contact" },
     },
     story: {
       heading: "Our story",
-      body: "PAKAI TechHub was born from a simple observation: Pakistan's 5.3 million+ businesses are hungry for AI but can't access it. Custom solutions cost PKR 5-50M, and no marketplace exists where businesses can discover, buy, and deploy AI tools easily. We built PAKAI TechHub to bridge this gap — making AI affordable, accessible, and actionable for every Pakistani business.",
+      body: "PAKAI TechHub was born from a simple observation: businesses everywhere want to use AI, but finding the right tool, trusting it actually works, and getting it running is still too hard. We built PAKAI TechHub to fix that — a single marketplace where any business can discover AI products, try them before committing, and any AI provider can reach customers worldwide.",
     },
     different: {
       heading: "What makes us different",
-      body: "We're not just another software house. We're Pakistan's first AI product marketplace — a unified platform where businesses of all sizes can browse, try, buy, and learn AI tools tailored to their industry. With a training-first approach, we don't just sell AI — we teach you how to use it.",
+      body: "We're not just another software directory. PAKAI TechHub is a marketplace built on trust — every product is evaluated by our team before it goes live, every listing includes a free trial, and providers only pay when they make a sale.",
     },
     facts: {
       label: "Company facts",
@@ -765,6 +778,7 @@ export const siteCopy = {
         "Founded 2026",
         "SECP-registered (Pvt.) Ltd.",
         "AI / SaaS / B2B",
+        "Worldwide marketplace",
       ],
     },
     values: {
@@ -776,28 +790,26 @@ export const siteCopy = {
       items: [
         { label: "Accessibility", body: "AI for every budget" },
         { label: "Simplicity", body: "No-code, easy to use" },
-        { label: "Local Focus", body: "Urdu support, Lahore HQ" },
+        { label: "Trust & Safety", body: "Every product reviewed before listing" },
         { label: "Training First", body: "Every product + training" },
         { label: "Transparency", body: "Clear pricing, no tricks" },
         { label: "Innovation", body: "First to market, always" },
       ] satisfies ValueBadge[],
     },
-    marketNumbers: {
-      heading: "Pakistan by the numbers",
-      /**
-       * Market context figures supplied by the team. Each is split into a
-       * value and a label to fit the stat-strip treatment; do not add a figure
-       * here that the team has not provided.
-       */
-      items: [
-        { value: "207M+", label: "Telecom subscribers" },
-        { value: "166M+", label: "Internet users" },
-        { value: "5.3M+", label: "SMEs" },
-        { value: "$3.23B", label: "AI market by 2030" },
-        { value: "$5B", label: "IT exports" },
-        { value: "10%", label: "AI-skilled workforce" },
-      ] satisfies Stat[],
-    },
+    /*
+     * REMOVED: the "Pakistan by the numbers" stat strip.
+     *
+     * It held six Pakistan market figures (telecom subscribers, internet
+     * users, SMEs, AI market size, IT exports, AI-skilled workforce) and was
+     * dropped in the global rebrand — the numbers described a single country's
+     * market, which is no longer what the site claims to serve.
+     *
+     * It was deliberately NOT replaced with worldwide equivalents. Nobody has
+     * supplied those, and inventing them would be exactly the kind of made-up
+     * figure the rest of this file is careful to avoid. If real global market
+     * data is sourced later, add it back with a citation — do not restore this
+     * section from memory or estimate it.
+     */
     team: {
       heading: "Our team",
       /**
@@ -825,7 +837,7 @@ export const siteCopy = {
         {
           role: "Head of Academy",
           roleDetail: "Training & Education",
-          bio: "AI educator building Pakistan's premier AI training curriculum.",
+          bio: "AI educator building the PAKAI TechHub training curriculum.",
         },
       ] satisfies TeamMember[],
       keyHires: {
@@ -888,7 +900,7 @@ export const siteCopy = {
           audience: "Managers",
           duration: "2 Days",
           format: "Workshop",
-          price: "PKR 10,000/person",
+          price: "$35/person",
         },
         {
           id: "practitioner",
@@ -897,7 +909,7 @@ export const siteCopy = {
           audience: "IT Staff",
           duration: "5 Days",
           format: "Bootcamp",
-          price: "PKR 30,000/person",
+          price: "$110/person",
         },
         {
           id: "champion",
@@ -906,7 +918,7 @@ export const siteCopy = {
           audience: "Tech Leads",
           duration: "10 Days",
           format: "Certification",
-          price: "PKR 75,000/person",
+          price: "$270/person",
         },
         {
           id: "master-trainer",
@@ -915,7 +927,7 @@ export const siteCopy = {
           audience: "Instructors",
           duration: "30 Days",
           format: "Intensive",
-          price: "PKR 150,000/person",
+          price: "$540/person",
         },
       ] satisfies TrainingTier[],
     },
@@ -978,6 +990,7 @@ export const siteCopy = {
       headline: "Let's talk",
       subhead:
         "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+      reach: "We work with businesses and AI providers worldwide.",
       /* Opens the visitor's mail client. See the note on `details` below. */
       primaryCta: { label: "Email us", href: "mailto:info@pakaitechub.com" },
     },
