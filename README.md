@@ -87,8 +87,13 @@ Production automatically.
 three environments. Generate one with:
 
 ```bash
-npx auth secret        # or: openssl rand -base64 32
+openssl rand -base64 32
 ```
+
+Do **not** use `npx auth secret`. The `auth` package on npm is Better Auth's
+CLI, not Auth.js's — it prints a `BETTER_AUTH_SECRET=` line, which is the wrong
+variable name for this project. The value it generates is a fine random string,
+but it has to be set as `AUTH_SECRET`. There is no published Auth.js CLI.
 
 Until both exist, `/sign-up`, `/login` and `/dashboard` return a 500 naming the
 missing variable. The rest of the site builds and serves normally — the
