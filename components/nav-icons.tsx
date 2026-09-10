@@ -66,13 +66,20 @@ const BARS = 5;
  * tier's position in the ladder at a glance. Reads the number straight off the
  * tier data rather than needing five hand-drawn icons.
  */
-export function TierIcon({ step }: { step: number }) {
+export function TierIcon({
+  step,
+  className = "h-5 w-5",
+}: {
+  step: number;
+  /** Sized up when the glyph carries a featured card rather than a row. */
+  className?: string;
+}) {
   return (
     <svg
       aria-hidden
       focusable="false"
       viewBox="0 0 20 20"
-      className="h-5 w-5"
+      className={className}
       fill="currentColor"
     >
       {Array.from({ length: BARS }, (_, index) => {
