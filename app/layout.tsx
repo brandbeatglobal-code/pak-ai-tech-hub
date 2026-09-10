@@ -29,12 +29,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         {/*
-          Scroll-reveal blocks start at opacity 0 and are animated in by
-          Motion. With JavaScript disabled that never happens, so force them
-          to their final state.
+          Two things that need JavaScript, and their fallbacks.
+
+          1. Scroll-reveal blocks start at opacity 0 and are animated in by
+             Motion. With JavaScript disabled that never happens, so force
+             them to their final state.
+          2. The desktop nav's dropdown triggers are buttons, which do nothing
+             without JavaScript. Fall back to the plain link row — normally
+             the narrow-screen nav — at every width, so Marketplace and
+             Academy stay reachable.
         */}
         <noscript>
-          <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
+          <style>{`[data-reveal]{opacity:1!important;transform:none!important}[data-nav-menus]{display:none!important}[data-nav-plain]{display:flex!important}`}</style>
         </noscript>
       </head>
       <body className="flex min-h-full flex-col font-sans">

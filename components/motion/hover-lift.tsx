@@ -10,6 +10,8 @@ type HoverLiftProps = {
   as?: "div" | "li";
   /** How far the card rises, in pixels. */
   distance?: number;
+  /** Anchor target, where a card is linked to directly. */
+  id?: string;
 };
 
 /**
@@ -24,6 +26,7 @@ export function HoverLift({
   className,
   as = "div",
   distance = 4,
+  id,
 }: HoverLiftProps) {
   const prefersReducedMotion = useReducedMotion();
   const Component = as === "li" ? motion.li : motion.div;
@@ -35,6 +38,7 @@ export function HoverLift({
 
   return (
     <Component
+      id={id}
       className={className}
       initial={false}
       whileHover={raised}

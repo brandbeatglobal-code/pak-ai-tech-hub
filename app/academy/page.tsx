@@ -95,11 +95,14 @@ export default function AcademyPage() {
             {tiers.items.map((tier) => {
               const isFree = tier.price === tiers.freeLabel;
               return (
+                /* The nav dropdown links straight to a tier, so each rung is
+                   an anchor target. scroll-mt clears the sticky header. */
                 <HoverLift
-                  key={tier.step}
+                  key={tier.id}
+                  id={`tier-${tier.id}`}
                   as="li"
                   distance={3}
-                  className="rounded-3xl border border-black/5 bg-white p-7 shadow-sm sm:p-8"
+                  className="scroll-mt-28 rounded-3xl border border-black/5 bg-white p-7 shadow-sm sm:p-8"
                 >
                   <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
                     <span
