@@ -269,6 +269,15 @@ export const siteCopy = {
         },
       },
     },
+    /*
+     * Logged-out entry point to the auth pages, shown beside the CTA.
+     *
+     * There is deliberately no logged-in variant yet. Swapping this for
+     * "Dashboard" means reading the session server-side in the nav, which
+     * turns a static shared component into a dynamic one across every page —
+     * a bigger change than this one, and not something to improvise here.
+     */
+    signIn: { label: "Sign in", href: "/login" },
     cta: { label: "Start free trial", href: "/pricing" },
   },
 
