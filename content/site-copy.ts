@@ -123,7 +123,8 @@ export type Product = {
    *
    * The marketplace cards prepend `marketplace.products.pricePrefix`; the
    * pricing table shows the amount on its own. Keeping the number in one
-   * place means the two pages cannot quote different prices.   *
+   * place means the two pages cannot quote different prices.
+   *
    * INTERIM DISPLAY PRICING. These figures were converted from the original
    * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
    * a placeholder for a marketplace where providers set their own prices, and
@@ -149,7 +150,8 @@ export type TrainingTier = {
   duration: string;
   format: string;
   /**
-   * Per-person amount.   *
+   * Per-person amount.
+   *
    * INTERIM DISPLAY PRICING. These figures were converted from the original
    * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
    * a placeholder for a marketplace where providers set their own prices, and
@@ -267,6 +269,15 @@ export const siteCopy = {
         },
       },
     },
+    /*
+     * Logged-out entry point to the auth pages, shown beside the CTA.
+     *
+     * There is deliberately no logged-in variant yet. Swapping this for
+     * "Dashboard" means reading the session server-side in the nav, which
+     * turns a static shared component into a dynamic one across every page —
+     * a bigger change than this one, and not something to improvise here.
+     */
+    signIn: { label: "Sign in", href: "/login" },
     cta: { label: "Start free trial", href: "/pricing" },
   },
 
@@ -997,10 +1008,9 @@ export const siteCopy = {
     /*
      * Real details only.
      *
-     * THERE IS DELIBERATELY NO CONTACT FORM. A form with no mail service
-     * behind it would look like it works and silently drop every message; a
-     * mailto link is the honest option that actually delivers today. Do not
-     * add a form until an email-sending service is wired up and tested.
+     * There is now a form (see `form` below) backed by Resend. The mailto link
+     * in the hero stays as the always-available fallback, and the error state
+     * surfaces it too, so a delivery failure never leaves someone stuck.
      *
      * The email address and city are the ones the team supplied. Do not add a
      * phone number, a street address, office hours or a second inbox — none
@@ -1018,6 +1028,82 @@ export const siteCopy = {
        * either place.
        */
       connectLabel: "Social",
+    },
+    /*
+     * Lead-gen form.
+     *
+     * The industry and product options are NOT listed here — they are derived
+     * from `industries.items` and `marketplace.products.items` by the form
+     * component, so the dropdowns cannot offer an industry the site does not
+     * cover or a product the marketplace does not sell.
+     *
+     * There is deliberately no Privacy Policy link on the consent checkbox:
+     * no such page exists, and linking to one that 404s is worse than not
+     * linking at all. Add the link when the page does.
+     */
+    form: {
+      heading: "Send us a message",
+      intro:
+        "Tell us who you are and what you need. Everything marked with an asterisk is required.",
+      fields: {
+        firstName: "First name",
+        lastName: "Last name",
+        jobTitle: "Job title",
+        country: "Country",
+        email: "Business email",
+        industry: "Industry",
+        reason: "I am trying to reach…",
+        product: "Product of interest",
+        message: "Anything else you would like to tell us?",
+      },
+      /** Shown as the disabled first option of every select. */
+      selectPlaceholder: "Select an option",
+      optionalLabel: "optional",
+      /** Appended to the derived product list — not a real product. */
+      productUnsure: "Not sure yet",
+      reasons: [
+        "General inquiry",
+        "I want to list a product (Provider)",
+        "I'm interested in using a product (Buyer)",
+        "Partnership or press",
+      ],
+      consent: "I agree to be contacted about this inquiry.",
+      submit: "Send message",
+      submitting: "Sending…",
+      /* Only shown once Resend has confirmed the send, never optimistically. */
+      successHeading: "Message sent",
+      successBody:
+        "Thanks — we have your message and will reply to the email address you gave us.",
+      successAgain: "Send another message",
+      /* {email} is replaced with the mailto address, so a failure always
+         leaves a working way through. */
+      errorPrefix: "We could not send that.",
+      errorFallback: "Please email us directly at {email} and we will pick it up.",
+      validation: {
+        required: "This field is required.",
+        email: "Enter a valid email address.",
+        consent: "Please confirm you agree to be contacted.",
+      },
+    },
+    /*
+     * Two cards, mapped to things that actually exist: the provider sign-up
+     * route and the marketplace. Do not add an "expert team", a press desk, an
+     * RFP flow or office locations — none of those exist.
+     */
+    reachUs: {
+      heading: "Ways to reach us",
+      cards: [
+        {
+          heading: "Have a product to list?",
+          body: "List your AI product, reach customers worldwide, and pay commission only when you make a sale.",
+          cta: { label: "Sign up as a provider", href: "/sign-up?role=provider" },
+        },
+        {
+          heading: "Looking for AI tools?",
+          body: "Browse reviewed products, try them free, and put them to work.",
+          cta: { label: "Browse the marketplace", href: "/marketplace" },
+        },
+      ],
     },
     closingCta: {
       heading: "Ready to get started instead?",
