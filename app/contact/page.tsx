@@ -38,6 +38,9 @@ export default function ContactPage() {
             <p className="mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
               {hero.subhead}
             </p>
+            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+              {hero.reach}
+            </p>
             {/*
               A mailto link, not a form.
 

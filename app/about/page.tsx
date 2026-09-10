@@ -26,7 +26,6 @@ export default function AboutPage() {
     different,
     facts,
     values,
-    marketNumbers,
     team,
     closingCta,
   } = about;
@@ -140,33 +139,22 @@ export default function AboutPage() {
         </Reveal>
       </section>
 
-      {/* 6. Pakistan by the numbers — homepage dark stats-bar treatment. */}
-      <section aria-label={marketNumbers.heading} className="bg-brand-navy">
-        <Reveal>
-          <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-            <h2 className="text-center text-sm font-semibold tracking-wide text-white/60 uppercase">
-              {marketNumbers.heading}
-            </h2>
-            <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 text-center sm:grid-cols-3 lg:grid-cols-6">
-              {marketNumbers.items.map((stat) => (
-                <div key={stat.label}>
-                  <dt className="sr-only">{stat.label}</dt>
-                  <dd>
-                    <span className="block bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-                      {stat.value}
-                    </span>
-                    <span className="mt-2 block text-xs font-medium tracking-wide text-white/70 uppercase">
-                      {stat.label}
-                    </span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </Reveal>
-      </section>
+      {/*
+        REMOVED: section 6, the "Pakistan by the numbers" stat strip.
 
-      {/* 7. Our team */}
+        It rendered six Pakistan market figures in the homepage's dark
+        stats-bar treatment. The global rebrand dropped it — those numbers
+        described a single country's market, which is no longer what the site
+        claims to serve.
+
+        It was deliberately NOT replaced with worldwide equivalents: nobody
+        has supplied those, and estimating them would be inventing data. If
+        real global market figures are sourced later, the section can come
+        back with its `marketNumbers` copy block. Do not reconstruct either
+        from memory.
+      */}
+
+      {/* 6. Our team */}
       <section className="relative isolate border-b border-black/5">
         <SectionGlow placement="right" />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
@@ -259,7 +247,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 8. Closing CTA */}
+      {/* 7. Closing CTA */}
       <section className="bg-gradient-to-r from-brand-blue to-brand-green">
         <Reveal>
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 lg:px-8">

@@ -1,6 +1,6 @@
 # PAKAI TechHub
 
-Marketing site for PAKAI TechHub — AI for every business in Pakistan.
+Marketing site for PAKAI TechHub — AI for every business, everywhere.
 
 Built with [Next.js](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4,
 and ESLint.
@@ -69,7 +69,7 @@ Two rules keep this safe:
 ## Copy
 
 Every user-facing string lives in `content/site-copy.ts`. Components read from it
-rather than hard-coding text. Urdu translations are planned, so new copy should
+rather than hard-coding text. Translations are planned, so new copy should
 be added there — not inline in JSX.
 
 ## Brand assets

@@ -107,10 +107,11 @@ export default function Home() {
 
       {/* 3. Who it's built for */}
       {/*
-        Stands in for the customer-logo band a mature site would show here. We
-        have no named customers to display, so this uses real segment reach
-        instead — do not swap in logos or "trusted by" names until real ones
-        are confirmed.
+        The two sides of the marketplace. This previously showed four
+        Pakistani market segments with reach figures; the global rebrand
+        dropped those rather than inventing worldwide equivalents — see the
+        note on `audience.tiles`. Do not swap in logos or "trusted by" names
+        until real ones are confirmed.
       */}
       <section className={container}>
         <Reveal>
@@ -122,20 +123,21 @@ export default function Home() {
           {/* Tiles left, illustration right — the reference's text-and-image
               band, with segment reach standing in for customer logos. */}
           <div className="mt-12 grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:gap-10">
-            <ul className="grid gap-5 sm:grid-cols-2">
+            {/* Two tiles now rather than four, so they stack in one column and
+                stay the same height as the illustration beside them. The card
+                treatment is unchanged; only the count line is gone, because
+                the two sides of a marketplace have no reach figure to show. */}
+            <ul className="grid gap-5">
               {audience.tiles.map((tile) => (
                 <HoverLift
                   key={tile.segment}
                   as="li"
-                  className="flex flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+                  className="flex flex-1 flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
                 >
                   <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
                     {tile.segment}
                   </h3>
-                  <p className="mt-4 bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
-                    {tile.count}
-                  </p>
-                  <p className="mt-4 text-sm leading-relaxed text-brand-navy/70">
+                  <p className="mt-4 text-lg leading-relaxed text-brand-navy/70">
                     {tile.body}
                   </p>
                 </HoverLift>
