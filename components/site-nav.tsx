@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
+import { FlagshipArt } from "@/components/visuals/flagship-art";
 import {
   siteCopy,
   type NavMenuSource,
@@ -24,8 +25,27 @@ type PanelRow = {
   icon: React.ReactNode;
 };
 
+/**
+ * Highlight card filling the panel's left region.
+ *
+ * It is a real link, and it sits first in DOM order — so it is also the first
+ * stop for Tab and for ArrowDown from the trigger. That is deliberate: a
+ * "Featured" / "Start here" card is the one thing in the panel that should be
+ * reachable without reading past anything else.
+ */
+type Featured = {
+  eyebrow: string;
+  headline: string;
+  body: string;
+  href: string;
+  /** Optional emphasis line, e.g. a price. */
+  meta?: string;
+  art: React.ReactNode;
+};
+
 type Panel = {
   heading: string;
+  featured: Featured;
   rows: PanelRow[];
   viewAll: { label: string; href: string };
 };
@@ -43,10 +63,24 @@ function isCategory(
  * that one edit, and the product counts below cannot disagree with the grid on
  * /marketplace because they are counted from the same array.
  */
+/** The tier the Academy panel features. First in the ladder, and the free one. */
+const entryTier = academy.tiers.items[0];
+
 const PANELS: Record<NavMenuSource, Panel> = {
   marketplace: {
     heading: nav.menus.marketplace.heading,
     viewAll: { label: nav.menus.marketplace.viewAll, href: "/marketplace" },
+    featured: {
+      eyebrow: nav.menus.marketplace.featured.eyebrow,
+      /* Counted from the product list, so the headline cannot overstate it. */
+      headline: nav.menus.marketplace.featured.headline.replace(
+        "{count}",
+        String(marketplace.products.items.length),
+      ),
+      body: nav.menus.marketplace.featured.body,
+      href: "/marketplace",
+      art: <FlagshipArt className="h-full w-auto" />,
+    },
     rows: marketplace.products.categories.filter(isCategory).map((category) => {
       const count = marketplace.products.items.filter(
         (product) => product.category === category.id,
@@ -66,6 +100,15 @@ const PANELS: Record<NavMenuSource, Panel> = {
   academy: {
     heading: nav.menus.academy.heading,
     viewAll: { label: nav.menus.academy.viewAll, href: "/academy" },
+    /* Name, price, duration and format all come off the tier itself. */
+    featured: {
+      eyebrow: nav.menus.academy.featured.eyebrow,
+      headline: entryTier.name,
+      meta: entryTier.price,
+      body: `${entryTier.duration}, ${entryTier.format} — ${nav.menus.academy.featured.body}`,
+      href: `/academy#tier-${entryTier.id}`,
+      art: <TierIcon step={Number(entryTier.step)} className="h-14 w-14" />,
+    },
     rows: academy.tiers.items.map((tier) => ({
       key: tier.id,
       href: `/academy#tier-${tier.id}`,
@@ -198,9 +241,12 @@ export function SiteNav() {
       ref={headerRef}
       className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur"
     >
+      {/* `relative` here rather than on each <li>: the dropdown panels are
+          wide enough that they need to be centred in the nav container, not
+          under their own trigger. */}
       <nav
         aria-label="Main"
-        className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8"
+        className="relative mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8"
       >
         <Link href="/" className="flex shrink-0 items-center" aria-label={brand.name}>
           <Image
@@ -247,7 +293,6 @@ export function SiteNav() {
             return (
               <li
                 key={item.href}
-                className="relative"
                 onKeyDown={(event) => onItemKeyDown(event, source)}
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
@@ -278,6 +323,14 @@ export function SiteNav() {
                 </button>
 
                 {open ? (
+                  /*
+                    Positioned against the <nav>, not this <li> — the li is no
+                    longer `relative`. The panel stays a DOM child of the li,
+                    which is what keeps pointer-leave and focus-out working,
+                    but it is laid out and centred inside the nav container, so
+                    a panel this wide cannot hang off the edge of a narrow
+                    window the way a trigger-anchored one would.
+                  */
                   <motion.div
                     id={`nav-panel-${source}`}
                     ref={(node) => {
@@ -286,47 +339,87 @@ export function SiteNav() {
                     initial={prefersReducedMotion ? false : { opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: prefersReducedMotion ? 0 : 0.16, ease: "easeOut" }}
-                    className="absolute top-full left-1/2 w-80 -translate-x-1/2 pt-3"
+                    className="absolute top-full left-1/2 w-[min(44rem,calc(100vw_-_3rem))] -translate-x-1/2 pt-3"
                   >
-                    <div className="rounded-2xl border border-black/5 bg-white p-3 shadow-xl shadow-brand-navy/10">
-                      <p className="px-3 pt-2 pb-3 text-xs font-bold tracking-wide text-brand-navy/65 uppercase">
-                        {panel.heading}
-                      </p>
-                      <ul>
-                        {panel.rows.map((row) => (
-                          <li key={row.key}>
-                            <Link
-                              href={row.href}
-                              onClick={() => setOpenMenu(null)}
-                              className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-brand-navy/[0.04]"
+                    <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xl shadow-brand-navy/10">
+                      <div className="grid grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
+                        {/* Region 1 — featured. A real link, first in DOM
+                            order, so Tab and ArrowDown reach it first. */}
+                        <div className="border-r border-black/5 p-3">
+                          <Link
+                            href={panel.featured.href}
+                            onClick={() => setOpenMenu(null)}
+                            className="flex h-full flex-col rounded-xl bg-brand-navy p-5 transition-opacity hover:opacity-95"
+                          >
+                            <span className="text-[0.6875rem] font-bold tracking-[0.16em] text-brand-green uppercase">
+                              {panel.featured.eyebrow}
+                            </span>
+                            {/* Explicit colour: the glyphs draw with
+                                `currentColor`, which would otherwise inherit
+                                the page's navy and vanish against this card. */}
+                            <span
+                              aria-hidden
+                              className="mt-4 flex h-24 items-center justify-center text-brand-green"
                             >
-                              <span
-                                aria-hidden
-                                className="mt-0.5 shrink-0 text-brand-navy/50"
-                              >
-                                {row.icon}
+                              {panel.featured.art}
+                            </span>
+                            <span className="mt-5 text-base leading-snug font-bold text-white">
+                              {panel.featured.headline}
+                            </span>
+                            {panel.featured.meta ? (
+                              <span className="mt-1 bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-sm font-bold text-transparent">
+                                {panel.featured.meta}
                               </span>
-                              <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-brand-navy">
-                                  {row.label}
-                                </span>
-                                <span className="mt-0.5 block text-xs text-brand-navy/65">
-                                  {row.detail}
-                                </span>
-                              </span>
+                            ) : null}
+                            <span className="mt-2 text-xs leading-relaxed text-white/70">
+                              {panel.featured.body}
+                            </span>
+                          </Link>
+                        </div>
+
+                        {/* Region 2 — the existing list, reflowed into two
+                            columns now that there is room for them. */}
+                        <div className="flex flex-col p-3">
+                          <p className="px-3 pt-2 pb-2 text-xs font-bold tracking-wide text-brand-navy/65 uppercase">
+                            {panel.heading}
+                          </p>
+                          <ul className="grid grid-cols-2">
+                            {panel.rows.map((row) => (
+                              <li key={row.key}>
+                                <Link
+                                  href={row.href}
+                                  onClick={() => setOpenMenu(null)}
+                                  className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-brand-navy/[0.04]"
+                                >
+                                  <span
+                                    aria-hidden
+                                    className="mt-0.5 shrink-0 text-brand-navy/50"
+                                  >
+                                    {row.icon}
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-brand-navy">
+                                      {row.label}
+                                    </span>
+                                    <span className="mt-0.5 block text-xs text-brand-navy/65">
+                                      {row.detail}
+                                    </span>
+                                  </span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-auto border-t border-black/5 pt-2">
+                            <Link
+                              href={panel.viewAll.href}
+                              onClick={() => setOpenMenu(null)}
+                              className="flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-navy transition-colors hover:bg-brand-navy/[0.04]"
+                            >
+                              {panel.viewAll.label}
+                              <span aria-hidden>&rarr;</span>
                             </Link>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="mt-2 border-t border-black/5 pt-2">
-                        <Link
-                          href={panel.viewAll.href}
-                          onClick={() => setOpenMenu(null)}
-                          className="flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-navy transition-colors hover:bg-brand-navy/[0.04]"
-                        >
-                          {panel.viewAll.label}
-                          <span aria-hidden>&rarr;</span>
-                        </Link>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </motion.div>

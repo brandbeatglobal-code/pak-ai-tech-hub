@@ -226,10 +226,32 @@ export const siteCopy = {
         /** {count} is substituted with the real number of products. */
         countOne: "1 product",
         countOther: "{count} products",
+        /**
+         * Highlight card in the panel's left region.
+         *
+         * {count} is substituted with `marketplace.products.items.length`, so
+         * the headline cannot claim a product count the marketplace does not
+         * have. Do not hard-code a number here.
+         */
+        featured: {
+          eyebrow: "Featured",
+          headline: "Browse all {count} AI products",
+          body: "Built in-house or vetted from trusted partners, managed in one place.",
+        },
       },
       academy: {
         heading: "Training tiers",
         viewAll: "All tiers",
+        /**
+         * Highlight card in the panel's left region. It points at the first
+         * tier in `academy.tiers.items` and reads its name, price, duration
+         * and format straight off that object — nothing about the tier is
+         * restated here, so it cannot drift from /academy.
+         */
+        featured: {
+          eyebrow: "Start here",
+          body: "The free entry point to the training ladder.",
+        },
       },
     },
     cta: { label: "Start free trial", href: "/pricing" },
@@ -946,15 +968,47 @@ export const siteCopy = {
     },
   },
 
-  /** Placeholder routes so nav links resolve while the real pages are built. */
-  placeholders: {
-    comingSoon: "Coming soon.",
-    pages: {
-      marketplace: { title: "Marketplace" },
-      academy: { title: "Academy" },
-      pricing: { title: "Pricing" },
-      about: { title: "About" },
-      contact: { title: "Contact" },
+  contact: {
+    meta: {
+      title: "Contact — PAKAI TechHub",
+      description:
+        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+    },
+    hero: {
+      headline: "Let's talk",
+      subhead:
+        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+      /* Opens the visitor's mail client. See the note on `details` below. */
+      primaryCta: { label: "Email us", href: "mailto:info@pakaitechub.com" },
+    },
+    /*
+     * Real details only.
+     *
+     * THERE IS DELIBERATELY NO CONTACT FORM. A form with no mail service
+     * behind it would look like it works and silently drop every message; a
+     * mailto link is the honest option that actually delivers today. Do not
+     * add a form until an email-sending service is wired up and tested.
+     *
+     * The email address and city are the ones the team supplied. Do not add a
+     * phone number, a street address, office hours or a second inbox — none
+     * of those have been confirmed.
+     */
+    details: {
+      heading: "How to reach us",
+      email: { label: "Email", value: "info@pakaitechub.com" },
+      location: { label: "Where we are", value: "Lahore, Pakistan" },
+      /*
+       * The social rows reuse `footer.connect` — the same handle, the same
+       * networks, the same icons. That block still carries its
+       * "NEEDS REAL PROFILE URLS" note and every href is still "#"; fixing
+       * them there fixes them here too. Do not paste a guessed URL into
+       * either place.
+       */
+      connectLabel: "Social",
+    },
+    closingCta: {
+      heading: "Ready to get started instead?",
+      cta: { label: "Browse AI products", href: "/marketplace" },
     },
   },
 };
