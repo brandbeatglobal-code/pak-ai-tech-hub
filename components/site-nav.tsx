@@ -241,12 +241,21 @@ export function SiteNav() {
       ref={headerRef}
       className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur"
     >
-      {/* `relative` here rather than on each <li>: the dropdown panels are
-          wide enough that they need to be centred in the nav container, not
-          under their own trigger. */}
+      {/*
+        `relative` here rather than on each <li>: the dropdown panels are wide
+        enough that they need to be centred in the nav container, not under
+        their own trigger.
+
+        Spacing tightens between `md` and `lg` and returns to its normal values
+        at `lg`. That band is the tightest the bar ever gets — the full wordmark
+        and all four menu triggers are in play, with much less room for them
+        than a desktop screen has. Without the tighter gaps and padding, adding
+        Sign in beside the CTA pushes the row past the viewport at 768px.
+        Measured, not guessed — see the comment on the Sign in link.
+      */}
       <nav
         aria-label="Main"
-        className="relative mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8"
+        className="relative mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-6 lg:px-8"
       >
         <Link href="/" className="flex shrink-0 items-center" aria-label={brand.name}>
           <Image
@@ -269,7 +278,7 @@ export function SiteNav() {
 
         <ul
           data-nav-menus
-          className="hidden flex-1 items-center justify-center gap-2 md:flex"
+          className="hidden flex-1 items-center justify-center gap-1 md:flex lg:gap-2"
         >
           {nav.items.map((item) => {
             const source = item.menu;
@@ -279,7 +288,7 @@ export function SiteNav() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="rounded-lg px-3 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy"
+                    className="rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy lg:px-3"
                   >
                     {item.label}
                   </Link>
@@ -314,7 +323,7 @@ export function SiteNav() {
                   aria-expanded={open}
                   aria-controls={`nav-panel-${source}`}
                   onClick={() => setOpenMenu(open ? null : source)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3 ${
                     open ? "text-brand-navy" : "text-brand-navy/70 hover:text-brand-navy"
                   }`}
                 >
@@ -429,7 +438,24 @@ export function SiteNav() {
           })}
         </ul>
 
-        <div className="ml-auto flex items-center md:ml-0">
+        <div className="ml-auto flex items-center gap-2 md:ml-0 lg:gap-4">
+          {/*
+            Plain text link, so the CTA stays the only button on this side.
+
+            Hidden below `md`: the flat row underneath already carries a Sign
+            in link at those widths, and without this it renders twice.
+
+            This link is what made the `md`–`lg` band tight. Measured at 768px:
+            it adds 77px to a row that had no room to spare, so the gaps and
+            padding above give that back. Anything else added here needs the
+            same measurement — the bar is at its limit at 768px.
+          */}
+          <Link
+            href={nav.signIn.href}
+            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy md:inline-flex"
+          >
+            {nav.signIn.label}
+          </Link>
           <HoverScale>
             <Link
               href={nav.cta.href}
@@ -461,6 +487,16 @@ export function SiteNav() {
             </Link>
           </li>
         ))}
+        {/* Appended rather than added to `nav.items`, which would also put it
+            in the centred desktop list where it does not belong. */}
+        <li>
+          <Link
+            href={nav.signIn.href}
+            className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+          >
+            {nav.signIn.label}
+          </Link>
+        </li>
       </ul>
     </header>
   );
