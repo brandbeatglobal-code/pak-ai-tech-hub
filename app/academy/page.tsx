@@ -21,7 +21,7 @@ const sectionHeading =
 const sectionPad = "px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32";
 const container = `mx-auto w-full max-w-6xl ${sectionPad}`;
 
-/** Small check mark, matching the one on /pricing. */
+/** Small check mark. Decorative — every row it marks is labelled in text. */
 function CheckMark() {
   return (
     <svg

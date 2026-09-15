@@ -8,7 +8,7 @@ import { products, providers } from "./schema";
  * Seeds the first-party provider and its eight products.
  *
  * The product rows are read from `siteCopy.marketplace.products.items` — the
- * same array `/marketplace` and `/pricing` render — rather than retyped, so
+ * same array `/marketplace` renders — rather than retyped, so
  * the seed cannot disagree with what the site shows.
  *
  * This is seed data only. The marketing pages still render from the static
