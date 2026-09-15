@@ -1,8 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { useId, useState } from "react";
 
+import { HoverScale } from "@/components/motion/hover-scale";
 import { Reveal } from "@/components/motion/reveal";
 import type { HowItWorksSide } from "@/content/site-copy";
 
@@ -184,6 +186,35 @@ export function HowItWorks({ sides }: { sides: HowItWorksSide[] }) {
               );
             })}
           </ol>
+
+          {/*
+            The action each column ends on.
+
+            Outside the <ol> — it is not a step, and putting it inside would
+            number it as one. `mt-8` sits it clear of the last step whether
+            that step is open or closed; because it follows the list in normal
+            flow rather than being positioned against it, a step expanding just
+            pushes it down, which costs no layout shift of its own.
+
+            The provider button is the gradient primary, identical to the one
+            in the provider band further down the page — the same action
+            should not look like two different offers. The buyer button is the
+            outline secondary used for "Talk to us" elsewhere, minus that
+            style's `bg-white/70 backdrop-blur`, which exists to sit on the
+            gradient hero backdrop and buys nothing on an opaque white card.
+          */}
+          <HoverScale className="mt-8 inline-block">
+            <Link
+              href={side.cta.href}
+              className={
+                side.id === "providers"
+                  ? "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90"
+                  : "inline-flex items-center justify-center rounded-full border border-brand-navy/15 px-6 py-3 text-base font-semibold text-brand-navy transition-colors hover:border-brand-navy/40"
+              }
+            >
+              {side.cta.label}
+            </Link>
+          </HoverScale>
         </div>
       ))}
     </div>

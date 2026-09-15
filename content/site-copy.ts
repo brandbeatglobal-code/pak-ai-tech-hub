@@ -51,6 +51,13 @@ export type HowItWorksSide = {
   id: "buyers" | "providers";
   title: string;
   steps: Step[];
+  /**
+   * The action the column ends on, shown as a button under its last step.
+   *
+   * Each side's CTA is the shared object for that action, not a label typed
+   * again here — see `browseProductsCta` and `startListingCta`.
+   */
+  cta: NavLink;
 };
 
 export type OfferingTab = {
@@ -271,6 +278,35 @@ const founder = {
 const commissionTerms =
   "We take a 20% commission only when you make a sale — nothing upfront.";
 
+/**
+ * The two calls to action that appear in more than one place.
+ *
+ * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
+ *
+ * "Browse AI products" was typed out five times — the flagship banner and the
+ * pricing, about and contact pages — and "Start listing — it's free" twice,
+ * once in the provider band and once in the provider column of `howItWorks`.
+ * Same label, same href, same action each time, which is a copy change waiting
+ * to half-land. Every one of them now reads from here.
+ *
+ * Reusing one action's wording everywhere is the point: a visitor should not
+ * meet "Browse AI products", "Browse the marketplace" and "See all products"
+ * for the same click. If the wording changes, change it here.
+ *
+ * Not every marketplace link belongs to these — `contact.reachUs` says "Browse
+ * the marketplace" in a sentence-like card, which is deliberately its own
+ * phrasing rather than a button label.
+ */
+const browseProductsCta = {
+  label: "Browse AI products",
+  href: "/marketplace",
+} satisfies NavLink;
+
+const startListingCta = {
+  label: "Start listing — it's free",
+  href: "/sign-up?role=provider",
+} satisfies NavLink;
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -442,7 +478,7 @@ export const siteCopy = {
     eyebrow: "The PAKAI TechHub platform",
     headline: "A marketplace built on trust",
     body: "Our own products and vetted partner tools in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
-    primaryCta: { label: "Browse AI products", href: "/marketplace" },
+    primaryCta: browseProductsCta,
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
     /**
      * The three-up row under the banner is rendered from `offering.tabs` —
@@ -499,6 +535,8 @@ export const siteCopy = {
             detail: "Put it to work — no long procurement process.",
           },
         ],
+        /* Where the buyer journey lands: the marketplace itself. */
+        cta: browseProductsCta,
       },
       {
         id: "providers",
@@ -529,6 +567,8 @@ export const siteCopy = {
             detail: commissionTerms,
           },
         ],
+        /* The same action, and the same button, as the provider band below. */
+        cta: startListingCta,
       },
     ] satisfies HowItWorksSide[],
   },
@@ -559,7 +599,7 @@ export const siteCopy = {
   providerCta: {
     heading: "List your AI product on PAKAI TechHub",
     body: `Free to list. ${commissionTerms}`,
-    cta: { label: "Start listing — it's free", href: "/sign-up?role=provider" },
+    cta: startListingCta,
     /* See the note on the removed `audience` block: keep this generic. */
     figureCaption: "AI for modern business",
   },
@@ -887,7 +927,7 @@ export const siteCopy = {
       headline: "Simple, transparent pricing",
       subhead:
         "One price per product, shown upfront. No custom quotes, no setup fees, no surprises.",
-      primaryCta: { label: "Browse AI products", href: "/marketplace" },
+      primaryCta: browseProductsCta,
       secondaryCta: { label: "Talk to us", href: "/contact" },
     },
     included: {
@@ -932,7 +972,7 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to start?",
-      cta: { label: "Browse AI products", href: "/marketplace" },
+      cta: browseProductsCta,
     },
   },
 
@@ -1006,7 +1046,7 @@ export const siteCopy = {
       headline: "Making AI something every business can use",
       subhead:
         "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
-      primaryCta: { label: "Browse AI products", href: "/marketplace" },
+      primaryCta: browseProductsCta,
       secondaryCta: { label: "Get in touch", href: "/contact" },
     },
     story: {
@@ -1343,7 +1383,7 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to get started instead?",
-      cta: { label: "Browse AI products", href: "/marketplace" },
+      cta: browseProductsCta,
     },
   },
 };
