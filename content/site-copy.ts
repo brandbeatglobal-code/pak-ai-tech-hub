@@ -34,6 +34,16 @@ export type NavItem = NavLink & {
 export type Step = {
   number: string;
   title: string;
+  /**
+   * One line of supporting detail, revealed when the step is expanded.
+   *
+   * Required, so a step cannot be added without saying what it means. Every
+   * one of these restates something the site already establishes elsewhere —
+   * the trial terms, the review gate, the commission split — rather than
+   * making a new claim. Keep it that way: if a detail here is the only place
+   * a fact appears, it belongs in the section that owns the fact first.
+   */
+  detail: string;
 };
 
 /** One column of "How it works" — the buyer's journey or the provider's. */
@@ -244,6 +254,23 @@ const founder = {
   bio: "Visionary leader driving AI adoption worldwide. Customer care operations expert.",
 };
 
+/**
+ * The commission model, in one sentence.
+ *
+ * THIS IS THE ONLY PLACE THE COMMISSION SPLIT SHOULD BE WRITTEN.
+ *
+ * Two surfaces state it: the last step of the provider column in `howItWorks`,
+ * and the body of the `providerCta` band. They previously carried the same
+ * sentence typed out twice, which is exactly how the founder content drifted
+ * before it was consolidated. Both now read from here, so changing the split
+ * is a one-line edit and the two cannot disagree.
+ *
+ * It is a real term of the marketplace, not a projection. Do not add payout
+ * timings, fee tiers or minimums — none of those are settled.
+ */
+const commissionTerms =
+  "We take a 20% commission only when you make a sale — nothing upfront.";
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -438,24 +465,69 @@ export const siteCopy = {
    */
   howItWorks: {
     heading: "How it works",
+    /**
+     * Each step carries a `detail` line, revealed when the step is expanded.
+     *
+     * None of them is a new claim — every one restates something the site
+     * already establishes, noted per step below. Step 1 of each column is the
+     * one open by default, so the section says something before anyone
+     * interacts with it.
+     */
     sides: [
       {
         id: "buyers",
         title: "For buyers",
         steps: [
-          { number: "1", title: "Browse" },
-          { number: "2", title: "Try free" },
-          { number: "3", title: "Use it" },
+          {
+            number: "1",
+            title: "Browse",
+            /* The search field and category bar directly above this section. */
+            detail:
+              "Search or filter by category to find AI tools for your business.",
+          },
+          {
+            number: "2",
+            title: "Try free",
+            /* Same trial terms as `hero.reassurance` and the /pricing page. */
+            detail:
+              "Every listing includes a 7-day free trial, no card required.",
+          },
+          {
+            number: "3",
+            title: "Use it",
+            /* The no-procurement point the audience tiles used to carry. */
+            detail: "Put it to work — no long procurement process.",
+          },
         ],
       },
       {
         id: "providers",
         title: "For providers",
         steps: [
-          { number: "1", title: "Sign up free" },
-          { number: "2", title: "List your product" },
-          { number: "3", title: "Reach buyers worldwide" },
-          { number: "4", title: "Get paid, keep 80%" },
+          {
+            number: "1",
+            title: "Sign up free",
+            /* The provider side of /sign-up, which the nav CTA links to. */
+            detail: "Create a provider account in a couple of minutes.",
+          },
+          {
+            number: "2",
+            title: "List your product",
+            /* The review gate stated in `whyPakai` and `about.different`. */
+            detail: "Submit it for review by our team before it goes live.",
+          },
+          {
+            number: "3",
+            title: "Reach buyers worldwide",
+            /* The marketplace search this page now leads with. */
+            detail: "Get discovered by businesses searching the marketplace.",
+          },
+          {
+            number: "4",
+            title: "Get paid, keep 80%",
+            /* Read from the shared constant — see `commissionTerms`. */
+            detail: commissionTerms,
+          },
         ],
       },
     ] satisfies HowItWorksSide[],
@@ -479,15 +551,14 @@ export const siteCopy = {
   /*
    * The provider recruitment band.
    *
-   * `body` is the commission model stated plainly, and it is the same 80/20
-   * split as the last step of the provider column in `howItWorks` — the two
-   * must agree. It is a real term of the marketplace, not a projection, so it
-   * is safe to state without hedging; nothing else about provider economics
-   * is settled, so do not add payout timings, fee tiers or minimums here.
+   * `body` is "Free to list." plus the shared `commissionTerms` sentence —
+   * the same words the last step of the provider column in `howItWorks`
+   * shows, read from one constant rather than typed out in both places. See
+   * the note on `commissionTerms` for what must not be added to it.
    */
   providerCta: {
     heading: "List your AI product on PAKAI TechHub",
-    body: "Free to list. We take a 20% commission only when you make a sale — nothing upfront.",
+    body: `Free to list. ${commissionTerms}`,
     cta: { label: "Start listing — it's free", href: "/sign-up?role=provider" },
     /* See the note on the removed `audience` block: keep this generic. */
     figureCaption: "AI for modern business",
