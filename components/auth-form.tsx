@@ -29,6 +29,7 @@ export function AuthForm({
   pendingLabel,
   footer,
   showRoleChoice = false,
+  initialRole = "buyer",
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   heading: string;
@@ -37,9 +38,18 @@ export function AuthForm({
   pendingLabel: string;
   footer: React.ReactNode;
   showRoleChoice?: boolean;
+  /**
+   * Which option starts selected, from `?role=` on the sign-up page.
+   *
+   * It is only ever a starting point — the radio group stays editable, so
+   * arriving from a provider link and deciding to sign up as a buyer takes one
+   * click. The value the server acts on is the one posted in the form, not
+   * this one.
+   */
+  initialRole?: "buyer" | "provider";
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
-  const [role, setRole] = useState<"buyer" | "provider">("buyer");
+  const [role, setRole] = useState<"buyer" | "provider">(initialRole);
 
   return (
     <div className="mx-auto w-full max-w-md">

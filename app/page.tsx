@@ -1,5 +1,12 @@
 import Link from "next/link";
 
+import {
+  BrowseProvider,
+  CategoryBar,
+  CategoryGrid,
+  ExampleListings,
+  HeroSearch,
+} from "@/components/home-browse";
 import { HeroBackdrop } from "@/components/motion/hero-backdrop";
 import { HoverLift } from "@/components/motion/hover-lift";
 import { HoverScale } from "@/components/motion/hover-scale";
@@ -27,15 +34,16 @@ const container = `mx-auto w-full max-w-6xl ${sectionPad}`;
 
 export default function Home() {
   const {
+    nav,
     hero,
     trustStrip,
-    audience,
+    marketplace,
     flagship,
     howItWorks,
-    stats,
+    providerCta,
+    categoryBrowse,
     offering,
     whyPakai,
-    industries,
     worksWith,
     founder,
     resources,
@@ -44,13 +52,20 @@ export default function Home() {
   } = siteCopy;
 
   return (
-    <>
-      {/* 1. Hero */}
+    /*
+      Search, the category bar and the listings grid are three sections apart
+      on the page but one selection, so they share a context rather than being
+      three separate widgets that each remember their own filter. Everything
+      inside that is not one of those three still renders on the server.
+    */
+    <BrowseProvider>
+      {/* 1. Hero — headline, subhead, and the search field that leads the page */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        {/* Centred, matching the reference layout: the homepage headline is
-            the one place on the site that gets the full width of the column. */}
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-36">
+        {/* Shorter than it was: the category bar and the first row of listings
+            are meant to be reachable without scrolling far, which is the whole
+            point of leading with search. */}
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
           <Reveal className="mx-auto max-w-4xl text-center">
             <h1 className="text-[2.75rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg lg:text-display-xl">
               {hero.headline}
@@ -58,31 +73,48 @@ export default function Home() {
             <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
               {hero.subhead}
             </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <HoverScale>
-                <Link
-                  href={hero.primaryCta.href}
-                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90"
-                >
-                  {hero.primaryCta.label}
-                </Link>
-              </HoverScale>
-              <HoverScale>
-                <Link
-                  href={hero.secondaryCta.href}
-                  className="inline-flex items-center justify-center rounded-full border border-brand-navy/15 bg-white/70 px-6 py-3 text-base font-semibold text-brand-navy backdrop-blur transition-colors hover:border-brand-navy/40"
-                >
-                  {hero.secondaryCta.label}
-                </Link>
-              </HoverScale>
-            </div>
+            <HeroSearch />
             {/* Restates the trial terms already on /pricing — not a new claim. */}
             <p className="mt-5 text-sm text-brand-navy/65">{hero.reassurance}</p>
           </Reveal>
         </div>
       </section>
 
-      {/* 2. Trust strip */}
+      {/* 2. Category bar and the example listings it filters */}
+      {/*
+        One section, not two. The bar is the grid's control — separating them
+        with the page's usual section padding would put a band of white space
+        between a filter and the thing it filters.
+      */}
+      <section
+        id="example-listings"
+        className="scroll-mt-40 border-t border-black/5 bg-brand-navy/[0.02]"
+      >
+        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+          <CategoryBar />
+          <div className="mt-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+              <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
+                {marketplace.products.heading}
+              </h2>
+              <Link
+                href="/marketplace"
+                className="text-sm font-semibold text-brand-navy underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
+              >
+                {nav.menus.marketplace.viewAll} &rarr;
+              </Link>
+            </div>
+            <p className="mt-3 max-w-2xl leading-relaxed text-brand-navy/70">
+              {marketplace.products.intro}
+            </p>
+            <div className="mt-8">
+              <ExampleListings />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Trust strip */}
       <section
         aria-label="Why PAKAI TechHub"
         className="border-y border-black/5 bg-brand-navy/[0.02]"
@@ -105,44 +137,75 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* 3. Who it's built for */}
+      {/* 4. How it works, split by which side of the marketplace you are on */}
       {/*
-        The two sides of the marketplace. This previously showed four
-        Pakistani market segments with reach figures; the global rebrand
-        dropped those rather than inventing worldwide equivalents — see the
-        note on `audience.tiles`. Do not swap in logos or "trusted by" names
-        until real ones are confirmed.
+        /marketplace links here as /#how-it-works, and so does the flagship
+        banner below. scroll-mt clears the two-row sticky nav so the heading is
+        not hidden behind it on arrival.
+
+        Two columns, because a marketplace has two journeys and the page used
+        to describe only the buyer's. The provider column ends on the
+        commission split, which is the one settled economic term the
+        marketplace has — see the note on `howItWorks` for what not to add.
+      */}
+      <section
+        id="how-it-works"
+        className="relative isolate scroll-mt-40 border-y border-black/5 bg-brand-navy/[0.02]"
+      >
+        <SectionGlow placement="left" />
+        <div className={`relative ${container}`}>
+          <Reveal>
+            <h2 className={sectionHeading}>{howItWorks.heading}</h2>
+            <div className="mt-12 grid gap-5 lg:grid-cols-2">
+              {howItWorks.sides.map((side) => (
+                <div
+                  key={side.id}
+                  className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-10"
+                >
+                  <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
+                    {side.title}
+                  </h3>
+                  <ol className="mt-7 space-y-5">
+                    {side.steps.map((step) => (
+                      <li key={step.number} className="flex items-center gap-4">
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green text-sm font-bold text-brand-navy">
+                          {step.number}
+                        </span>
+                        <span className="text-lg font-semibold text-brand-navy">
+                          {step.title}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 5. Provider recruitment */}
+      {/*
+        The supply side's own band. The commission sentence is the same 80/20
+        split the provider column above ends on — if one changes, both change.
       */}
       <section className={container}>
         <Reveal>
-          <h2 className={sectionHeading}>{audience.heading}</h2>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-            {audience.intro}
-          </p>
-
-          {/* Tiles left, illustration right — the reference's text-and-image
-              band, with segment reach standing in for customer logos. */}
-          <div className="mt-12 grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:gap-10">
-            {/* Two tiles now rather than four, so they stack in one column and
-                stay the same height as the illustration beside them. The card
-                treatment is unchanged; only the count line is gone, because
-                the two sides of a marketplace have no reach figure to show. */}
-            <ul className="grid gap-5">
-              {audience.tiles.map((tile) => (
-                <HoverLift
-                  key={tile.segment}
-                  as="li"
-                  className="flex flex-1 flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+            <div>
+              <h2 className={sectionHeading}>{providerCta.heading}</h2>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-brand-navy/70">
+                {providerCta.body}
+              </p>
+              <HoverScale className="mt-9 inline-block">
+                <Link
+                  href={providerCta.cta.href}
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90"
                 >
-                  <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-                    {tile.segment}
-                  </h3>
-                  <p className="mt-4 text-lg leading-relaxed text-brand-navy/70">
-                    {tile.body}
-                  </p>
-                </HoverLift>
-              ))}
-            </ul>
+                  {providerCta.cta.label}
+                </Link>
+              </HoverScale>
+            </div>
 
             {/*
               Illustration, not a photograph — see the note in
@@ -151,18 +214,28 @@ export default function Home() {
               generic either way.
             */}
             <figure className="flex flex-col">
-              <div className="aspect-[4/3] overflow-hidden rounded-3xl border border-black/5 sm:aspect-[16/9] lg:aspect-auto lg:min-h-64 lg:flex-1">
+              <div className="aspect-[4/3] overflow-hidden rounded-3xl border border-black/5 sm:aspect-[16/9] lg:aspect-auto lg:min-h-56 lg:flex-1">
                 <SkylineArt className="h-full w-full" />
               </div>
               <figcaption className="mt-3 text-sm text-brand-navy/65">
-                {audience.figureCaption}
+                {providerCta.figureCaption}
               </figcaption>
             </figure>
           </div>
         </Reveal>
       </section>
 
-      {/* 4. Flagship platform banner */}
+      {/* 6. Browse by category — the same nine categories as the bar above */}
+      <section className="border-y border-black/5 bg-brand-navy/[0.02]">
+        <div className={container}>
+          <Reveal>
+            <h2 className={sectionHeading}>{categoryBrowse.heading}</h2>
+            <CategoryGrid />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 7. Flagship platform banner */}
       {/*
         Full-width dark band introducing the platform as a whole. The three-up
         row underneath is rendered from `offering.tabs` and links down to that
@@ -237,67 +310,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. How it works */}
-      {/* The marketplace hero links here as /#how-it-works. scroll-mt clears
-          the sticky nav so the heading is not hidden behind it on arrival. */}
-      <section
-        id="how-it-works"
-        className={`relative isolate scroll-mt-28 border-y border-black/5 bg-brand-navy/[0.02]`}
-      >
-        <SectionGlow placement="left" />
-        <div className={`relative ${container}`}>
-          <Reveal>
-            <h2 className={sectionHeading}>{howItWorks.heading}</h2>
-            <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-              {howItWorks.steps.map((step) => (
-                <HoverLift
-                  key={step.number}
-                  as="li"
-                  className="rounded-3xl border border-black/5 bg-white p-7 shadow-sm"
-                >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green text-sm font-bold text-brand-navy">
-                    {step.number}
-                  </span>
-                  <p className="mt-5 font-semibold text-brand-navy">{step.title}</p>
-                </HoverLift>
-              ))}
-            </ol>
-          </Reveal>
-        </div>
-      </section>
+      {/*
+        REMOVED: the dark stat bar ("8 products", "8 industries", "24/7
+        support"). See the note where `stats` used to be in site-copy.ts —
+        every number available today counts placeholder data, so the section
+        went rather than being restated with different figures. Do not
+        reinstate it with invented metrics.
+      */}
 
-      {/* 6. Stats bar */}
-      <section aria-label="PAKAI TechHub at a glance" className="bg-brand-navy">
-        <Reveal>
-          <dl className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-16 text-center sm:grid-cols-3 sm:px-6 lg:px-8">
-            {stats.items.map((stat) => (
-              <div key={stat.label}>
-                <dt className="sr-only">{stat.label}</dt>
-                <dd>
-                  <span className="block bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
-                    {stat.value}
-                  </span>
-                  <span className="mt-3 block text-sm font-medium tracking-wide text-white/70 uppercase">
-                    {stat.label}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </Reveal>
-      </section>
-
-      {/* 7. Tabbed offering */}
+      {/* 8. Tabbed offering */}
       {/* The flagship banner's three-up row links here. scroll-mt clears the
-          sticky nav so the heading is not hidden behind it on arrival. */}
-      <section id="what-you-get" className={`scroll-mt-28 ${container}`}>
+          two-row sticky nav so the heading is not hidden behind it. */}
+      <section id="what-you-get" className={`scroll-mt-40 ${container}`}>
         <Reveal>
           <h2 className={sectionHeading}>{offering.heading}</h2>
           <OfferingTabs tabs={offering.tabs} />
         </Reveal>
       </section>
 
-      {/* 8. Why PAKAI TechHub */}
+      {/* 9. Why PAKAI TechHub */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="left" />
         <div className={`relative ${container}`}>
@@ -323,30 +354,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 9. Industries */}
-      <section className={container}>
-        <Reveal>
-          <h2 className={sectionHeading}>{industries.heading}</h2>
-          <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {industries.items.map((industry) => (
-              <HoverLift
-                key={industry.name}
-                as="li"
-                distance={3}
-                className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
-              >
-                <h3 className="text-sm font-bold text-brand-navy">{industry.name}</h3>
-                {/* Only industries with a shipped product carry a description. */}
-                {industry.description ? (
-                  <p className="mt-2 text-sm leading-relaxed text-brand-navy/60">
-                    {industry.description}
-                  </p>
-                ) : null}
-              </HoverLift>
-            ))}
-          </ul>
-        </Reveal>
-      </section>
+      {/*
+        REMOVED: the "Industries we cover" grid.
+
+        It listed the same eight industries the category browse grid above now
+        shows, four of them with a description and four bare, which read as an
+        unfinished list. The browse grid shows all nine consistently and, being
+        a control rather than a display, takes you to the listings in that
+        category. The industry descriptions are still in site-copy.ts — see the
+        note on `industries` for what they are kept for.
+      */}
 
       {/* 10. Works with */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
@@ -512,6 +529,6 @@ export default function Home() {
           </div>
         </Reveal>
       </section>
-    </>
+    </BrowseProvider>
   );
 }
