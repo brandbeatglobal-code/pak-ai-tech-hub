@@ -36,9 +36,11 @@ export type Step = {
   title: string;
 };
 
-export type Stat = {
-  value: string;
-  label: string;
+/** One column of "How it works" — the buyer's journey or the provider's. */
+export type HowItWorksSide = {
+  id: "buyers" | "providers";
+  title: string;
+  steps: Step[];
 };
 
 export type OfferingTab = {
@@ -65,7 +67,30 @@ export type ValueBadge = {
   body: string;
 };
 
+/**
+ * Every industry in the taxonomy.
+ *
+ * A union rather than `string` so that adding one is a compile error until a
+ * glyph is chosen for it in components/nav-icons.tsx — which is what stops a
+ * new category rendering as a blank mark in the browse grid.
+ */
+export type IndustryId =
+  | "healthcare"
+  | "agriculture"
+  | "education"
+  | "retail"
+  | "banking-finance"
+  | "manufacturing"
+  | "logistics"
+  | "real-estate";
+
 export type Industry = {
+  /**
+   * Stable slug. Used as the browse-category id on the homepage and, for the
+   * four industries that have products, it matches the `ProductCategory` of
+   * those products — which is what lets a category chip filter the grid.
+   */
+  id: IndustryId;
   name: string;
   /**
    * Only set where a real product exists for that industry. The remaining
@@ -167,9 +192,20 @@ export type Curriculum = {
   topics: string[];
 };
 
-export type AudienceTile = {
-  segment: string;
-  body: string;
+/**
+ * One of the nine categories a visitor can browse by.
+ *
+ * `productCategory` is set only where products actually exist under that
+ * category, which is what lets a chip filter the listings grid. The five
+ * without it are real parts of the taxonomy that have nothing listed yet —
+ * selecting one shows the empty-state message rather than a broken grid.
+ */
+export type BrowseCategoryId = "cross-industry" | IndustryId;
+
+export type BrowseCategory = {
+  id: BrowseCategoryId;
+  label: string;
+  productCategory?: ProductCategory;
 };
 
 /** Placeholder card for a resource that does not exist yet. */
@@ -278,15 +314,61 @@ export const siteCopy = {
      * a bigger change than this one, and not something to improvise here.
      */
     signIn: { label: "Sign in", href: "/login" },
-    cta: { label: "Start free trial", href: "/pricing" },
+    signUp: { label: "Sign up", href: "/sign-up" },
+    /*
+     * The nav CTA speaks to providers, not buyers.
+     *
+     * Buyers already have the search field, the category bar and the whole
+     * listings grid as their entry point; the supply side of the marketplace
+     * has none, so the one button in the bar is theirs. `?role=provider` is
+     * read by /sign-up and preselects the Provider option — do not drop the
+     * query string, or the button lands people on the buyer form.
+     */
+    cta: { label: "List your product", href: "/sign-up?role=provider" },
+    /*
+     * Copy for the search field in the nav, and for the larger one in the
+     * hero, which is the same control at a different size.
+     *
+     * The search is real: it filters the example listings and the category
+     * names that are already in this file. It does not reach a backend, and
+     * there is no search results page behind it, so do not write copy here
+     * that promises either.
+     */
+    search: {
+      label: "Search AI products",
+      placeholder: "Search AI products",
+      /** Screen-reader name for the category `<select>` beside the field. */
+      categoryLabel: "Filter by category",
+      allCategories: "All categories",
+      clear: "Clear search",
+      resultsLabel: "Search results",
+      /** {count} is substituted with the number of matches. */
+      resultCountOne: "1 result",
+      resultCountOther: "{count} results",
+      /** {query} is substituted with what was typed. */
+      noResults: "No products match {query}",
+      /** Row label distinguishing a category match from a product match. */
+      categoryRowLabel: "Category",
+    },
   },
 
+  /*
+   * The hero is search-first: headline, subhead, then the search field.
+   *
+   * The two CTA buttons that used to sit here are gone. Everything they
+   * pointed at is now closer to hand than a button would be — the search field
+   * itself, the category bar under it and the listings grid under that — and
+   * three competing calls to action above the fold made the search look
+   * optional. The provider side keeps its button in the nav.
+   *
+   * No stat row. There was one ("8 products, 8 industries, 24/7 support") and
+   * it was removed rather than restated: see the note where `stats` used to
+   * be, further down this file.
+   */
   hero: {
     headline: "One place to find, try, and run AI",
     subhead:
       "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
-    primaryCta: { label: "Browse AI products", href: "/marketplace" },
-    secondaryCta: { label: "Start free trial", href: "/pricing" },
     /** Same trial terms the pricing page states — not a new claim. */
     reassurance: "7-day free trial, no card required.",
   },
@@ -300,40 +382,22 @@ export const siteCopy = {
     ],
   },
 
-  audience: {
-    heading: "Who PAKAI TechHub is built for",
-    intro:
-      "A marketplace has two sides. PAKAI TechHub is built for both of them.",
-    /*
-     * Caption for the illustration beside the tiles.
-     *
-     * Deliberately generic. It describes the subject of an illustrative
-     * graphic, not a place PAKAI operates from or a customer it serves — do
-     * not change it to name a city, an office or a client, and keep it
-     * generic if the artwork is ever swapped for a licensed stock photo.
-     */
-    figureCaption: "AI for modern business",
-    /*
-     * The two sides of the marketplace, not market segments.
-     *
-     * This previously held four reach figures for Pakistani market segments
-     * (SMEs, Mid-Market, Enterprise, Government). Those were removed with the
-     * global rebrand: they described one country's market, and there is no
-     * worldwide equivalent the team has supplied. Do not substitute invented
-     * global figures, and do not add logos, names or "trusted by" claims here
-     * until real ones are confirmed.
-     */
-    tiles: [
-      {
-        segment: "For businesses",
-        body: "Find AI tools, try them free, and put them to work — no procurement headaches.",
-      },
-      {
-        segment: "For AI providers",
-        body: "List your product, reach customers worldwide, and pay commission only when you make a sale.",
-      },
-    ] satisfies AudienceTile[],
-  },
+  /*
+   * REMOVED: the `audience` block ("Who PAKAI TechHub is built for").
+   *
+   * It held two tiles, "For businesses" and "For AI providers", saying what
+   * each side of the marketplace gets. `howItWorks` below now says the same
+   * thing in more detail and in the same two-column shape, so the tiles were
+   * repeating the section directly beneath them.
+   *
+   * Do not reinstate it. If a point is missing, it belongs in the matching
+   * side of `howItWorks`, not in a second block that has to be kept in step
+   * with it.
+   *
+   * Its caption for the illustration ("AI for modern business") moved to
+   * `providerCta.figureCaption`, which is where that artwork now sits, and
+   * carries the same constraint with it.
+   */
 
   /**
    * Full-width banner introducing the platform as a whole.
@@ -361,29 +425,89 @@ export const siteCopy = {
     linksLabel: "What's on the platform",
   },
 
+  /*
+   * How it works, split by which side of the marketplace you are on.
+   *
+   * This used to be one five-step row written entirely from the buyer's point
+   * of view, which left the provider journey unstated anywhere on the page.
+   *
+   * The buyer steps are the same commitments the old row made, minus two that
+   * were platform admin rather than steps a buyer takes ("Subscribe to a
+   * monthly plan", "We handle support and updates") — both are still stated on
+   * /pricing, which is where they belong.
+   */
   howItWorks: {
     heading: "How it works",
-    steps: [
-      { number: "1", title: "Browse AI products" },
-      { number: "2", title: "Free 7-day trial" },
-      { number: "3", title: "Get trained via AI Academy" },
-      { number: "4", title: "Subscribe to a monthly plan" },
-      { number: "5", title: "We handle support and updates" },
-    ] satisfies Step[],
+    sides: [
+      {
+        id: "buyers",
+        title: "For buyers",
+        steps: [
+          { number: "1", title: "Browse" },
+          { number: "2", title: "Try free" },
+          { number: "3", title: "Use it" },
+        ],
+      },
+      {
+        id: "providers",
+        title: "For providers",
+        steps: [
+          { number: "1", title: "Sign up free" },
+          { number: "2", title: "List your product" },
+          { number: "3", title: "Reach buyers worldwide" },
+          { number: "4", title: "Get paid, keep 80%" },
+        ],
+      },
+    ] satisfies HowItWorksSide[],
   },
 
-  stats: {
-    /*
-     * The product count must match what /marketplace and /pricing actually
-     * list — currently 8. If a product ships, change it in all three places
-     * (the two pages read from `marketplace.products`, so in practice that
-     * means adding the product there and updating this number).
-     */
-    items: [
-      { value: "8", label: "Products" },
-      { value: "8", label: "Industries" },
-      { value: "24/7", label: "Support" },
-    ] satisfies Stat[],
+  /*
+   * REMOVED: the `stats` block and the dark stat bar it fed.
+   *
+   * It showed "8 products", "8 industries" and "24/7 support". The first two
+   * counted example listings and taxonomy entries, not anything a visitor
+   * would understand the numbers to mean, and the third is a support
+   * commitment no rota exists for yet.
+   *
+   * Do not replace it with other figures. There is no honest number to put
+   * above the fold on this page today: every count available is a count of
+   * placeholder data. The one true economic fact the marketplace has is the
+   * commission split, and that is stated in words in `howItWorks` and
+   * `providerCta` rather than dressed up as a metric.
+   */
+
+  /*
+   * The provider recruitment band.
+   *
+   * `body` is the commission model stated plainly, and it is the same 80/20
+   * split as the last step of the provider column in `howItWorks` — the two
+   * must agree. It is a real term of the marketplace, not a projection, so it
+   * is safe to state without hedging; nothing else about provider economics
+   * is settled, so do not add payout timings, fee tiers or minimums here.
+   */
+  providerCta: {
+    heading: "List your AI product on PAKAI TechHub",
+    body: "Free to list. We take a 20% commission only when you make a sale — nothing upfront.",
+    cta: { label: "Start listing — it's free", href: "/sign-up?role=provider" },
+    /* See the note on the removed `audience` block: keep this generic. */
+    figureCaption: "AI for modern business",
+  },
+
+  /*
+   * The nine browse categories, rendered as the category bar under the hero
+   * and as the grid further down.
+   *
+   * Name only, by design. A product count would read "0" for five of the nine
+   * and "1" for three of the rest, which says the marketplace is empty rather
+   * than that it is new. Add counts when the counts are worth showing.
+   *
+   * The list itself is derived in `browseCategories` below, from the industry
+   * taxonomy — there is no second list of categories to keep in step.
+   */
+  categoryBrowse: {
+    heading: "Browse by category",
+    /** Accessible name for the horizontally scrolling bar under the hero. */
+    barLabel: "Browse by category",
   },
 
   resources: {
@@ -406,7 +530,7 @@ export const siteCopy = {
     heading: "What you get with PAKAI TechHub",
     /**
      * Tab 2 deliberately avoids naming any marketplace partner. Do not add
-     * CustomGPT, BotPenguin, TruBot or any other vendor here until that
+     * CustomGPT, BotPenguin, TruBot or any other provider here until that
      * partnership is confirmed the same way KladAI's was — see `worksWith`.
      */
     tabs: [
@@ -414,7 +538,13 @@ export const siteCopy = {
         id: "own-products",
         label: "Own AI Products",
         headline: "Ready to deploy, built in-house",
-        body: "TechHub Chatbot, Analytics, Content, and CRM — built by our team, with training included from day one.",
+        /*
+         * Describes the in-house products without naming them. They used to be
+         * listed here by name, which meant renaming one left this sentence
+         * quoting a product that no longer existed. The names live in
+         * `marketplace.products.items`; if this line needs them, derive them.
+         */
+        body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
         link: { label: "Learn more", href: "#" },
       },
       {
@@ -460,6 +590,17 @@ export const siteCopy = {
     ] satisfies ValueCard[],
   },
 
+  /**
+   * The industry taxonomy, and the source of record for the browse categories
+   * below. Nothing else may define an industry list.
+   *
+   * The homepage no longer renders this as its own section — the category
+   * browse grid and the category bar took that over, and both show name only.
+   * The descriptions are kept because they are the only written account of
+   * what each industry covers, and the next surface that needs one (an
+   * industry page, a category landing page) should read them from here rather
+   * than write new ones.
+   */
   industries: {
     heading: "Industries we cover",
     /**
@@ -469,25 +610,29 @@ export const siteCopy = {
      */
     items: [
       {
+        id: "healthcare",
         name: "Healthcare",
         description: "Patient triage, diagnostics, and EHR analysis for hospitals.",
       },
       {
+        id: "agriculture",
         name: "Agriculture",
         description: "Crop monitoring, yield prediction, and soil analysis.",
       },
       {
+        id: "education",
         name: "Education",
         description: "Adaptive learning, grading, and engagement prediction.",
       },
       {
+        id: "retail",
         name: "Retail",
         description: "Customer behavior, demand forecasting, and dynamic pricing.",
       },
-      { name: "Banking & Finance" },
-      { name: "Manufacturing" },
-      { name: "Logistics" },
-      { name: "Real Estate" },
+      { id: "banking-finance", name: "Banking & Finance" },
+      { id: "manufacturing", name: "Manufacturing" },
+      { id: "logistics", name: "Logistics" },
+      { id: "real-estate", name: "Real Estate" },
     ] satisfies Industry[],
   },
 
@@ -531,7 +676,27 @@ export const siteCopy = {
       secondaryCta: { label: "How it works", href: "/#how-it-works" },
     },
     products: {
-      heading: "Our products",
+      /*
+       * "Example listings", not "Our products".
+       *
+       * Nothing in this array is buyable. The eight entries are illustrative —
+       * real product shapes at real-looking prices, standing in for listings
+       * that providers have not made yet — so every surface that renders them
+       * carries the `exampleBadge` and the disabled `buyLabel` button, and the
+       * heading says what they are. Do not relabel this "Our products",
+       * "Featured" or "Popular" until there is something behind it.
+       */
+      heading: "Example listings",
+      intro:
+        "Illustrative listings showing what a product page will carry. None of these are buyable yet.",
+      /** Badge on every card. Same treatment as the "Coming soon" labels. */
+      exampleBadge: "Example",
+      /*
+       * The buy button on each card, permanently disabled. There is no
+       * checkout, so a working-looking button would be a lie; a disabled one
+       * that says why is not. Do not wire this to a cart.
+       */
+      buyLabel: "Coming soon",
       filterLegend: "Filter products by category",
       /**
        * Announced to screen readers when the filter changes the grid. Kept as
@@ -556,7 +721,7 @@ export const siteCopy = {
       items: [
         {
           id: "chatbot",
-          name: "TechHub Chatbot",
+          name: "AI Customer Support Chatbot",
           category: "cross-industry",
           description:
             "Multi-channel AI customer service for web, WhatsApp, and SMS. Available around the clock.",
@@ -565,7 +730,7 @@ export const siteCopy = {
         },
         {
           id: "analytics",
-          name: "TechHub Analytics",
+          name: "AI Predictive Analytics Dashboard",
           category: "cross-industry",
           description:
             "Predictive analytics dashboard with real-time insights and AI recommendations.",
@@ -574,7 +739,7 @@ export const siteCopy = {
         },
         {
           id: "content",
-          name: "TechHub Content",
+          name: "AI Content Generator",
           category: "cross-industry",
           description:
             "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
@@ -583,7 +748,7 @@ export const siteCopy = {
         },
         {
           id: "crm",
-          name: "TechHub CRM",
+          name: "AI Sales CRM",
           category: "cross-industry",
           description:
             "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
@@ -592,7 +757,7 @@ export const siteCopy = {
         },
         {
           id: "health",
-          name: "TechHub Health",
+          name: "AI Patient Triage & Diagnostics",
           category: "healthcare",
           description:
             "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
@@ -601,7 +766,7 @@ export const siteCopy = {
         },
         {
           id: "agri",
-          name: "TechHub Agri",
+          name: "AI Crop Monitoring",
           category: "agriculture",
           description:
             "Crop monitoring, yield prediction, and soil analysis for farmers.",
@@ -610,7 +775,7 @@ export const siteCopy = {
         },
         {
           id: "edu",
-          name: "TechHub Edu",
+          name: "AI Adaptive Learning Platform",
           category: "education",
           description:
             "Adaptive learning, automated grading, and student engagement prediction.",
@@ -619,7 +784,7 @@ export const siteCopy = {
         },
         {
           id: "retail",
-          name: "TechHub Retail",
+          name: "AI Demand Forecasting",
           category: "retail",
           description:
             "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
@@ -1111,5 +1276,43 @@ export const siteCopy = {
     },
   },
 };
+
+/**
+ * The nine browse categories, in the order they are shown.
+ *
+ * Derived, not written. "Cross-Industry" comes off the marketplace filter list
+ * — it is a product category that spans every industry rather than an industry
+ * in its own right, so it leads — and the other eight are the industry
+ * taxonomy in `industries.items`, in its order.
+ *
+ * Deriving it is the point: there is exactly one place to add an industry, and
+ * a category cannot appear in the bar, the grid or the nav's category select
+ * without existing in the taxonomy first. Do not hand-write a parallel list,
+ * and do not add a category here that no part of the site recognises — the
+ * previous version of this page invented categories that matched nothing.
+ *
+ * `productCategory` is set where the id is also a real `ProductCategory`, and
+ * that is what a chip filters on. The five without it — Banking & Finance,
+ * Manufacturing, Logistics, Real Estate, and any industry added later — are
+ * honest empty categories: selecting one says nothing is listed yet.
+ */
+const PRODUCT_CATEGORY_IDS = new Set<string>(
+  siteCopy.marketplace.products.categories
+    .filter((category) => category.id !== "all")
+    .map((category) => category.id),
+);
+
+function asProductCategory(id: string): ProductCategory | undefined {
+  return PRODUCT_CATEGORY_IDS.has(id) ? (id as ProductCategory) : undefined;
+}
+
+export const browseCategories: BrowseCategory[] = [
+  { id: "cross-industry", label: "Cross-Industry", productCategory: "cross-industry" },
+  ...siteCopy.industries.items.map((industry) => ({
+    id: industry.id,
+    label: industry.name,
+    productCategory: asProductCategory(industry.id),
+  })),
+];
 
 export default siteCopy;

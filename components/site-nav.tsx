@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
+import { NavSearch } from "@/components/nav-search";
 import { FlagshipArt } from "@/components/visuals/flagship-art";
 import {
   siteCopy,
@@ -140,6 +141,15 @@ function Chevron({ open }: { open: boolean }) {
 /**
  * Top navigation.
  *
+ * Two rows at every width. Row 1 carries the brand, the marketplace search and
+ * the account actions; row 2 carries the section links and is the page's only
+ * nav landmark. Splitting them is what makes room for a search field wide
+ * enough to use — see the note on row 1.
+ *
+ * Deliberately no cart and no notification icons. Nothing is purchasable and
+ * nothing notifies, so either one would be an affordance with nothing behind
+ * it. Do not add them before the feature they imply exists.
+ *
  * Marketplace and Academy open a dropdown; Pricing and About are plain links
  * because no sub-content exists for them. The dropdowns follow the disclosure
  * pattern rather than `role="menu"`: the trigger is a real button carrying
@@ -242,21 +252,16 @@ export function SiteNav() {
       className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur"
     >
       {/*
-        `relative` here rather than on each <li>: the dropdown panels are wide
-        enough that they need to be centred in the nav container, not under
-        their own trigger.
+        Row 1 — brand, search, account actions.
 
-        Spacing tightens between `md` and `lg` and returns to its normal values
-        at `lg`. That band is the tightest the bar ever gets — the full wordmark
-        and all four menu triggers are in play, with much less room for them
-        than a desktop screen has. Without the tighter gaps and padding, adding
-        Sign in beside the CTA pushes the row past the viewport at 768px.
-        Measured, not guessed — see the comment on the Sign in link.
+        The bar is two rows at every width now, rather than one row on desktop
+        and two on mobile. The search field is the reason: it needs real width
+        to be usable, and there is no width for it beside the wordmark, four
+        menu triggers and the account links. Splitting it the way the reference
+        marketplaces do gives the field the middle of its own row and takes the
+        pressure off the 768–899px band, which previously had 35px to spare.
       */}
-      <nav
-        aria-label="Main"
-        className="relative mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-6 lg:px-8"
-      >
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-5 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center" aria-label={brand.name}>
           <Image
             src="/brand/logo.png"
@@ -276,9 +281,52 @@ export function SiteNav() {
           />
         </Link>
 
+        {/* Takes the middle of the row and shrinks before anything else does. */}
+        <NavSearch className="min-w-0 flex-1 lg:max-w-2xl" />
+
+        <div className="flex shrink-0 items-center gap-1 lg:gap-3">
+          {/*
+            Both auth links are hidden below `md`, where the flat row underneath
+            carries them instead — without that they would render twice.
+          */}
+          <Link
+            href={nav.signIn.href}
+            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy md:inline-flex"
+          >
+            {nav.signIn.label}
+          </Link>
+          <Link
+            href={nav.signUp.href}
+            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy lg:inline-flex"
+          >
+            {nav.signUp.label}
+          </Link>
+          <HoverScale>
+            <Link
+              href={nav.cta.href}
+              /* nowrap: the label is three words and the row is tight at md. */
+              className="inline-flex rounded-full bg-brand-navy px-3 py-2 text-sm font-semibold whitespace-nowrap text-white transition-opacity hover:opacity-90 sm:px-4"
+            >
+              {nav.cta.label}
+            </Link>
+          </HoverScale>
+        </div>
+      </div>
+
+      {/*
+        Row 2 — the section links, and the only nav landmark.
+
+        `relative` here rather than on each <li>: the dropdown panels are wide
+        enough that they need to be centred in the nav container, not under
+        their own trigger.
+      */}
+      <nav
+        aria-label="Main"
+        className="relative mx-auto w-full max-w-6xl border-t border-black/5 px-4 sm:px-6 lg:px-8"
+      >
         <ul
           data-nav-menus
-          className="hidden flex-1 items-center justify-center gap-1 md:flex lg:gap-2"
+          className="hidden items-center gap-1 py-1 md:flex lg:gap-2"
         >
           {nav.items.map((item) => {
             const source = item.menu;
@@ -438,66 +486,39 @@ export function SiteNav() {
           })}
         </ul>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-0 lg:gap-4">
-          {/*
-            Plain text link, so the CTA stays the only button on this side.
-
-            Hidden below `md`: the flat row underneath already carries a Sign
-            in link at those widths, and without this it renders twice.
-
-            This link is what made the `md`–`lg` band tight. Measured at 768px:
-            it adds 77px to a row that had no room to spare, so the gaps and
-            padding above give that back. Anything else added here needs the
-            same measurement — the bar is at its limit at 768px.
-          */}
-          <Link
-            href={nav.signIn.href}
-            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy md:inline-flex"
-          >
-            {nav.signIn.label}
-          </Link>
-          <HoverScale>
-            <Link
-              href={nav.cta.href}
-              /* nowrap: at the md breakpoint the row is tight enough that the
-                 label otherwise breaks across two lines. */
-              className="rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition-opacity hover:opacity-90"
-            >
-              {nav.cta.label}
-            </Link>
-          </HoverScale>
-        </div>
+        {/* Compact link row for narrow screens. Plain links, no panels — the
+            dropdowns above are desktop-only and this row is untouched by their
+            state. A `<noscript>` rule in the root layout also shows this row at
+            every width, so the nav still works with JavaScript disabled. */}
+        <ul
+          data-nav-plain
+          className="flex items-center gap-5 overflow-x-auto py-2 md:hidden"
+        >
+          {nav.items.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
+          {/* Appended rather than added to `nav.items`, which would also put
+              the auth links in the desktop menu row, where they do not belong
+              — row 1 carries them at those widths. */}
+          {[nav.signIn, nav.signUp].map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
-
-      {/* Compact link row for narrow screens. Plain links, no panels — the
-          dropdowns above are desktop-only and this row is untouched by their
-          state. A `<noscript>` rule in the root layout also shows this row at
-          every width, so the nav still works with JavaScript disabled. */}
-      <ul
-        data-nav-plain
-        className="flex items-center gap-5 overflow-x-auto border-t border-black/5 px-4 py-2 md:hidden"
-      >
-        {nav.items.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-            >
-              {item.label}
-            </Link>
-          </li>
-        ))}
-        {/* Appended rather than added to `nav.items`, which would also put it
-            in the centred desktop list where it does not belong. */}
-        <li>
-          <Link
-            href={nav.signIn.href}
-            className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-          >
-            {nav.signIn.label}
-          </Link>
-        </li>
-      </ul>
     </header>
   );
 }
