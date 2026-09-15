@@ -20,8 +20,8 @@ import * as schema from "./schema";
  *
  * Behind this proxy, the variable is read on the first actual query. A missing
  * DATABASE_URL then breaks only the routes that need a database, loudly and
- * with a message that says what to do, while `/`, `/marketplace`, `/pricing`,
- * `/about`, `/academy` and `/contact` keep building and serving.
+ * with a message that says what to do, while `/`, `/marketplace`, `/about`,
+ * `/academy` and `/contact` keep building and serving.
  */
 
 const globalForDb = globalThis as unknown as {

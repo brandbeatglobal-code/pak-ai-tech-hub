@@ -16,8 +16,8 @@ import { submitContact, type ContactState } from "@/lib/contact-actions";
  * which a div-based replacement gets for free.
  *
  * The industry and product options are derived from the same arrays
- * /marketplace and /pricing render, so the dropdowns cannot drift from what the
- * site actually offers.
+ * /marketplace renders, so the dropdowns cannot drift from what the site
+ * actually offers.
  *
  * Validation runs in two places on purpose: the browser's own constraint
  * validation for immediate feedback, and again in the server action, which is

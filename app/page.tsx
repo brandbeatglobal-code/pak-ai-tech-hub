@@ -75,7 +75,7 @@ export default function Home() {
               {hero.subhead}
             </p>
             <HeroSearch />
-            {/* Restates the trial terms already on /pricing — not a new claim. */}
+            {/* Same trial terms the How it works steps state — not a new claim. */}
             <p className="mt-5 text-sm text-brand-navy/65">{hero.reassurance}</p>
           </Reveal>
         </div>

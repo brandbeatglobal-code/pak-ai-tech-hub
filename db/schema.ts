@@ -16,8 +16,8 @@ import {
  * UI and the real provider dashboard are separate, later passes; nothing here
  * assumes their shape beyond the columns they will need.
  *
- * The marketing site does not read from this database. `/marketplace` and
- * `/pricing` still render from `content/site-copy.ts`.
+ * The marketing site does not read from this database. `/marketplace` still
+ * renders from `content/site-copy.ts`.
  */
 
 export const userRole = pgEnum("user_role", ["buyer", "provider", "admin"]);

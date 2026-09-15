@@ -156,9 +156,14 @@ export type Product = {
   /**
    * The bare amount, e.g. "$55/mo" — no "from" prefix baked in.
    *
-   * The marketplace cards prepend `marketplace.products.pricePrefix`; the
-   * pricing table shows the amount on its own. Keeping the number in one
-   * place means the two pages cannot quote different prices.
+   * The cards that show it prepend `marketplace.products.pricePrefix`, so the
+   * prefix is presentation and the number is data. Both /marketplace and the
+   * homepage's example listings read this same field, which is what stops the
+   * two surfaces quoting different prices.
+   *
+   * The /pricing table used to read it too, showing the amount without the
+   * prefix. That page is gone; this field is unchanged and still the single
+   * source for every price the site shows.
    *
    * INTERIM DISPLAY PRICING. These figures were converted from the original
    * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
@@ -289,7 +294,6 @@ export const siteCopy = {
     items: [
       { label: "Marketplace", href: "/marketplace", menu: "marketplace" },
       { label: "Academy", href: "/academy", menu: "academy" },
-      { label: "Pricing", href: "/pricing" },
       { label: "About", href: "/about" },
     ] satisfies NavItem[],
     /**
@@ -460,8 +464,11 @@ export const siteCopy = {
    *
    * The buyer steps are the same commitments the old row made, minus two that
    * were platform admin rather than steps a buyer takes ("Subscribe to a
-   * monthly plan", "We handle support and updates") — both are still stated on
-   * /pricing, which is where they belong.
+   * monthly plan", "We handle support and updates"). Those used to be stated
+   * on /pricing; that page is gone, so neither is stated anywhere on the site
+   * now. That is deliberate rather than an oversight — there is no billing to
+   * describe yet and no support rota behind a 24/7 claim. Do not reinstate
+   * either here; put it on the page that owns it when one exists.
    */
   howItWorks: {
     heading: "How it works",
@@ -488,7 +495,7 @@ export const siteCopy = {
           {
             number: "2",
             title: "Try free",
-            /* Same trial terms as `hero.reassurance` and the /pricing page. */
+            /* Same trial terms as `hero.reassurance`. */
             detail:
               "Every listing includes a 7-day free trial, no card required.",
           },
@@ -743,7 +750,13 @@ export const siteCopy = {
       headline: "Every AI product your business needs, in one place",
       subhead:
         "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
-      primaryCta: { label: "Start free trial", href: "/pricing" },
+      /*
+       * NOT /marketplace. This button sits on /marketplace, so pointing it
+       * there would make the page's own primary call to action reload the page
+       * you are already looking at. A trial starts with an account, so it goes
+       * to /sign-up — the nearest destination that actually does something.
+       */
+      primaryCta: { label: "Start free trial", href: "/sign-up" },
       secondaryCta: { label: "How it works", href: "/#how-it-works" },
     },
     products: {
@@ -877,64 +890,20 @@ export const siteCopy = {
     },
   },
 
-  pricing: {
-    meta: {
-      title: "Pricing — PAKAI TechHub",
-      description:
-        "One price per product, shown upfront. No custom quotes, no setup fees, no surprises.",
-    },
-    hero: {
-      headline: "Simple, transparent pricing",
-      subhead:
-        "One price per product, shown upfront. No custom quotes, no setup fees, no surprises.",
-      primaryCta: { label: "Browse AI products", href: "/marketplace" },
-      secondaryCta: { label: "Talk to us", href: "/contact" },
-    },
-    included: {
-      heading: "What's included, with every product",
-      items: [
-        {
-          label: "7-day free trial",
-          body: "Try before you subscribe, no card required to start.",
-        },
-        {
-          label: "Training included",
-          body: "Every product comes with AI Academy access.",
-        },
-        { label: "Real support", body: "24/7 support, not a chatbot loop." },
-      ] satisfies ValueBadge[],
-    },
-    table: {
-      heading: "Product pricing",
-      /*
-       * The rows are rendered from `marketplace.products` — the same array the
-       * marketplace page uses. Do not restate product names, categories or
-       * prices here; change them at the source and both pages follow.
-       */
-      columns: {
-        product: "Product",
-        category: "Category",
-        price: "Price",
-        training: "Training",
-      },
-      /** Training ships with every product, so every row reads the same. */
-      trainingIncludedLabel: "Included",
-      caption:
-        "Monthly price per product. Every product includes a 7-day free trial and AI Academy training.",
-    },
-    biggerNeeds: {
-      /*
-       * A routing statement, not a quote. Do not add enterprise or government
-       * price points or contract terms here — those are handled directly.
-       */
-      body: "Need something custom? Enterprise and government pricing is handled directly.",
-      cta: { label: "Contact us", href: "/contact" },
-    },
-    closingCta: {
-      heading: "Ready to start?",
-      cta: { label: "Browse AI products", href: "/marketplace" },
-    },
-  },
+  /*
+   * REMOVED: the `pricing` block, and the /pricing page it fed.
+   *
+   * It held that page's own content only — its meta, hero, the "what's
+   * included" badges, the pricing table's column labels and caption, the
+   * "bigger needs" routing line and its closing CTA. No product and no price
+   * was ever stored here: the table rendered its rows from
+   * `marketplace.products.items`, which is untouched and still the single
+   * source for every price the marketplace shows.
+   *
+   * /pricing now redirects to /marketplace (see next.config.ts). If a pricing
+   * page returns, it goes back to reading products from `marketplace.products`
+   * rather than restating them — that was the point of the earlier refactor.
+   */
 
   /** Homepage founder section. Values come from the shared `founder` source. */
   founder: {
@@ -952,7 +921,7 @@ export const siteCopy = {
 
   finalCta: {
     heading: "Ready to bring AI into your business?",
-    cta: { label: "Get started", href: "/pricing" },
+    cta: { label: "Get started", href: "/marketplace" },
   },
 
   footer: {
@@ -969,12 +938,11 @@ export const siteCopy = {
         links: [
           { label: "Marketplace", href: "/marketplace" },
           { label: "Academy", href: "/academy" },
-          { label: "Pricing", href: "/pricing" },
         ],
       },
       {
         heading: "Get started",
-        links: [{ label: "Start free trial", href: "/pricing" }],
+        links: [{ label: "Start free trial", href: "/marketplace" }],
       },
     ] satisfies FooterColumn[],
     connect: {
@@ -1122,7 +1090,7 @@ export const siteCopy = {
       headline: "AI training for every level of your team",
       subhead:
         "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
-      primaryCta: { label: "Start free trial", href: "/pricing" },
+      primaryCta: { label: "Start free trial", href: "/marketplace" },
       secondaryCta: { label: "Talk to us", href: "/contact" },
     },
     tiers: {
@@ -1223,7 +1191,7 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to build AI skills on your team?",
-      cta: { label: "Start free trial", href: "/pricing" },
+      cta: { label: "Start free trial", href: "/marketplace" },
     },
   },
 
