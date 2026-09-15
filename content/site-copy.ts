@@ -51,6 +51,13 @@ export type HowItWorksSide = {
   id: "buyers" | "providers";
   title: string;
   steps: Step[];
+  /**
+   * The action the column ends on, shown as a button under its last step.
+   *
+   * Each side's CTA is the shared object for that action, not a label typed
+   * again here — see `browseProductsCta` and `startListingCta`.
+   */
+  cta: NavLink;
 };
 
 export type OfferingTab = {
@@ -276,6 +283,35 @@ const founder = {
 const commissionTerms =
   "We take a 20% commission only when you make a sale — nothing upfront.";
 
+/**
+ * The two calls to action that appear in more than one place.
+ *
+ * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
+ *
+ * "Browse AI products" was typed out five times — the flagship banner and the
+ * pricing, about and contact pages — and "Start listing — it's free" twice,
+ * once in the provider band and once in the provider column of `howItWorks`.
+ * Same label, same href, same action each time, which is a copy change waiting
+ * to half-land. Every one of them now reads from here.
+ *
+ * Reusing one action's wording everywhere is the point: a visitor should not
+ * meet "Browse AI products", "Browse the marketplace" and "See all products"
+ * for the same click. If the wording changes, change it here.
+ *
+ * Not every marketplace link belongs to these — `contact.reachUs` says "Browse
+ * the marketplace" in a sentence-like card, which is deliberately its own
+ * phrasing rather than a button label.
+ */
+const browseProductsCta = {
+  label: "Browse AI products",
+  href: "/marketplace",
+} satisfies NavLink;
+
+const startListingCta = {
+  label: "Start listing — it's free",
+  href: "/sign-up?role=provider",
+} satisfies NavLink;
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -284,6 +320,16 @@ export const siteCopy = {
     brandmarkAlt: "PAKAI TechHub",
   },
 
+  /*
+   * The homepage's <title> and description tag, read by app/layout.tsx.
+   *
+   * `description` is deliberately kept at this literal wording, which the hero
+   * subhead used to share. It is a search-result snippet: someone reading it
+   * has no page around it, so it should say plainly what the site is and what
+   * you can do there. The hero can be punchier because the page is right
+   * behind it. See the note on `hero.subhead` — the two are separate fields
+   * and are now meant to differ.
+   */
   meta: {
     title: "PAKAI TechHub — AI for every business, everywhere.",
     description:
@@ -397,9 +443,27 @@ export const siteCopy = {
    * be, further down this file.
    */
   hero: {
-    headline: "One place to find, try, and run AI",
+    headline: "Find AI. Try it free. Put it to work.",
+    /*
+     * Deliberately NOT the same string as `meta.description`.
+     *
+     * The two were identical until this change — not because one fed the
+     * other, but because they had been written the same way. They are separate
+     * fields: `meta.description` is read by app/layout.tsx for the description
+     * tag, this is read by app/page.tsx for the visible subhead. Nothing
+     * derives one from the other, so they were free to diverge, and they now
+     * do: this is hero copy, that is a search-result snippet, and the snippet
+     * is better off literal about what the site is.
+     *
+     * If they ever need to agree again, make one read from the other rather
+     * than typing the same sentence twice.
+     *
+     * "every product reviewed before it lists" is not a new claim — it is the
+     * review gate already stated in `whyPakai`, `flagship.body` and
+     * `about.different`.
+     */
     subhead:
-      "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
+      "One marketplace, every product reviewed before it lists — browse, test, and buy with confidence.",
     /** Same trial terms the pricing page states — not a new claim. */
     reassurance: "7-day free trial, no card required.",
   },
@@ -439,14 +503,16 @@ export const siteCopy = {
    * every subscription (`pricing.included`). Do not add a new claim here;
    * add it to the section that owns it first.
    *
-   * The headline must NOT repeat the hero's. The hero owns "One place to
-   * find, try, and run AI"; this banner sits on the same page.
+   * The headline must NOT repeat the hero's. The hero owns "Find AI. Try it
+   * free. Put it to work."; this banner sits on the same page. (It previously
+   * owned "One place to find, try, and run AI" — if you are grepping for that
+   * string after a copy change, this comment is why it used to appear twice.)
    */
   flagship: {
     eyebrow: "The PAKAI TechHub platform",
     headline: "A marketplace built on trust",
     body: "Our own products and vetted partner tools in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
-    primaryCta: { label: "Browse AI products", href: "/marketplace" },
+    primaryCta: browseProductsCta,
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
     /**
      * The three-up row under the banner is rendered from `offering.tabs` —
@@ -506,6 +572,8 @@ export const siteCopy = {
             detail: "Put it to work — no long procurement process.",
           },
         ],
+        /* Where the buyer journey lands: the marketplace itself. */
+        cta: browseProductsCta,
       },
       {
         id: "providers",
@@ -536,6 +604,8 @@ export const siteCopy = {
             detail: commissionTerms,
           },
         ],
+        /* The same action, and the same button, as the provider band below. */
+        cta: startListingCta,
       },
     ] satisfies HowItWorksSide[],
   },
@@ -566,7 +636,7 @@ export const siteCopy = {
   providerCta: {
     heading: "List your AI product on PAKAI TechHub",
     body: `Free to list. ${commissionTerms}`,
-    cta: { label: "Start listing — it's free", href: "/sign-up?role=provider" },
+    cta: startListingCta,
     /* See the note on the removed `audience` block: keep this generic. */
     figureCaption: "AI for modern business",
   },
@@ -974,7 +1044,7 @@ export const siteCopy = {
       headline: "Making AI something every business can use",
       subhead:
         "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
-      primaryCta: { label: "Browse AI products", href: "/marketplace" },
+      primaryCta: browseProductsCta,
       secondaryCta: { label: "Get in touch", href: "/contact" },
     },
     story: {
@@ -1311,7 +1381,7 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to get started instead?",
-      cta: { label: "Browse AI products", href: "/marketplace" },
+      cta: browseProductsCta,
     },
   },
 };
