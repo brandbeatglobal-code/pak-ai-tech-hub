@@ -7,6 +7,7 @@ import {
   ExampleListings,
   HeroSearch,
 } from "@/components/home-browse";
+import { HowItWorks } from "@/components/how-it-works";
 import { HeroBackdrop } from "@/components/motion/hero-backdrop";
 import { HoverLift } from "@/components/motion/hover-lift";
 import { HoverScale } from "@/components/motion/hover-scale";
@@ -156,31 +157,13 @@ export default function Home() {
         <div className={`relative ${container}`}>
           <Reveal>
             <h2 className={sectionHeading}>{howItWorks.heading}</h2>
-            <div className="mt-12 grid gap-5 lg:grid-cols-2">
-              {howItWorks.sides.map((side) => (
-                <div
-                  key={side.id}
-                  className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-10"
-                >
-                  <h3 className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-                    {side.title}
-                  </h3>
-                  <ol className="mt-7 space-y-5">
-                    {side.steps.map((step) => (
-                      <li key={step.number} className="flex items-center gap-4">
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green text-sm font-bold text-brand-navy">
-                          {step.number}
-                        </span>
-                        <span className="text-lg font-semibold text-brand-navy">
-                          {step.title}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-            </div>
           </Reveal>
+          {/*
+            Outside the Reveal above, not inside it: the steps manage their own
+            expansion state and draw their own connectors, each of which
+            reveals on scroll in turn. See components/how-it-works.tsx.
+          */}
+          <HowItWorks sides={howItWorks.sides} />
         </div>
       </section>
 
