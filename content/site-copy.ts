@@ -312,6 +312,24 @@ const startListingCta = {
   href: "/sign-up?role=provider",
 } satisfies NavLink;
 
+/**
+ * The official inbox.
+ *
+ * THIS IS THE ONLY PLACE THE ADDRESS SHOULD BE WRITTEN.
+ *
+ * Four things read it: the email card on /contact, that card's mailto link,
+ * the hero's "Email us" button, and — via `contact.details.email.value` —
+ * the `to` address the contact form's Resend submission actually delivers to
+ * (`lib/contact-actions.ts`). It was typed out twice before, in the card and
+ * the hero button, which is how a half-finished address change leaves a form
+ * quietly posting to the old inbox while the page displays the new one.
+ *
+ * `pakaitechub.com` is a verified sending domain in the Resend account, so
+ * changing the local part here is safe; changing the DOMAIN is not, and needs
+ * the new one verified in Resend first or every submission starts failing.
+ */
+const contactEmail = "hello@pakaitechub.com";
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -1277,7 +1295,7 @@ export const siteCopy = {
         "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
       reach: "We work with businesses and AI providers worldwide.",
       /* Opens the visitor's mail client. See the note on `details` below. */
-      primaryCta: { label: "Email us", href: "mailto:info@pakaitechub.com" },
+      primaryCta: { label: "Email us", href: `mailto:${contactEmail}` },
     },
     /*
      * Real details only.
@@ -1286,13 +1304,15 @@ export const siteCopy = {
      * in the hero stays as the always-available fallback, and the error state
      * surfaces it too, so a delivery failure never leaves someone stuck.
      *
-     * The email address and city are the ones the team supplied. Do not add a
-     * phone number, a street address, office hours or a second inbox — none
-     * of those have been confirmed.
+     * The email address and city are the ones the team supplied. The address
+     * itself is not written here — it comes from `contactEmail` above, which
+     * the Resend `to` address reads from too. Do not add a phone number, a
+     * street address, office hours or a second inbox — none of those have
+     * been confirmed.
      */
     details: {
       heading: "How to reach us",
-      email: { label: "Email", value: "info@pakaitechub.com" },
+      email: { label: "Email", value: contactEmail },
       location: { label: "Where we are", value: "Lahore, Pakistan" },
       /*
        * The social rows reuse `footer.connect` — the same handle, the same
