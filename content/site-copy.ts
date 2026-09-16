@@ -1404,6 +1404,79 @@ export const siteCopy = {
       cta: browseProductsCta,
     },
   },
+  /*
+   * The provider product-submission form, at /dashboard/products/new.
+   *
+   * Signed-in surface, not a marketing page — but the copy lives here with
+   * everything else a visitor reads, so there is one file to change wording in.
+   *
+   * The category options are NOT listed here. They are derived from
+   * `marketplace.products.categories` by the form component, so the dropdown
+   * cannot offer a category the marketplace has no filter for. The commission
+   * line reads `commissionTerms`, the same constant the homepage bands use —
+   * do not retype the split.
+   *
+   * Nothing here may promise a review turnaround. No SLA has been agreed, and
+   * there is no admin review queue yet to meet one.
+   */
+  providerSubmit: {
+    meta: {
+      title: "Submit a product — PAKAI TechHub",
+    },
+    heading: "Submit a product for review",
+    /** Label on the link into this page from the provider dashboard panel. */
+    navLabel: "Submit a product",
+    intro:
+      "Tell us what you are listing. Every product is reviewed before it appears in the marketplace.",
+    commission: commissionTerms,
+    fields: {
+      name: "Product name",
+      description: "What does it do?",
+      category: "Category",
+      price: "Monthly price",
+    },
+    selectPlaceholder: "Select a category",
+    /*
+     * Field notes, shown under the control.
+     *
+     * The price note says "per month" because every price the marketplace
+     * shows is monthly — but the `products` table stores an amount and a
+     * currency with NO billing-period column, so the period is a marketplace
+     * convention here, not stored data. See the note on `products.priceAmount`
+     * in db/schema.ts. If a period column is ever added, this note and the
+     * field label both need revisiting.
+     */
+    notes: {
+      description: "A plain description of what a buyer gets. 40 to 600 characters.",
+      price: "US dollars per month, the only billing period the marketplace lists today.",
+      currency: "USD",
+    },
+    submit: "Submit for review",
+    submitting: "Submitting…",
+    /* Shown only after the row is actually written, never optimistically. */
+    successHeading: "Submitted for review",
+    /* {name} is replaced with the product name that was just written. */
+    successBody:
+      "{name} is now pending review. We will be in touch about the listing — there is no review queue to track it in yet.",
+    successAgain: "Submit another product",
+    backToDashboard: "Back to dashboard",
+    validation: {
+      nameRequired: "Enter a product name.",
+      nameLength: "Use between 3 and 80 characters.",
+      nameTaken: "A product with this name is already listed. Choose another name.",
+      descriptionRequired: "Describe what the product does.",
+      descriptionLength: "Use between 40 and 600 characters.",
+      category: "Choose a category.",
+      price: "Enter a price in US dollars, for example 55 or 55.00.",
+    },
+    /* Every failure path says what happened; none of them lose the form. */
+    errors: {
+      notProvider: "Only provider accounts can submit products.",
+      noProviderRecord:
+        "This account has no provider record, so there is nothing to list under. Contact us and we will sort it out.",
+      write: "We could not save that. Please try again.",
+    },
+  },
 };
 
 /**

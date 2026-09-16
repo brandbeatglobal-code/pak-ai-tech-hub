@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { siteCopy } from "@/content/site-copy";
 import { logOut } from "@/lib/auth-actions";
 import type { UserRole } from "@/db/schema";
 
@@ -13,18 +15,30 @@ export const metadata: Metadata = {
  * Role-gated stub.
  *
  * This page exists to prove the role system works end to end — sign up, log
- * in, get the right view, log out. It is NOT the real dashboard. The provider
- * product-submission form, the admin review queue and the buyer's subscription
- * view are each a separate, later pass; do not start growing them in here.
+ * in, get the right view, log out. It is NOT the real dashboard. The admin
+ * review queue and the buyer's subscription view are each a separate, later
+ * pass; do not start growing them in here.
+ *
+ * The provider entry now carries a link out to the one real feature that
+ * exists, `/dashboard/products/new`. That is a way in, not the feature: the
+ * form lives on its own route and nothing about it is built in this file.
+ * Tracking a provider's submissions and their review status is still to come.
  */
-const STUBS: Record<UserRole, { heading: string; body: string }> = {
+const STUBS: Record<
+  UserRole,
+  { heading: string; body: string; action?: { label: string; href: string } }
+> = {
   buyer: {
     heading: "Buyer dashboard — coming soon",
     body: "Your trials, subscriptions and Academy progress will live here.",
   },
   provider: {
     heading: "Provider dashboard — coming soon",
-    body: "Submit products for review and track their listing status here.",
+    body: "You can submit a product for review now. Tracking each listing's status here comes next.",
+    action: {
+      label: siteCopy.providerSubmit.navLabel,
+      href: "/dashboard/products/new",
+    },
   },
   admin: {
     heading: "Admin — coming soon",
@@ -53,6 +67,15 @@ export default async function DashboardPage() {
       <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
         {stub.body}
       </p>
+
+      {stub.action ? (
+        <Link
+          href={stub.action.href}
+          className="mt-8 inline-block rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          {stub.action.label}
+        </Link>
+      ) : null}
 
       <dl className="mt-10 max-w-md space-y-3 rounded-3xl border border-black/5 bg-white p-8 shadow-sm">
         <div className="flex justify-between gap-6">
