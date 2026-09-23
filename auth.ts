@@ -86,11 +86,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
+      /* Signing in: `authorize()` above has just read the row, so trust it. */
       if (user) {
         token.role = user.role;
         token.sub = user.id;
+        return token;
       }
+
+      /*
+        EVERY LATER CALL RE-READS THE ROLE FROM THE DATABASE.
+
+        The role used to be written into the JWT once, at sign-in, and trusted
+        until the cookie expired. That stopped being safe when roles started
+        changing after sign-in: approving a provider application flips
+        `users.role` from "buyer" to "provider" while that person is signed
+        in. With the old behaviour they would stay a buyer — refused by
+        /dashboard/products/new and by `submitProduct` — until they happened
+        to log out and back in. The same staleness would let a demoted
+        account keep its old role for the life of the cookie.
+
+        So `session.user.role` is the database's answer on every `auth()`
+        call. The cost is one primary-key lookup per call; only the signed-in
+        pages and actions call `auth()`, and the marketing pages do not.
+
+        Returning null gives back no session, so the visitor is treated as
+        signed out. That is what happens if the user row is gone, and a token
+        with no subject was never valid. If the lookup itself throws, Auth.js
+        logs a JWTSessionError and likewise returns no session: a database
+        outage sends people to /login rather than letting them keep a role
+        nobody can confirm. Both were observed, not assumed — deleting a
+        signed-in user's row, and stopping Postgres under a signed-in session,
+        each landed on /login.
+      */
+      if (!token.sub) return null;
+
+      const [current] = await db
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, token.sub))
+        .limit(1);
+
+      if (!current) return null;
+
+      token.role = current.role;
       return token;
     },
     session({ session, token }) {

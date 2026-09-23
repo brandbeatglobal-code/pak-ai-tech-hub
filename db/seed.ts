@@ -61,13 +61,24 @@ async function seed() {
   /*
     userId stays null: this provider is PAKAI TechHub itself, which has no
     person to sign in as. See the note on `providers.userId`.
+
+    `status` is set explicitly. The column defaults to "pending", because a
+    new row is normally an application awaiting review — but the first-party
+    provider is approved by definition, and it lists eight approved products.
+    Leaning on the default seeded it as pending on any fresh database: the
+    migration's backfill only touches rows that already exist, and on an empty
+    table there are none.
   */
   const provider =
     existing ??
     (
       await db
         .insert(providers)
-        .values({ companyName: FIRST_PARTY_COMPANY, userId: null })
+        .values({
+          companyName: FIRST_PARTY_COMPANY,
+          userId: null,
+          status: "approved",
+        })
         .returning()
     )[0];
 

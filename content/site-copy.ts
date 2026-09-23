@@ -307,9 +307,37 @@ const browseProductsCta = {
   href: "/marketplace",
 } satisfies NavLink;
 
+/*
+ * `/start-listing` is not a page. It is a route handler that looks at who is
+ * asking and sends them on (app/start-listing/route.ts):
+ *
+ *   signed out   -> /sign-up?role=provider, which creates a buyer account and
+ *                   lands on the provider application
+ *   buyer        -> /dashboard/apply, the application form (or its
+ *                   "under review" state, if they have already applied)
+ *   provider     -> /dashboard/products/new
+ *
+ * The decision is made on the server when the link is followed, not when the
+ * marketing page renders — so the homepage stays statically rendered and the
+ * link is never stale. Every "list your product" link on the site points here,
+ * including the nav button and the contact page card, which read this `href`
+ * rather than repeating it.
+ */
 const startListingCta = {
   label: "Start listing — it's free",
-  href: "/sign-up?role=provider",
+  href: "/start-listing",
+} satisfies NavLink;
+
+/*
+ * The way into product submission, for someone who is already a provider.
+ *
+ * Two surfaces show it: the provider panel on /dashboard (via
+ * `providerSubmit.navLabel`) and the "you are already a provider" state of the
+ * application page. One label, one href.
+ */
+const submitProductCta = {
+  label: "Submit a product",
+  href: "/dashboard/products/new",
 } satisfies NavLink;
 
 /**
@@ -415,11 +443,13 @@ export const siteCopy = {
      *
      * Buyers already have the search field, the category bar and the whole
      * listings grid as their entry point; the supply side of the marketplace
-     * has none, so the one button in the bar is theirs. `?role=provider` is
-     * read by /sign-up and preselects the Provider option — do not drop the
-     * query string, or the button lands people on the buyer form.
+     * has none, so the one button in the bar is theirs.
+     *
+     * Its own label, but `startListingCta`'s destination — the state-aware
+     * `/start-listing` redirect. It used to point straight at
+     * `/sign-up?role=provider`, which sent a signed-in buyer to a sign-up form.
      */
-    cta: { label: "List your product", href: "/sign-up?role=provider" },
+    cta: { label: "List your product", href: startListingCta.href },
     /*
      * Copy for the search field in the nav, and for the larger one in the
      * hero, which is the same control at a different size.
@@ -599,9 +629,16 @@ export const siteCopy = {
         steps: [
           {
             number: "1",
-            title: "Sign up free",
-            /* The provider side of /sign-up, which the nav CTA links to. */
-            detail: "Create a provider account in a couple of minutes.",
+            title: "Sign up and apply",
+            /*
+              Providers are approved, not self-declared: signing up creates an
+              account, and the application at /dashboard/apply is what gets
+              reviewed. This step used to promise "a provider account in a
+              couple of minutes", which stopped being true when that review
+              gate was added. Do not promise a review turnaround here — no SLA
+              has been agreed.
+            */
+            detail: "Create a free account and tell us about your business.",
           },
           {
             number: "2",
@@ -1390,7 +1427,8 @@ export const siteCopy = {
         {
           heading: "Have a product to list?",
           body: "List your AI product, reach customers worldwide, and pay commission only when you make a sale.",
-          cta: { label: "Sign up as a provider", href: "/sign-up?role=provider" },
+          /* Same destination as `startListingCta`; see the note there. */
+          cta: { label: "Apply as a provider", href: startListingCta.href },
         },
         {
           heading: "Looking for AI tools?",
@@ -1425,7 +1463,7 @@ export const siteCopy = {
     },
     heading: "Submit a product for review",
     /** Label on the link into this page from the provider dashboard panel. */
-    navLabel: "Submit a product",
+    navLabel: submitProductCta.label,
     intro:
       "Tell us what you are listing. Every product is reviewed before it appears in the marketplace.",
     commission: commissionTerms,
@@ -1475,6 +1513,120 @@ export const siteCopy = {
       noProviderRecord:
         "This account has no provider record, so there is nothing to list under. Contact us and we will sort it out.",
       write: "We could not save that. Please try again.",
+    },
+  },
+  /*
+   * The provider application, at /dashboard/apply, and the application panel
+   * on a buyer's /dashboard.
+   *
+   * A buyer applies; the application is reviewed; approval makes them a
+   * provider. There is no review UI yet, so a decision is currently made
+   * directly in the database — nothing here may imply a person is working a
+   * queue, and nothing may promise a turnaround. No SLA has been agreed.
+   *
+   * The category options are not listed here. The form reuses
+   * `CATEGORY_LABELS` from lib/product-submission.ts, the same five the
+   * product form offers, so a provider and their products are filed under one
+   * vocabulary. The commission line reads `commissionTerms`.
+   *
+   * There is no rejection reason anywhere in this block because none is
+   * stored: `providers` has no review-notes column yet. A rejected applicant is
+   * told plainly that the application was not approved, and pointed at the
+   * contact page. Add the reason when the review pass adds somewhere to keep it.
+   */
+  providerApplication: {
+    meta: {
+      title: "Apply to become a provider — PAKAI TechHub",
+    },
+    heading: "Apply to become a provider",
+    intro:
+      "Tell us about your business. Every provider is reviewed before they can list products in the marketplace.",
+    commission: commissionTerms,
+    /* Shown above the form when a rejected applicant comes back to it. */
+    resubmitNote:
+      "Your previous application was not approved. Your answers are below — update them and submit again.",
+    fields: {
+      businessName: "Business name",
+      description: "What does your business do?",
+      category: "Category",
+      website: "Website",
+      reason: "Why do you want to list on PAKAI TechHub?",
+    },
+    selectPlaceholder: "Select a category",
+    optionalLabel: "optional",
+    notes: {
+      description: "40 to 600 characters.",
+      website: "For example, example.com.",
+      reason: "20 to 600 characters.",
+    },
+    submit: "Submit application",
+    submitting: "Submitting…",
+    /* Shown only after the row is actually written, never optimistically. */
+    successHeading: "Application submitted",
+    successBody:
+      "Your application is pending review. Your dashboard will show when that changes.",
+    backToDashboard: "Back to dashboard",
+    /*
+     * What the page shows instead of the form. `pending` and `approved` are
+     * reached by a buyer; `alreadyProvider` by a provider who follows an old
+     * link here.
+     */
+    states: {
+      pending: {
+        heading: "Your application is under review",
+        body: "We have your application and will review it before you can list products. You do not need to do anything else.",
+      },
+      /*
+       * Approved, but the account is still a buyer. Only reachable if a review
+       * decision set `providers.status` without also setting `users.role` —
+       * see the note on `providers.status` in db/schema.ts. Said plainly
+       * rather than hidden, so it gets reported instead of silently stuck.
+       */
+      approved: {
+        heading: "Your application was approved",
+        body: "Provider access for this account has not finished being set up. Contact us and we will sort it out.",
+        cta: { label: "Contact us", href: "/contact" },
+      },
+      alreadyProvider: {
+        heading: "You are already a provider",
+        body: "This account can already list products, so there is nothing to apply for.",
+        cta: submitProductCta,
+      },
+    },
+    validation: {
+      businessNameLength: "Use between 2 and 100 characters.",
+      descriptionLength: "Use between 40 and 600 characters.",
+      category: "Choose a category.",
+      website: "Enter a web address, for example example.com.",
+      reasonLength: "Use between 20 and 600 characters.",
+    },
+    errors: {
+      notBuyer: "Only signed-in buyer accounts can apply to become a provider.",
+      alreadyPending: "You already have an application under review.",
+      alreadyApproved: "Your application has already been approved.",
+      write: "We could not save that. Please try again.",
+    },
+    /*
+     * The application panel on a buyer's /dashboard. One entry per state;
+     * the provider state is not here because a provider sees the provider
+     * panel, which already links to product submission.
+     */
+    dashboard: {
+      heading: "Sell on PAKAI TechHub",
+      none: {
+        body: "Apply to become a provider and list your AI products in the marketplace.",
+        cta: "Apply to become a provider",
+      },
+      pending: {
+        body: "Your provider application is under review.",
+      },
+      rejected: {
+        body: "Your provider application was not approved. You can update your answers and apply again.",
+        cta: "Update and reapply",
+      },
+      approved: {
+        body: "Your provider application was approved, but provider access has not finished being set up. Contact us and we will sort it out.",
+      },
     },
   },
 };

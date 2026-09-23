@@ -69,7 +69,9 @@ export function AuthForm({
                   {
                     value: "provider",
                     title: "Provider",
-                    detail: "List your AI product",
+                    /* "Apply", not "List": this creates a buyer account and
+                       opens the application — see `signUp`. */
+                    detail: "Apply to list your AI product",
                   },
                 ] as const
               ).map((option) => (

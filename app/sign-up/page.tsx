@@ -11,10 +11,13 @@ export const metadata: Metadata = {
 /**
  * `?role=provider` preselects the Provider option.
  *
- * The nav's "List your product" button and the homepage's provider band both
- * link here with it. Without this the links would land on the buyer form and
- * quietly sign providers up as buyers, so do not drop the parameter from those
- * links or this handling from here — they are one feature.
+ * Every "list your product" link on the site points at `/start-listing`,
+ * which sends a signed-out visitor here with this parameter. Choosing
+ * Provider does not make anyone a provider: it creates a buyer account and
+ * lands it on the provider application instead of the dashboard (see
+ * `signUp`). Without the parameter a would-be provider would land on the
+ * dashboard and have to find the application themselves, so do not drop it
+ * from the redirect in app/start-listing/route.ts.
  *
  * Anything other than "provider" falls back to the buyer default rather than
  * erroring, since the value comes off a URL anyone can edit.

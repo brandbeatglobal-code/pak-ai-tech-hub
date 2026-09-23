@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { siteCopy } from "@/content/site-copy";
+import { getApplication } from "@/lib/application-queries";
 import { logOut } from "@/lib/auth-actions";
-import type { UserRole } from "@/db/schema";
+import type { ProviderStatus, UserRole } from "@/db/schema";
 
 export const metadata: Metadata = {
   title: "Dashboard — PAKAI TechHub",
@@ -23,6 +24,11 @@ export const metadata: Metadata = {
  * exists, `/dashboard/products/new`. That is a way in, not the feature: the
  * form lives on its own route and nothing about it is built in this file.
  * Tracking a provider's submissions and their review status is still to come.
+ *
+ * A buyer additionally sees the provider-application panel below: where their
+ * application is, and a way into /dashboard/apply when there is something to
+ * do there. Same principle — a status line and a link, not the feature. The
+ * form and its states live on their own route.
  */
 const STUBS: Record<
   UserRole,
@@ -53,8 +59,12 @@ export default async function DashboardPage() {
      middleware, which runs on the edge where bcrypt cannot. */
   if (!session?.user) redirect("/login");
 
-  const { role, name, email } = session.user;
+  const { role, name, email, id } = session.user;
   const stub = STUBS[role];
+
+  /* Only a buyer has an application to show. A provider's was approved, and
+     the provider panel above already covers what they can do next. */
+  const application = role === "buyer" ? await getApplication(id) : null;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
@@ -75,6 +85,10 @@ export default async function DashboardPage() {
         >
           {stub.action.label}
         </Link>
+      ) : null}
+
+      {role === "buyer" ? (
+        <ApplicationPanel status={application?.status ?? null} />
       ) : null}
 
       <dl className="mt-10 max-w-md space-y-3 rounded-3xl border border-black/5 bg-white p-8 shadow-sm">
@@ -100,6 +114,71 @@ export default async function DashboardPage() {
           Log out
         </button>
       </form>
+    </section>
+  );
+}
+
+/**
+ * The provider-application panel on a buyer's dashboard.
+ *
+ * Four states, keyed on the buyer's `providers` row:
+ *
+ *   none      -> invitation, linking to the form
+ *   pending   -> under review; nothing to click, because nothing to do
+ *   rejected  -> not approved, linking to the form to update and reapply
+ *   approved  -> only while `users.role` has not caught up with the status;
+ *                see the note on `providers.status` in db/schema.ts
+ *
+ * The fifth state — an approved provider — is not a buyer, so it never
+ * reaches here: it gets the provider panel and its product-submission link.
+ */
+function ApplicationPanel({ status }: { status: ProviderStatus | null }) {
+  const { dashboard, states } = siteCopy.providerApplication;
+  const headingId = "provider-application-heading";
+
+  const link = (label: string, href: string) => (
+    <Link
+      href={href}
+      className="mt-6 inline-block rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+    >
+      {label}
+    </Link>
+  );
+
+  let body: string;
+  let action: React.ReactNode = null;
+
+  switch (status) {
+    case null:
+      body = dashboard.none.body;
+      action = link(dashboard.none.cta, "/dashboard/apply");
+      break;
+    case "pending":
+      body = dashboard.pending.body;
+      break;
+    case "rejected":
+      body = dashboard.rejected.body;
+      action = link(dashboard.rejected.cta, "/dashboard/apply");
+      break;
+    case "approved":
+      body = dashboard.approved.body;
+      action = link(states.approved.cta.label, states.approved.cta.href);
+      break;
+  }
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="mt-10 max-w-2xl rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+    >
+      <h2
+        id={headingId}
+        className="text-xl font-extrabold tracking-tight text-brand-navy"
+      >
+        {dashboard.heading}
+      </h2>
+      <p className="mt-3 leading-relaxed text-brand-navy/70">{body}</p>
+      {action}
     </section>
   );
 }
