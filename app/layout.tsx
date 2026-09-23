@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { SiteFooter } from "@/components/site-footer";
+import { SiteFrame } from "@/components/site-frame";
 import { SiteNav } from "@/components/site-nav";
 import { siteCopy } from "@/content/site-copy";
 
@@ -44,9 +45,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </noscript>
       </head>
       <body className="flex min-h-full flex-col font-sans">
-        <SiteNav />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        {/* The marketing nav, <main> and footer — except on routes with an
+            application shell of their own. See components/site-frame.tsx. */}
+        <SiteFrame nav={<SiteNav />} footer={<SiteFooter />}>
+          {children}
+        </SiteFrame>
       </body>
     </html>
   );

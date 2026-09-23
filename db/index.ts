@@ -50,11 +50,22 @@ function connect(): PostgresJsDatabase<typeof schema> {
 
   const database = drizzle(sql, { schema });
 
-  /* Cached across dev-server hot reloads so edits do not open a new pool. */
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.__pakaiSql = sql;
-    globalForDb.__pakaiDb = database;
-  }
+  /*
+    Cached in EVERY environment — one pool per server process.
+
+    This used to cache only outside production, the usual guard for surviving
+    dev-server hot reloads. But nothing else here is a module-level singleton:
+    the Proxy below calls `connect()` on every property access, so in
+    production every `db.select`, `db.update` and `db.transaction` built a
+    brand-new pool, and each pool held its connection for `idle_timeout`
+    seconds after use. Under `next start` that exhausted Postgres
+    ("sorry, too many clients already") once the review queue and the per-
+    request role check in auth.ts put a few queries into every request.
+    Caching on `globalThis` is also what survives hot reloads, so one rule
+    covers both.
+  */
+  globalForDb.__pakaiSql = sql;
+  globalForDb.__pakaiDb = database;
 
   return database;
 }

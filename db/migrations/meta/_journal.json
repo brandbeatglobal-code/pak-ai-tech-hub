@@ -15,6 +15,13 @@
       "when": 1790169507972,
       "tag": "0001_provider_application",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790172118308,
+      "tag": "0002_review_queue",
+      "breakpoints": true
     }
   ]
 }

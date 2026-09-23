@@ -1519,20 +1519,20 @@ export const siteCopy = {
    * The provider application, at /dashboard/apply, and the application panel
    * on a buyer's /dashboard.
    *
-   * A buyer applies; the application is reviewed; approval makes them a
-   * provider. There is no review UI yet, so a decision is currently made
-   * directly in the database — nothing here may imply a person is working a
-   * queue, and nothing may promise a turnaround. No SLA has been agreed.
+   * A buyer applies; an admin reviews it in the queue at /dashboard/admin;
+   * approval makes them a provider, and either decision emails them (see
+   * `reviewEmails`). Nothing here may promise a turnaround — no SLA has been
+   * agreed.
    *
    * The category options are not listed here. The form reuses
    * `CATEGORY_LABELS` from lib/product-submission.ts, the same five the
    * product form offers, so a provider and their products are filed under one
    * vocabulary. The commission line reads `commissionTerms`.
    *
-   * There is no rejection reason anywhere in this block because none is
-   * stored: `providers` has no review-notes column yet. A rejected applicant is
-   * told plainly that the application was not approved, and pointed at the
-   * contact page. Add the reason when the review pass adds somewhere to keep it.
+   * The decline reason is stored (`providers.rejection_reason`) and sent in
+   * the decline email, but deliberately NOT shown anywhere in this block: the
+   * review-queue pass left the applicant-facing resubmit flow exactly as it
+   * was. Showing it on /dashboard/apply is a small, separate change.
    */
   providerApplication: {
     meta: {
@@ -1627,6 +1627,213 @@ export const siteCopy = {
       approved: {
         body: "Your provider application was approved, but provider access has not finished being set up. Contact us and we will sort it out.",
       },
+    },
+  },
+  /*
+   * The admin review queue at /dashboard/admin: provider applications and
+   * product submissions, one queue, decided by an admin.
+   *
+   * Every number on that page is counted from the database. The Approved and
+   * Declined cards cover the LAST 7 DAYS by `reviewed_at` — a rolling window
+   * rather than a calendar week, so the count does not drop to zero every
+   * Monday and does not depend on which timezone "this week" is measured in.
+   * If the window changes, change `windowNote` here and `REVIEW_WINDOW_DAYS`
+   * in lib/review-queries.ts together.
+   *
+   * The four placeholder sections in the sidebar do not exist. They are shown
+   * as labelled, non-interactive "Soon" items — never as links, which would
+   * lead to a 404 — and the search field and notification icon in the top bar
+   * are likewise marked as not available yet rather than pretending to work.
+   */
+  adminReview: {
+    meta: {
+      title: "Review queue — PAKAI TechHub admin",
+    },
+    /* The admin panel on /dashboard, which is where an admin lands after
+       logging in, and its way into the queue. */
+    entry: {
+      heading: "Admin dashboard",
+      body: "Provider applications and product submissions waiting for a decision are in the review queue.",
+      cta: "Open the review queue",
+    },
+    sidebar: {
+      navLabel: "Admin",
+      queue: "Review Queue",
+      /* Screen-reader text for the count badge; {count} is replaced. */
+      pendingBadge: "{count} pending",
+      placeholders: ["Providers", "Products", "Buyers", "Settings"],
+      soon: "Soon",
+      soonLong: "not built yet",
+      /* Back to the ordinary dashboard, which is still where log-out lives. */
+      exit: "Back to dashboard",
+    },
+    topbar: {
+      searchLabel: "Search the queue (not available yet)",
+      searchPlaceholder: "Search — not available yet",
+      notifications: "Notifications (not available yet)",
+      signedInAs: "Signed in as",
+      role: "Admin",
+    },
+    heading: "Review Queue",
+    subhead:
+      "Provider applications and product submissions waiting for a decision.",
+    windowNote: "Last 7 days",
+    stats: {
+      pendingProviders: "Pending providers",
+      pendingProducts: "Pending products",
+      approved: "Approved",
+      declined: "Declined",
+      waiting: "Waiting for review",
+    },
+    tabs: {
+      label: "Queue",
+      providers: "Providers",
+      products: "Products",
+    },
+    sections: {
+      pending: "Waiting for review",
+      reviewed: "Reviewed in the last 7 days",
+    },
+    empty: {
+      pending: "Nothing is waiting for review.",
+      reviewed: "Nothing has been reviewed in the last 7 days.",
+    },
+    /* Shown when there are more pending items than the page lists at once. */
+    truncated: "Showing the {shown} oldest of {total}. Decide these to see the rest.",
+    fields: {
+      applicant: "Applicant",
+      website: "Website",
+      noWebsite: "No website given",
+      description: "What they do",
+      reason: "Why they want to list",
+      submitted: "Submitted",
+      reviewed: "Reviewed",
+      provider: "Provider",
+      price: "Price",
+      /* The period is the product form's convention, not stored data — see
+         `providerSubmit.notes.price`. */
+      perMonth: "/ month",
+      declineReason: "Reason given",
+      /* A resubmitted application keeps the last decline's reason. */
+      previouslyDeclined: "Declined last time",
+      newTab: "(opens in a new tab)",
+    },
+    status: {
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Declined",
+    },
+    actions: {
+      approve: "Approve",
+      decline: "Decline",
+      confirmDecline: "Decline with this reason",
+      cancel: "Cancel",
+      reasonLabel: "Reason for declining",
+      reasonNote: "Sent to them by email. 10 to 600 characters.",
+      working: "Saving…",
+    },
+    /* {name} and {email} are replaced. Each decision gets one outcome line
+       and one email line, so the admin always knows whether mail went out. */
+    results: {
+      providerApproved: "{name} approved — they can now submit products.",
+      providerDeclined: "{name} declined.",
+      productApproved: "{name} approved.",
+      productDeclined: "{name} declined.",
+      emailSent: "Email sent to {email}.",
+      emailSkippedNoOwner:
+        "No email sent: this provider has no account to send it to.",
+      emailNotConfigured:
+        "No email sent: email delivery is not configured on this server.",
+      emailFailed:
+        "The decision is saved, but the email to {email} could not be sent.",
+      /* The recipient could not even be looked up after the decision saved. */
+      emailFailedUnknown:
+        "The decision is saved, but no email could be sent. Let them know by hand.",
+    },
+    errors: {
+      notAdmin: "Only admin accounts can review.",
+      notPending:
+        "This is no longer waiting for review — someone may have decided it already.",
+      reasonLength: "Give a reason between 10 and 600 characters.",
+      adminApplicant:
+        "This application belongs to an admin account, so it cannot be approved as a provider.",
+      write: "That decision could not be saved. Nothing was changed.",
+    },
+  },
+  /*
+   * The emails the review queue sends, one per decision.
+   *
+   * Plain text, like the contact-form email: short, literal, no marketing.
+   * `{placeholders}` are filled in by lib/review-email.ts; `{link}` is built
+   * from the address the admin is using the site on, because no canonical
+   * site-URL setting exists (and pakaitechub.com is not confirmed as the web
+   * address — only as the mail domain).
+   *
+   * What these must not say:
+   *
+   *   - That an approved PRODUCT is live or visible to buyers. The marketplace
+   *     still renders from this file, not the database; approval does not
+   *     list anything. It says the product passed review, and reuses the
+   *     product form's own "we will be in touch about the listing".
+   *   - Any turnaround or SLA. None has been agreed.
+   *   - Anything about payouts beyond `commissionTerms`.
+   *
+   * Replies go to `contactEmail`, so answering a decision email reaches a
+   * person rather than the no-reply sender.
+   */
+  reviewEmails: {
+    signOff: "PAKAI TechHub",
+    providerApproved: {
+      subject: "Your PAKAI TechHub provider application was approved",
+      body: [
+        "Hi {name},",
+        "",
+        "Your application to list {business} on PAKAI TechHub has been approved. You can now submit products for review:",
+        "{link}",
+        "",
+        commissionTerms,
+      ],
+    },
+    providerDeclined: {
+      subject: "Your PAKAI TechHub provider application was not approved",
+      body: [
+        "Hi {name},",
+        "",
+        "We have reviewed your application to list {business} on PAKAI TechHub and have not approved it.",
+        "",
+        "Reason: {reason}",
+        "",
+        "You can update your answers and apply again from your dashboard:",
+        "{link}",
+        "",
+        "If you have questions, reply to this email.",
+      ],
+    },
+    productApproved: {
+      subject: "{product} passed review on PAKAI TechHub",
+      body: [
+        "Hi {name},",
+        "",
+        "{product} has been reviewed and approved. We will be in touch about the listing.",
+        "",
+        "You can submit another product at any time:",
+        "{link}",
+      ],
+    },
+    productDeclined: {
+      subject: "{product} was not approved on PAKAI TechHub",
+      body: [
+        "Hi {name},",
+        "",
+        "We have reviewed {product} and have not approved it for listing.",
+        "",
+        "Reason: {reason}",
+        "",
+        "You can submit a new version from your dashboard:",
+        "{link}",
+        "",
+        "If you have questions, reply to this email.",
+      ],
     },
   },
 };

@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { siteCopy } from "@/content/site-copy";
@@ -23,9 +23,10 @@ import {
 /**
  * Provider application submission.
  *
- * Writes the applicant's `providers` row with status "pending". Approving it is
- * not this module's job and has no UI yet — see the note on `providers.status`
- * in db/schema.ts for what approving has to do.
+ * Writes the applicant's `providers` row with status "pending" and stamps
+ * `submitted_at`. Deciding it is the review queue's job (`approveProvider` and
+ * `declineProvider` in lib/review-actions.ts) — see the note on
+ * `providers.status` in db/schema.ts for what approving has to do.
  *
  * AUTHORISATION IS RE-CHECKED HERE, not just on the page, for the same reason
  * as `submitProduct`: a server action is a public endpoint, reachable without
@@ -109,6 +110,14 @@ export async function submitApplication(
     /* Explicit, for the same reason `submitProduct` is: a later change to the
        column default must not start auto-approving applications. */
     status: "pending" as const,
+    /*
+      Stamped on the first application AND on every resubmission, because
+      `answers` feeds both the insert and the conflict update below. The review
+      queue sorts by this, so a resubmitted application joins the back of the
+      queue. The database's clock, not this server's, like every other
+      timestamp in the schema.
+    */
+    submittedAt: sql`now()`,
   };
 
   try {

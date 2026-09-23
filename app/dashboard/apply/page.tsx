@@ -37,8 +37,10 @@ export const metadata: Metadata = {
  * `jwt` callback in auth.ts), so a buyer approved a moment ago already sees
  * the provider state here.
  *
- * This is the application pass only. The review queue that moves an
- * application out of "pending", and any email about it, are later passes.
+ * An admin decides the application in the review queue at /dashboard/admin,
+ * which also emails the applicant. This page did not change with that: a
+ * declined applicant gets the reapply form here and the decline reason by
+ * email only.
  */
 export default async function ApplyPage() {
   const session = await auth();

@@ -16,9 +16,13 @@ export const metadata: Metadata = {
  * Role-gated stub.
  *
  * This page exists to prove the role system works end to end — sign up, log
- * in, get the right view, log out. It is NOT the real dashboard. The admin
- * review queue and the buyer's subscription view are each a separate, later
- * pass; do not start growing them in here.
+ * in, get the right view, log out. It is NOT the real dashboard. The buyer's
+ * subscription view is a separate, later pass; do not start growing it in
+ * here.
+ *
+ * The admin entry links out to the review queue at /dashboard/admin, which
+ * has its own route, its own app shell and its own gate. Same principle as the
+ * provider link below: a way in, not the feature.
  *
  * The provider entry now carries a link out to the one real feature that
  * exists, `/dashboard/products/new`. That is a way in, not the feature: the
@@ -47,8 +51,12 @@ const STUBS: Record<
     },
   },
   admin: {
-    heading: "Admin — coming soon",
-    body: "The product review queue will live here.",
+    heading: siteCopy.adminReview.entry.heading,
+    body: siteCopy.adminReview.entry.body,
+    action: {
+      label: siteCopy.adminReview.entry.cta,
+      href: "/dashboard/admin",
+    },
   },
 };
 
