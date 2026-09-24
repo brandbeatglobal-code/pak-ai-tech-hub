@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import { signIn, signOut } from "@/auth";
 import { db } from "@/db";
-import { providers, users, type UserRole } from "@/db/schema";
+import { users, type UserRole } from "@/db/schema";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 
 /**
@@ -45,14 +45,24 @@ export async function signUp(
     return { error: `Use at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   /*
-    "admin" is not selectable. The only roles a sign-up form can create are
-    buyer and provider; admins are promoted directly in the database until
-    there is an admin UI to do it properly.
+    The account-type choice is INTENT, not the role granted.
+
+    Every sign-up creates a buyer. Choosing "Provider" only changes where the
+    new account lands: on the provider application rather than the dashboard.
+    It used to create a provider on the spot, with a `providers` row and no
+    review — which would make the application flow decorative, since anyone
+    could skip it by picking the other radio button. A provider is now what an
+    approved application makes you, and nothing else.
+
+    "admin" is not selectable either way; admins are promoted directly in the
+    database until there is an admin UI to do it properly.
   */
   if (!isSignUpRole(roleInput)) return { error: "Choose an account type." };
-  const role: UserRole = roleInput;
+  const wantsToList = roleInput === "provider";
+  const role: UserRole = "buyer";
 
-  if (role === "provider" && !companyName) {
+  /* Kept so the application's business-name field starts filled in. */
+  if (wantsToList && !companyName) {
     return { error: "Providers need a company name." };
   }
 
@@ -65,24 +75,19 @@ export async function signUp(
 
   const passwordHash = await hashPassword(password);
 
-  const [user] = await db
-    .insert(users)
-    .values({
-      name,
-      email,
-      passwordHash,
-      role,
-      companyName: companyName || null,
-    })
-    .returning();
+  await db.insert(users).values({
+    name,
+    email,
+    passwordHash,
+    role,
+    companyName: companyName || null,
+  });
 
-  /* A provider account gets its provider record in the same flow. */
-  if (role === "provider") {
-    await db.insert(providers).values({
-      userId: user.id,
-      companyName,
-    });
-  }
+  /*
+    No `providers` row here any more. One is written by the application,
+    when there are answers to review — an empty row created at sign-up would
+    sit in the review queue as a "pending application" with nothing in it.
+  */
 
   await signIn("credentials", {
     email,
@@ -90,7 +95,7 @@ export async function signUp(
     redirect: false,
   });
 
-  redirect("/dashboard");
+  redirect(wantsToList ? "/dashboard/apply" : "/dashboard");
 }
 
 export async function logIn(

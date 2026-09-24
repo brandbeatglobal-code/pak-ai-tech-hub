@@ -40,6 +40,11 @@ export const PRICE_MAX = 1_000_000;
  * five have a marketplace filter, so a product filed under any other one could
  * never be found once the marketplace reads this table. Widening the list means
  * adding a `ProductCategory` and a filter for it first.
+ *
+ * TWO forms read this list: the product form, for `products.category`, and
+ * the provider application (lib/provider-application.ts), for
+ * `providers.category`. A provider and their products are filed under one
+ * vocabulary; changing it here changes both.
  */
 export const CATEGORY_LABELS: string[] =
   siteCopy.marketplace.products.categories

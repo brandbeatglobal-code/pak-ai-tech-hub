@@ -307,9 +307,37 @@ const browseProductsCta = {
   href: "/marketplace",
 } satisfies NavLink;
 
+/*
+ * `/start-listing` is not a page. It is a route handler that looks at who is
+ * asking and sends them on (app/start-listing/route.ts):
+ *
+ *   signed out   -> /sign-up?role=provider, which creates a buyer account and
+ *                   lands on the provider application
+ *   buyer        -> /dashboard/apply, the application form (or its
+ *                   "under review" state, if they have already applied)
+ *   provider     -> /dashboard/products/new
+ *
+ * The decision is made on the server when the link is followed, not when the
+ * marketing page renders — so the homepage stays statically rendered and the
+ * link is never stale. Every "list your product" link on the site points here,
+ * including the nav button and the contact page card, which read this `href`
+ * rather than repeating it.
+ */
 const startListingCta = {
   label: "Start listing — it's free",
-  href: "/sign-up?role=provider",
+  href: "/start-listing",
+} satisfies NavLink;
+
+/*
+ * The way into product submission, for someone who is already a provider.
+ *
+ * Two surfaces show it: the provider panel on /dashboard (via
+ * `providerSubmit.navLabel`) and the "you are already a provider" state of the
+ * application page. One label, one href.
+ */
+const submitProductCta = {
+  label: "Submit a product",
+  href: "/dashboard/products/new",
 } satisfies NavLink;
 
 /**
@@ -415,11 +443,13 @@ export const siteCopy = {
      *
      * Buyers already have the search field, the category bar and the whole
      * listings grid as their entry point; the supply side of the marketplace
-     * has none, so the one button in the bar is theirs. `?role=provider` is
-     * read by /sign-up and preselects the Provider option — do not drop the
-     * query string, or the button lands people on the buyer form.
+     * has none, so the one button in the bar is theirs.
+     *
+     * Its own label, but `startListingCta`'s destination — the state-aware
+     * `/start-listing` redirect. It used to point straight at
+     * `/sign-up?role=provider`, which sent a signed-in buyer to a sign-up form.
      */
-    cta: { label: "List your product", href: "/sign-up?role=provider" },
+    cta: { label: "List your product", href: startListingCta.href },
     /*
      * Copy for the search field in the nav, and for the larger one in the
      * hero, which is the same control at a different size.
@@ -599,9 +629,16 @@ export const siteCopy = {
         steps: [
           {
             number: "1",
-            title: "Sign up free",
-            /* The provider side of /sign-up, which the nav CTA links to. */
-            detail: "Create a provider account in a couple of minutes.",
+            title: "Sign up and apply",
+            /*
+              Providers are approved, not self-declared: signing up creates an
+              account, and the application at /dashboard/apply is what gets
+              reviewed. This step used to promise "a provider account in a
+              couple of minutes", which stopped being true when that review
+              gate was added. Do not promise a review turnaround here — no SLA
+              has been agreed.
+            */
+            detail: "Create a free account and tell us about your business.",
           },
           {
             number: "2",
@@ -1390,7 +1427,8 @@ export const siteCopy = {
         {
           heading: "Have a product to list?",
           body: "List your AI product, reach customers worldwide, and pay commission only when you make a sale.",
-          cta: { label: "Sign up as a provider", href: "/sign-up?role=provider" },
+          /* Same destination as `startListingCta`; see the note there. */
+          cta: { label: "Apply as a provider", href: startListingCta.href },
         },
         {
           heading: "Looking for AI tools?",
@@ -1425,7 +1463,7 @@ export const siteCopy = {
     },
     heading: "Submit a product for review",
     /** Label on the link into this page from the provider dashboard panel. */
-    navLabel: "Submit a product",
+    navLabel: submitProductCta.label,
     intro:
       "Tell us what you are listing. Every product is reviewed before it appears in the marketplace.",
     commission: commissionTerms,
@@ -1475,6 +1513,327 @@ export const siteCopy = {
       noProviderRecord:
         "This account has no provider record, so there is nothing to list under. Contact us and we will sort it out.",
       write: "We could not save that. Please try again.",
+    },
+  },
+  /*
+   * The provider application, at /dashboard/apply, and the application panel
+   * on a buyer's /dashboard.
+   *
+   * A buyer applies; an admin reviews it in the queue at /dashboard/admin;
+   * approval makes them a provider, and either decision emails them (see
+   * `reviewEmails`). Nothing here may promise a turnaround — no SLA has been
+   * agreed.
+   *
+   * The category options are not listed here. The form reuses
+   * `CATEGORY_LABELS` from lib/product-submission.ts, the same five the
+   * product form offers, so a provider and their products are filed under one
+   * vocabulary. The commission line reads `commissionTerms`.
+   *
+   * The decline reason is stored (`providers.rejection_reason`) and sent in
+   * the decline email, but deliberately NOT shown anywhere in this block: the
+   * review-queue pass left the applicant-facing resubmit flow exactly as it
+   * was. Showing it on /dashboard/apply is a small, separate change.
+   */
+  providerApplication: {
+    meta: {
+      title: "Apply to become a provider — PAKAI TechHub",
+    },
+    heading: "Apply to become a provider",
+    intro:
+      "Tell us about your business. Every provider is reviewed before they can list products in the marketplace.",
+    commission: commissionTerms,
+    /* Shown above the form when a rejected applicant comes back to it. */
+    resubmitNote:
+      "Your previous application was not approved. Your answers are below — update them and submit again.",
+    fields: {
+      businessName: "Business name",
+      description: "What does your business do?",
+      category: "Category",
+      website: "Website",
+      reason: "Why do you want to list on PAKAI TechHub?",
+    },
+    selectPlaceholder: "Select a category",
+    optionalLabel: "optional",
+    notes: {
+      description: "40 to 600 characters.",
+      website: "For example, example.com.",
+      reason: "20 to 600 characters.",
+    },
+    submit: "Submit application",
+    submitting: "Submitting…",
+    /* Shown only after the row is actually written, never optimistically. */
+    successHeading: "Application submitted",
+    successBody:
+      "Your application is pending review. Your dashboard will show when that changes.",
+    backToDashboard: "Back to dashboard",
+    /*
+     * What the page shows instead of the form. `pending` and `approved` are
+     * reached by a buyer; `alreadyProvider` by a provider who follows an old
+     * link here.
+     */
+    states: {
+      pending: {
+        heading: "Your application is under review",
+        body: "We have your application and will review it before you can list products. You do not need to do anything else.",
+      },
+      /*
+       * Approved, but the account is still a buyer. Only reachable if a review
+       * decision set `providers.status` without also setting `users.role` —
+       * see the note on `providers.status` in db/schema.ts. Said plainly
+       * rather than hidden, so it gets reported instead of silently stuck.
+       */
+      approved: {
+        heading: "Your application was approved",
+        body: "Provider access for this account has not finished being set up. Contact us and we will sort it out.",
+        cta: { label: "Contact us", href: "/contact" },
+      },
+      alreadyProvider: {
+        heading: "You are already a provider",
+        body: "This account can already list products, so there is nothing to apply for.",
+        cta: submitProductCta,
+      },
+    },
+    validation: {
+      businessNameLength: "Use between 2 and 100 characters.",
+      descriptionLength: "Use between 40 and 600 characters.",
+      category: "Choose a category.",
+      website: "Enter a web address, for example example.com.",
+      reasonLength: "Use between 20 and 600 characters.",
+    },
+    errors: {
+      notBuyer: "Only signed-in buyer accounts can apply to become a provider.",
+      alreadyPending: "You already have an application under review.",
+      alreadyApproved: "Your application has already been approved.",
+      write: "We could not save that. Please try again.",
+    },
+    /*
+     * The application panel on a buyer's /dashboard. One entry per state;
+     * the provider state is not here because a provider sees the provider
+     * panel, which already links to product submission.
+     */
+    dashboard: {
+      heading: "Sell on PAKAI TechHub",
+      none: {
+        body: "Apply to become a provider and list your AI products in the marketplace.",
+        cta: "Apply to become a provider",
+      },
+      pending: {
+        body: "Your provider application is under review.",
+      },
+      rejected: {
+        body: "Your provider application was not approved. You can update your answers and apply again.",
+        cta: "Update and reapply",
+      },
+      approved: {
+        body: "Your provider application was approved, but provider access has not finished being set up. Contact us and we will sort it out.",
+      },
+    },
+  },
+  /*
+   * The admin review queue at /dashboard/admin: provider applications and
+   * product submissions, one queue, decided by an admin.
+   *
+   * Every number on that page is counted from the database. The Approved and
+   * Declined cards cover the LAST 7 DAYS by `reviewed_at` — a rolling window
+   * rather than a calendar week, so the count does not drop to zero every
+   * Monday and does not depend on which timezone "this week" is measured in.
+   * If the window changes, change `windowNote` here and `REVIEW_WINDOW_DAYS`
+   * in lib/review-queries.ts together.
+   *
+   * The four placeholder sections in the sidebar do not exist. They are shown
+   * as labelled, non-interactive "Soon" items — never as links, which would
+   * lead to a 404 — and the search field and notification icon in the top bar
+   * are likewise marked as not available yet rather than pretending to work.
+   */
+  adminReview: {
+    meta: {
+      title: "Review queue — PAKAI TechHub admin",
+    },
+    /* The admin panel on /dashboard, which is where an admin lands after
+       logging in, and its way into the queue. */
+    entry: {
+      heading: "Admin dashboard",
+      body: "Provider applications and product submissions waiting for a decision are in the review queue.",
+      cta: "Open the review queue",
+    },
+    sidebar: {
+      navLabel: "Admin",
+      queue: "Review Queue",
+      /* Screen-reader text for the count badge; {count} is replaced. */
+      pendingBadge: "{count} pending",
+      placeholders: ["Providers", "Products", "Buyers", "Settings"],
+      soon: "Soon",
+      soonLong: "not built yet",
+      /* Back to the ordinary dashboard, which is still where log-out lives. */
+      exit: "Back to dashboard",
+    },
+    topbar: {
+      searchLabel: "Search the queue (not available yet)",
+      searchPlaceholder: "Search — not available yet",
+      notifications: "Notifications (not available yet)",
+      signedInAs: "Signed in as",
+      role: "Admin",
+    },
+    heading: "Review Queue",
+    subhead:
+      "Provider applications and product submissions waiting for a decision.",
+    windowNote: "Last 7 days",
+    stats: {
+      pendingProviders: "Pending providers",
+      pendingProducts: "Pending products",
+      approved: "Approved",
+      declined: "Declined",
+      waiting: "Waiting for review",
+    },
+    tabs: {
+      label: "Queue",
+      providers: "Providers",
+      products: "Products",
+    },
+    sections: {
+      pending: "Waiting for review",
+      reviewed: "Reviewed in the last 7 days",
+    },
+    empty: {
+      pending: "Nothing is waiting for review.",
+      reviewed: "Nothing has been reviewed in the last 7 days.",
+    },
+    /* Shown when there are more pending items than the page lists at once. */
+    truncated: "Showing the {shown} oldest of {total}. Decide these to see the rest.",
+    fields: {
+      applicant: "Applicant",
+      website: "Website",
+      noWebsite: "No website given",
+      description: "What they do",
+      reason: "Why they want to list",
+      submitted: "Submitted",
+      reviewed: "Reviewed",
+      provider: "Provider",
+      price: "Price",
+      /* The period is the product form's convention, not stored data — see
+         `providerSubmit.notes.price`. */
+      perMonth: "/ month",
+      declineReason: "Reason given",
+      /* A resubmitted application keeps the last decline's reason. */
+      previouslyDeclined: "Declined last time",
+      newTab: "(opens in a new tab)",
+    },
+    status: {
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Declined",
+    },
+    actions: {
+      approve: "Approve",
+      decline: "Decline",
+      confirmDecline: "Decline with this reason",
+      cancel: "Cancel",
+      reasonLabel: "Reason for declining",
+      reasonNote: "Sent to them by email. 10 to 600 characters.",
+      working: "Saving…",
+    },
+    /* {name} and {email} are replaced. Each decision gets one outcome line
+       and one email line, so the admin always knows whether mail went out. */
+    results: {
+      providerApproved: "{name} approved — they can now submit products.",
+      providerDeclined: "{name} declined.",
+      productApproved: "{name} approved.",
+      productDeclined: "{name} declined.",
+      emailSent: "Email sent to {email}.",
+      emailSkippedNoOwner:
+        "No email sent: this provider has no account to send it to.",
+      emailNotConfigured:
+        "No email sent: email delivery is not configured on this server.",
+      emailFailed:
+        "The decision is saved, but the email to {email} could not be sent.",
+      /* The recipient could not even be looked up after the decision saved. */
+      emailFailedUnknown:
+        "The decision is saved, but no email could be sent. Let them know by hand.",
+    },
+    errors: {
+      notAdmin: "Only admin accounts can review.",
+      notPending:
+        "This is no longer waiting for review — someone may have decided it already.",
+      reasonLength: "Give a reason between 10 and 600 characters.",
+      adminApplicant:
+        "This application belongs to an admin account, so it cannot be approved as a provider.",
+      write: "That decision could not be saved. Nothing was changed.",
+    },
+  },
+  /*
+   * The emails the review queue sends, one per decision.
+   *
+   * Plain text, like the contact-form email: short, literal, no marketing.
+   * `{placeholders}` are filled in by lib/review-email.ts; `{link}` is built
+   * from the address the admin is using the site on, because no canonical
+   * site-URL setting exists (and pakaitechub.com is not confirmed as the web
+   * address — only as the mail domain).
+   *
+   * What these must not say:
+   *
+   *   - That an approved PRODUCT is live or visible to buyers. The marketplace
+   *     still renders from this file, not the database; approval does not
+   *     list anything. It says the product passed review, and reuses the
+   *     product form's own "we will be in touch about the listing".
+   *   - Any turnaround or SLA. None has been agreed.
+   *   - Anything about payouts beyond `commissionTerms`.
+   *
+   * Replies go to `contactEmail`, so answering a decision email reaches a
+   * person rather than the no-reply sender.
+   */
+  reviewEmails: {
+    signOff: "PAKAI TechHub",
+    providerApproved: {
+      subject: "Your PAKAI TechHub provider application was approved",
+      body: [
+        "Hi {name},",
+        "",
+        "Your application to list {business} on PAKAI TechHub has been approved. You can now submit products for review:",
+        "{link}",
+        "",
+        commissionTerms,
+      ],
+    },
+    providerDeclined: {
+      subject: "Your PAKAI TechHub provider application was not approved",
+      body: [
+        "Hi {name},",
+        "",
+        "We have reviewed your application to list {business} on PAKAI TechHub and have not approved it.",
+        "",
+        "Reason: {reason}",
+        "",
+        "You can update your answers and apply again from your dashboard:",
+        "{link}",
+        "",
+        "If you have questions, reply to this email.",
+      ],
+    },
+    productApproved: {
+      subject: "{product} passed review on PAKAI TechHub",
+      body: [
+        "Hi {name},",
+        "",
+        "{product} has been reviewed and approved. We will be in touch about the listing.",
+        "",
+        "You can submit another product at any time:",
+        "{link}",
+      ],
+    },
+    productDeclined: {
+      subject: "{product} was not approved on PAKAI TechHub",
+      body: [
+        "Hi {name},",
+        "",
+        "We have reviewed {product} and have not approved it for listing.",
+        "",
+        "Reason: {reason}",
+        "",
+        "You can submit a new version from your dashboard:",
+        "{link}",
+        "",
+        "If you have questions, reply to this email.",
+      ],
     },
   },
 };
