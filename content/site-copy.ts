@@ -798,19 +798,16 @@ export const siteCopy = {
          * `products` table (read through lib/listings.ts); if this line needs
          * them, read them from there rather than typing them here.
          *
-         * UNRESOLVED TENSION — read before editing. The products this tab
-         * describes (support, analytics, content, CRM) are the house
-         * provider's listings, and the marketplace badges every one of them
-         * "Example": not live yet, placeholder prices
-         * (`marketplace.products.exampleNote`). This tab says they are "built
-         * in-house" and "ready to deploy". Both hold only if the products do
-         * exist and can be deployed today, with just their marketplace
-         * listings unfinished. If they cannot, this headline and body — and
-         * the "Built in-house" / "Our own products" lines in
-         * `marketplace.hero`, `marketplace.meta`, `flagship` and
-         * `nav.menus.marketplace.featured` — overstate them, and need
-         * rewriting. That is a fact about the products, not the code; it was
-         * left open rather than guessed.
+         * NOT A CONTRADICTION with the "Example" badge — confirmed on
+         * 2026-09-24. The products this tab describes (support, analytics,
+         * content, CRM) are built and deployable, so "built in-house" and
+         * "ready to deploy" are accurate as written. What is not final is
+         * their MARKETPLACE LISTINGS: the house provider's listings carry the
+         * "Example" badge because the listing is not live yet and its price is
+         * a placeholder (`marketplace.products.exampleNote`), not because the
+         * product does not exist. Keep the two meanings apart: if either one
+         * changes — the products, or the state of their listings — revisit
+         * this tab and `exampleNote` together.
          */
         body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
         link: { label: "Learn more", href: "#" },
@@ -983,10 +980,11 @@ export const siteCopy = {
        * Shown under the intro, only when at least one listing is an example.
        *
        * Deliberately narrow: it says the LISTING is not live and the PRICE is
-       * a placeholder. It does not say whether the product itself exists —
-       * the "Own AI Products" tab in `offering` says the in-house products
-       * are "built in-house" and "ready to deploy", and nothing here
-       * confirms or contradicts that. If that tab changes, revisit this line.
+       * a placeholder — nothing about the product itself. The in-house
+       * products are built and deployable (confirmed 2026-09-24), which is
+       * what the "Own AI Products" tab in `offering` says; this line must not
+       * be widened into suggesting otherwise. If that tab changes, revisit
+       * this line.
        */
       exampleNote: "Listings marked Example are not live yet — their prices are placeholders.",
       /*
