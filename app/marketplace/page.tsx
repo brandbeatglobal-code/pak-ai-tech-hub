@@ -93,6 +93,12 @@ export default async function MarketplacePage({
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
               {products.intro}
             </p>
+            {/* What the Example badge means — only when one is on show. */}
+            {listings?.some((listing) => listing.example) ? (
+              <p className="mt-2 max-w-2xl leading-relaxed text-brand-navy/70">
+                {products.exampleNote}
+              </p>
+            ) : null}
             {/*
               Keyed on the resolved category so arriving from the nav dropdown
               while already on this page resets the filter. Without it the
@@ -112,6 +118,8 @@ export default async function MarketplacePage({
                 resultCountOther: products.resultCountOther,
                 pricePrefix: products.pricePrefix,
                 byProvider: products.byProvider,
+                exampleBadge: products.exampleBadge,
+                buyLabel: products.buyLabel,
               }}
             />
           </Reveal>

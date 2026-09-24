@@ -31,6 +31,10 @@ type MarketplaceProductsProps = {
     pricePrefix: string;
     /** "by {provider}". */
     byProvider: string;
+    /** Shown on a card only when `listing.example` is true. */
+    exampleBadge: string;
+    /** The permanently disabled buy button — there is no checkout. */
+    buyLabel: string;
   };
 };
 
@@ -145,9 +149,21 @@ export function MarketplaceProducts({
                 distance={3}
                 className="relative flex flex-col rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
               >
-                <span className="inline-flex w-fit rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
-                  {categoryLabels.get(product.category) ?? product.category}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
+                    {categoryLabels.get(product.category) ?? product.category}
+                  </span>
+                  {/*
+                    Only on example listings (`Listing.example`, decided once
+                    in lib/listings.ts) — never on a real provider's product.
+                    Same dashed treatment as the homepage card's badge.
+                  */}
+                  {product.example ? (
+                    <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
+                      {labels.exampleBadge}
+                    </span>
+                  ) : null}
+                </div>
 
                 <h3 className="mt-4 text-lg font-bold tracking-tight text-brand-navy">
                   {/*
@@ -164,8 +180,7 @@ export function MarketplaceProducts({
                   </Link>
                 </h3>
 
-                {/* Who lists it. Now that these are real listings, the
-                    provider is part of what a buyer is looking at. */}
+                {/* Who lists it — part of what a buyer is looking at. */}
                 <p className="mt-1 text-sm text-brand-navy/65">
                   {labels.byProvider.replace("{provider}", product.provider)}
                 </p>
@@ -185,6 +200,23 @@ export function MarketplaceProducts({
                   />
                   {labels.trainingBadge}
                 </p>
+
+                {/*
+                  Disabled, on every card, exactly as on the homepage card:
+                  there is no checkout. CLAUDE.md requires it on an example
+                  listing, and a real listing cannot be bought either.
+
+                  `relative z-10` lifts it above the stretched link's overlay,
+                  so pressing it does nothing — rather than following the
+                  card's "#" link, which would read as the button working.
+                */}
+                <button
+                  type="button"
+                  disabled
+                  className="relative z-10 mt-4 w-full cursor-not-allowed rounded-full border border-black/10 bg-brand-navy/[0.04] px-4 py-2.5 text-sm font-semibold text-brand-navy/50"
+                >
+                  {labels.buyLabel}
+                </button>
               </HoverLift>
             ))}
           </ul>

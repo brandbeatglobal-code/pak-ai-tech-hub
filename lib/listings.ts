@@ -11,8 +11,8 @@ import { products, providers } from "@/db/schema";
 
 /**
  * The marketplace's listings: every APPROVED product, with the name of the
- * provider that lists it, in the `Product` shape the cards and the search
- * already take.
+ * provider that lists it and whether it is an EXAMPLE listing, in the
+ * `Product` shape the cards and the search already take.
  *
  * THE ONE READ. /marketplace, the homepage grid, the nav (its counts and its
  * search) and the contact form's product dropdown — and the contact form's
@@ -118,6 +118,7 @@ type Row = {
   priceAmount: string;
   priceCurrency: string;
   provider: string;
+  providerUserId: string | null;
 };
 
 /** A row the site can show, or null (logged) when it cannot be shown honestly. */
@@ -154,6 +155,20 @@ function toListing(row: Row): Listing | null {
     /* Individual product pages do not exist yet; every card links nowhere. */
     href: "#",
     provider: row.provider,
+    /*
+      THE ONE PLACE "example" IS DECIDED. A provider with no linked user
+      account is the house provider (see `providers.userId` in db/schema.ts):
+      its products are shown as examples — not real listings yet, placeholder
+      prices. A provider with an account applied and was approved; their
+      products are real listings, whoever they are.
+
+      Structural on purpose, not a list of names or ids: a renamed seeded
+      product stays an example, and any in-house demo listing added later is
+      one automatically. The signal cannot drift for a real provider either —
+      deleting a user deletes their provider row (ON DELETE CASCADE), it never
+      leaves one behind with a null user_id.
+    */
+    example: row.providerUserId === null,
   };
 }
 
@@ -168,6 +183,7 @@ const readListings = unstable_cache(
         priceAmount: products.priceAmount,
         priceCurrency: products.priceCurrency,
         provider: providers.companyName,
+        providerUserId: providers.userId,
       })
       .from(products)
       .innerJoin(providers, eq(providers.id, products.providerId))

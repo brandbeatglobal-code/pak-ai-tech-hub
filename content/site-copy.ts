@@ -197,6 +197,20 @@ export type Product = {
  */
 export type Listing = Product & {
   provider: string;
+  /**
+   * An EXAMPLE listing: shown, but not a real listing yet — its price is a
+   * placeholder. Every surface that renders a listing shows
+   * `marketplace.products.exampleBadge` when this is true, and only then.
+   *
+   * Structural, set in one place (lib/listings.ts): true exactly when the
+   * listing's provider has no linked user account (`providers.user_id` is
+   * null). Today that is the first-party house provider and its eight seeded
+   * products; it would also be any in-house demo listing added later. A
+   * provider with a real account — someone who applied and was approved — is
+   * never an example, whoever they are. Do not re-derive this per surface,
+   * and do not replace it with a list of names or ids.
+   */
+  example: boolean;
 };
 
 export type TrainingTier = {
@@ -783,6 +797,20 @@ export const siteCopy = {
          * quoting a product that no longer existed. The names live in the
          * `products` table (read through lib/listings.ts); if this line needs
          * them, read them from there rather than typing them here.
+         *
+         * UNRESOLVED TENSION — read before editing. The products this tab
+         * describes (support, analytics, content, CRM) are the house
+         * provider's listings, and the marketplace badges every one of them
+         * "Example": not live yet, placeholder prices
+         * (`marketplace.products.exampleNote`). This tab says they are "built
+         * in-house" and "ready to deploy". Both hold only if the products do
+         * exist and can be deployed today, with just their marketplace
+         * listings unfinished. If they cannot, this headline and body — and
+         * the "Built in-house" / "Our own products" lines in
+         * `marketplace.hero`, `marketplace.meta`, `flagship` and
+         * `nav.menus.marketplace.featured` — overstate them, and need
+         * rewriting. That is a fact about the products, not the code; it was
+         * left open rather than guessed.
          */
         body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
         link: { label: "Learn more", href: "#" },
@@ -936,9 +964,31 @@ export const siteCopy = {
        *
        * Still not buyable. There is no checkout, so every card's buy button is
        * disabled (`buyLabel`) and the intro says why (`notBuyableYet`).
+       *
+       * Some listings are EXAMPLES (`Listing.example`): the first-party
+       * products, which are not real listings yet — their prices are
+       * placeholders. Those, and only those, carry `exampleBadge`, and
+       * `exampleNote` says what the badge means wherever one is on show. A
+       * real provider's approved product never carries it.
        */
       heading: "Listed products",
       intro: `Products listed by providers on PAKAI TechHub. ${notBuyableYet}`,
+      /**
+       * Badge on every EXAMPLE listing card, and on its row in the nav
+       * search results. Dashed outline, like the other "not yet" markers, so
+       * it reads as a status rather than a product attribute.
+       */
+      exampleBadge: "Example",
+      /*
+       * Shown under the intro, only when at least one listing is an example.
+       *
+       * Deliberately narrow: it says the LISTING is not live and the PRICE is
+       * a placeholder. It does not say whether the product itself exists —
+       * the "Own AI Products" tab in `offering` says the in-house products
+       * are "built in-house" and "ready to deploy", and nothing here
+       * confirms or contradicts that. If that tab changes, revisit this line.
+       */
+      exampleNote: "Listings marked Example are not live yet — their prices are placeholders.",
       /*
        * The buy button on each card, permanently disabled. There is no
        * checkout, so a working-looking button would be a lie; a disabled one

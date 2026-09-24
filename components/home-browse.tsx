@@ -225,9 +225,12 @@ export function CategoryBar() {
  * hero search and the category bar.
  *
  * Every card carries a disabled "Coming soon" button. It is not decoration:
- * the listings are real, but there is no checkout, so nothing here can be
- * bought. Do not enable the button, and do not add a rating, a review count or
- * an add-to-cart control — there is no data behind any of them.
+ * there is no checkout, so nothing here can be bought. An EXAMPLE listing
+ * (`Listing.example` — the house provider's placeholder-priced products) also
+ * carries the "Example" badge; a real provider's listing never does. Do not
+ * enable the button, do not show the badge on anything but an example, and do
+ * not add a rating, a review count or an add-to-cart control — there is no
+ * data behind any of them.
  */
 export function ProductListings() {
   const { listings, query, categoryId, listingsRef } = useBrowse();
@@ -265,9 +268,22 @@ export function ProductListings() {
               distance={3}
               className="flex flex-col rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
             >
-              <span className="inline-flex w-fit rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
-                {categoryLabelFor(product)}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
+                  {categoryLabelFor(product)}
+                </span>
+                {/*
+                  Only on example listings, decided once in lib/listings.ts.
+                  A dashed outline rather than a solid fill, like the other
+                  "not yet" markers on the page, so it reads as a status and
+                  not as a product attribute.
+                */}
+                {product.example ? (
+                  <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
+                    {products.exampleBadge}
+                  </span>
+                ) : null}
+              </div>
 
               {/* Not a link. Product pages do not exist, and the card's own
                   button already says it cannot be bought yet. */}

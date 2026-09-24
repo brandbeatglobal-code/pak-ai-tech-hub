@@ -220,8 +220,20 @@ export function NavSearch({
                       index === activeIndex ? "bg-brand-navy/[0.06]" : ""
                     }`}
                   >
-                    <span className="font-semibold text-brand-navy">
-                      {product.name}
+                    {/*
+                      The "Example" badge sits with the name, as it does on
+                      the grid cards, and only on example listings (decided
+                      once in lib/listings.ts). Beside the name rather than the
+                      category so that, in the narrow panel on a phone, it
+                      wraps under the name instead of squeezing it.
+                    */}
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-semibold text-brand-navy">{product.name}</span>
+                      {product.example ? (
+                        <span className="rounded-full border border-dashed border-brand-navy/30 px-2 py-0.5 text-xs font-semibold text-brand-navy/65">
+                          {marketplace.products.exampleBadge}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="shrink-0 text-xs text-brand-navy/60">
                       {categoryLabelFor(product)}

@@ -72,6 +72,11 @@ export const providers = pgTable("providers", {
    * it has no person to sign in as. A null `user_id` means a first-party
    * provider rather than a signed-up one, which is cleaner than inventing a
    * placeholder user row that could then be logged into.
+   *
+   * It also decides the "Example" badge: a null here makes every product of
+   * this provider an example listing on the site (`Listing.example`, set in
+   * lib/listings.ts). Linking a user to the house provider would silently
+   * turn its eight placeholder-priced products into real-looking listings.
    */
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })

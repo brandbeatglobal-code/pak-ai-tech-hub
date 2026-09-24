@@ -116,6 +116,12 @@ export default async function Home() {
             <p className="mt-3 max-w-2xl leading-relaxed text-brand-navy/70">
               {marketplace.products.intro}
             </p>
+            {/* What the Example badge means — only when one is on show. */}
+            {listings?.some((listing) => listing.example) ? (
+              <p className="mt-2 max-w-2xl leading-relaxed text-brand-navy/70">
+                {marketplace.products.exampleNote}
+              </p>
+            ) : null}
             <div className="mt-8">
               <ProductListings />
             </div>
