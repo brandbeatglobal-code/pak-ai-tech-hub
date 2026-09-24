@@ -158,30 +158,59 @@ export type CategoryFilter = {
 export type Product = {
   id: string;
   name: string;
+  /**
+   * The filter ID ("cross-industry"), NOT the label ("Cross-Industry").
+   *
+   * The `products` table stores the label; lib/listings.ts converts it to
+   * this ID through `marketplace.products.categories`. Every filter compares
+   * IDs, so a label left in here would match nothing.
+   */
   category: ProductCategory;
   description: string;
   /**
    * The bare amount, e.g. "$55/mo" — no "from" prefix baked in.
    *
    * The cards that show it prepend `marketplace.products.pricePrefix`, so the
-   * prefix is presentation and the number is data. Both /marketplace and the
-   * homepage's example listings read this same field, which is what stops the
-   * two surfaces quoting different prices.
+   * prefix is presentation and the number is data. Every surface that shows a
+   * price reads this same field, which is what stops them quoting different
+   * prices.
    *
-   * The /pricing table used to read it too, showing the amount without the
-   * prefix. That page is gone; this field is unchanged and still the single
-   * source for every price the site shows.
+   * For a listing it is built by lib/listings.ts from `price_amount` and
+   * `price_currency`, plus `marketplace.products.pricePeriod`. The "/mo" is
+   * the marketplace's convention, NOT stored data — the table has no
+   * billing-period column (see `products.priceAmount` in db/schema.ts).
    *
-   * INTERIM DISPLAY PRICING. These figures were converted from the original
-   * PKR amounts at roughly 277 PKR/USD and rounded to clean numbers. They are
-   * a placeholder for a marketplace where providers set their own prices, and
-   * they will be replaced wholesale once provider-set pricing exists. Do not
-   * treat them as negotiated or quoted amounts, and do not add a currency
-   * switcher on top of them — this is one hard-coded currency, not a rate.
+   * The eight first-party rows still carry the INTERIM figures they were
+   * seeded with (converted from PKR at roughly 277 PKR/USD and rounded).
+   * Provider submissions carry the provider's own price, in USD only. Do not
+   * add a currency switcher on top of either.
    */
   price: string;
   /** Individual product pages do not exist yet. */
   href: string;
+};
+
+/**
+ * A product as the marketplace lists it: an approved row from the `products`
+ * table, in the `Product` shape the cards and the search already use, plus
+ * the name of the provider that lists it. Built only by lib/listings.ts.
+ */
+export type Listing = Product & {
+  provider: string;
+  /**
+   * An EXAMPLE listing: shown, but not a real listing yet — its price is a
+   * placeholder. Every surface that renders a listing shows
+   * `marketplace.products.exampleBadge` when this is true, and only then.
+   *
+   * Structural, set in one place (lib/listings.ts): true exactly when the
+   * listing's provider has no linked user account (`providers.user_id` is
+   * null). Today that is the first-party house provider and its eight seeded
+   * products; it would also be any in-house demo listing added later. A
+   * provider with a real account — someone who applied and was approved — is
+   * never an example, whoever they are. Do not re-derive this per surface,
+   * and do not replace it with a list of names or ids.
+   */
+  example: boolean;
 };
 
 export type TrainingTier = {
@@ -358,6 +387,18 @@ const submitProductCta = {
  */
 const contactEmail = "hello@pakaitechub.com";
 
+/**
+ * The one sentence that says nothing on the marketplace can be bought.
+ *
+ * THIS IS THE ONLY PLACE TO WRITE IT. Three surfaces read it: the listings
+ * intro on the homepage, the same intro on /marketplace, and the footnote
+ * under the nav search's results. The listings are real approved products
+ * now, but there is still no checkout — every card's buy button stays
+ * disabled, and this sentence is what explains why. Remove it only when
+ * checkout exists, and remove it here, once.
+ */
+const notBuyableYet = "None of these are buyable yet — checkout is still being built.";
+
 export const siteCopy = {
   brand: {
     name: "PAKAI TechHub",
@@ -397,19 +438,27 @@ export const siteCopy = {
       marketplace: {
         heading: "Browse by category",
         viewAll: "All products",
-        /** {count} is substituted with the real number of products. */
+        /**
+         * {count} is substituted with the number of listed products in that
+         * category — counted from the same listings /marketplace renders.
+         */
         countOne: "1 product",
         countOther: "{count} products",
         /**
          * Highlight card in the panel's left region.
          *
-         * {count} is substituted with `marketplace.products.items.length`, so
-         * the headline cannot claim a product count the marketplace does not
-         * have. Do not hard-code a number here.
+         * {count} is substituted with the number of listings lib/listings.ts
+         * returns — the approved products actually on /marketplace — so the
+         * headline cannot claim a count the marketplace does not have. Do not
+         * hard-code a number here.
+         *
+         * `headlineNoCount` is used when the listings could not be read. The
+         * panel then shows no counts at all rather than a wrong one.
          */
         featured: {
           eyebrow: "Featured",
           headline: "Browse all {count} AI products",
+          headlineNoCount: "Browse AI products",
           body: "Built in-house or vetted from trusted partners, managed in one place.",
         },
       },
@@ -454,10 +503,11 @@ export const siteCopy = {
      * Copy for the search field in the nav, and for the larger one in the
      * hero, which is the same control at a different size.
      *
-     * The search is real: it filters the example listings and the category
-     * names that are already in this file. It does not reach a backend, and
-     * there is no search results page behind it, so do not write copy here
-     * that promises either.
+     * The search is real: it filters the approved listings the page was
+     * rendered with (lib/listings.ts) by name, description and category.
+     * It filters in the browser — it does not query as you type — and there
+     * is no search results page behind it, so do not write copy here that
+     * promises either.
      */
     search: {
       label: "Search AI products",
@@ -744,8 +794,20 @@ export const siteCopy = {
         /*
          * Describes the in-house products without naming them. They used to be
          * listed here by name, which meant renaming one left this sentence
-         * quoting a product that no longer existed. The names live in
-         * `marketplace.products.items`; if this line needs them, derive them.
+         * quoting a product that no longer existed. The names live in the
+         * `products` table (read through lib/listings.ts); if this line needs
+         * them, read them from there rather than typing them here.
+         *
+         * NOT A CONTRADICTION with the "Example" badge — confirmed on
+         * 2026-09-24. The products this tab describes (support, analytics,
+         * content, CRM) are built and deployable, so "built in-house" and
+         * "ready to deploy" are accurate as written. What is not final is
+         * their MARKETPLACE LISTINGS: the house provider's listings carry the
+         * "Example" badge because the listing is not live yet and its price is
+         * a placeholder (`marketplace.products.exampleNote`), not because the
+         * product does not exist. Keep the two meanings apart: if either one
+         * changes — the products, or the state of their listings — revisit
+         * this tab and `exampleNote` together.
          */
         body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
         link: { label: "Learn more", href: "#" },
@@ -886,26 +948,57 @@ export const siteCopy = {
     },
     products: {
       /*
-       * "Example listings", not "Our products".
+       * The listings: every APPROVED row in the `products` table, read by
+       * lib/listings.ts. There is no product array in this file any more —
+       * changing what the marketplace shows means changing the table, through
+       * the review queue.
        *
-       * Nothing in this array is buyable. The eight entries are illustrative —
-       * real product shapes at real-looking prices, standing in for listings
-       * that providers have not made yet — so every surface that renders them
-       * carries the `exampleBadge` and the disabled `buyLabel` button, and the
-       * heading says what they are. Do not relabel this "Our products",
-       * "Featured" or "Popular" until there is something behind it.
+       * "Listed products", not "Our products", "Featured" or "Popular":
+       * providers other than PAKAI TechHub list here, and nothing measures
+       * popularity or picks features. It used to read "Example listings" when
+       * the grid was eight illustrative entries in this file; the heading and
+       * the intro changed when the grid started reading the table.
+       *
+       * Still not buyable. There is no checkout, so every card's buy button is
+       * disabled (`buyLabel`) and the intro says why (`notBuyableYet`).
+       *
+       * Some listings are EXAMPLES (`Listing.example`): the first-party
+       * products, which are not real listings yet — their prices are
+       * placeholders. Those, and only those, carry `exampleBadge`, and
+       * `exampleNote` says what the badge means wherever one is on show. A
+       * real provider's approved product never carries it.
        */
-      heading: "Example listings",
-      intro:
-        "Illustrative listings showing what a product page will carry. None of these are buyable yet.",
-      /** Badge on every card. Same treatment as the "Coming soon" labels. */
+      heading: "Listed products",
+      intro: `Products listed by providers on PAKAI TechHub. ${notBuyableYet}`,
+      /**
+       * Badge on every EXAMPLE listing card, and on its row in the nav
+       * search results. Dashed outline, like the other "not yet" markers, so
+       * it reads as a status rather than a product attribute.
+       */
       exampleBadge: "Example",
+      /*
+       * Shown under the intro, only when at least one listing is an example.
+       *
+       * Deliberately narrow: it says the LISTING is not live and the PRICE is
+       * a placeholder — nothing about the product itself. The in-house
+       * products are built and deployable (confirmed 2026-09-24), which is
+       * what the "Own AI Products" tab in `offering` says; this line must not
+       * be widened into suggesting otherwise. If that tab changes, revisit
+       * this line.
+       */
+      exampleNote: "Listings marked Example are not live yet — their prices are placeholders.",
       /*
        * The buy button on each card, permanently disabled. There is no
        * checkout, so a working-looking button would be a lie; a disabled one
-       * that says why is not. Do not wire this to a cart.
+       * that says why is not. Do not wire this to a cart. It stays disabled
+       * whether a listing is first-party or a provider's — that is about
+       * checkout, not about whether the data is real.
        */
       buyLabel: "Coming soon",
+      /** Under the nav search's results. Same sentence as the intro. */
+      searchFootnote: notBuyableYet,
+      /** {provider} is the listing provider's business name. */
+      byProvider: "by {provider}",
       filterLegend: "Filter products by category",
       /**
        * Announced to screen readers when the filter changes the grid. Kept as
@@ -915,10 +1008,36 @@ export const siteCopy = {
        */
       resultCountOne: "1 product shown",
       resultCountOther: "{count} products shown",
+      /*
+       * Shown when a category has no approved listing — which is true of
+       * several right now, and is the honest answer: the category is real,
+       * nothing is listed in it yet.
+       */
       emptyMessage: "No products in this category yet.",
+      /*
+       * Shown instead of the grid when the listings could not be read (the
+       * database is unreachable or not configured). Not the empty message:
+       * "nothing listed" and "could not check" are different answers.
+       */
+      unavailableMessage:
+        "The listings could not be loaded just now. Please try again in a few minutes.",
       trainingBadge: "Training included",
       /** Prepended to `Product.price` on the marketplace cards only. */
       pricePrefix: "from",
+      /*
+       * Appended to every price lib/listings.ts formats. A MARKETPLACE-WIDE
+       * CONVENTION, not stored data: `products` has an amount and a currency
+       * but no billing period, and the submission form asks for a monthly
+       * price. If a period column is ever added, read it instead of this.
+       */
+      pricePeriod: "/mo",
+      /*
+       * The filter list, and the one map between the two category
+       * vocabularies: `id` is what `Product.category` and every filter hold,
+       * `label` is what the `products.category` column holds. lib/listings.ts
+       * converts label to id through this list; lib/product-submission.ts
+       * takes its allowed labels from it.
+       */
       categories: [
         { id: "all", label: "All" },
         { id: "healthcare", label: "Healthcare" },
@@ -927,80 +1046,6 @@ export const siteCopy = {
         { id: "retail", label: "Retail" },
         { id: "cross-industry", label: "Cross-Industry" },
       ] satisfies CategoryFilter[],
-      items: [
-        {
-          id: "chatbot",
-          name: "AI Customer Support Chatbot",
-          category: "cross-industry",
-          description:
-            "Multi-channel AI customer service for web, WhatsApp, and SMS. Available around the clock.",
-          price: "$55/mo",
-          href: "#",
-        },
-        {
-          id: "analytics",
-          name: "AI Predictive Analytics Dashboard",
-          category: "cross-industry",
-          description:
-            "Predictive analytics dashboard with real-time insights and AI recommendations.",
-          price: "$90/mo",
-          href: "#",
-        },
-        {
-          id: "content",
-          name: "AI Content Generator",
-          category: "cross-industry",
-          description:
-            "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
-          price: "$35/mo",
-          href: "#",
-        },
-        {
-          id: "crm",
-          name: "AI Sales CRM",
-          category: "cross-industry",
-          description:
-            "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
-          price: "$70/mo",
-          href: "#",
-        },
-        {
-          id: "health",
-          name: "AI Patient Triage & Diagnostics",
-          category: "healthcare",
-          description:
-            "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
-          price: "$180/mo",
-          href: "#",
-        },
-        {
-          id: "agri",
-          name: "AI Crop Monitoring",
-          category: "agriculture",
-          description:
-            "Crop monitoring, yield prediction, and soil analysis for farmers.",
-          price: "$70/mo",
-          href: "#",
-        },
-        {
-          id: "edu",
-          name: "AI Adaptive Learning Platform",
-          category: "education",
-          description:
-            "Adaptive learning, automated grading, and student engagement prediction.",
-          price: "$55/mo",
-          href: "#",
-        },
-        {
-          id: "retail",
-          name: "AI Demand Forecasting",
-          category: "retail",
-          description:
-            "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
-          price: "$90/mo",
-          href: "#",
-        },
-      ] satisfies Product[],
     },
     partners: {
       heading: "Marketplace partners",
@@ -1021,13 +1066,14 @@ export const siteCopy = {
    * It held that page's own content only — its meta, hero, the "what's
    * included" badges, the pricing table's column labels and caption, the
    * "bigger needs" routing line and its closing CTA. No product and no price
-   * was ever stored here: the table rendered its rows from
-   * `marketplace.products.items`, which is untouched and still the single
-   * source for every price the marketplace shows.
+   * was ever stored here: the table rendered its rows from the product list,
+   * which was then an array in this file and is now the `products` table,
+   * read through lib/listings.ts — still the single source for every price
+   * the marketplace shows.
    *
    * /pricing now redirects to /marketplace (see next.config.ts). If a pricing
-   * page returns, it goes back to reading products from `marketplace.products`
-   * rather than restating them — that was the point of the earlier refactor.
+   * page returns, it reads products from lib/listings.ts rather than
+   * restating them — that was the point of the earlier refactor.
    */
 
   /** Homepage founder section. Values come from the shared `founder` source. */
@@ -1363,10 +1409,12 @@ export const siteCopy = {
     /*
      * Lead-gen form.
      *
-     * The industry and product options are NOT listed here — they are derived
-     * from `industries.items` and `marketplace.products.items` by the form
-     * component, so the dropdowns cannot offer an industry the site does not
-     * cover or a product the marketplace does not sell.
+     * The industry and product options are NOT listed here. Industries come
+     * from `industries.items`; products are the names of the listings
+     * /marketplace shows (lib/listings.ts), passed in by app/contact/page.tsx
+     * and re-checked against the same listings by lib/contact-actions.ts. So
+     * the dropdowns cannot offer an industry the site does not cover or a
+     * product the marketplace does not list.
      *
      * There is deliberately no Privacy Policy link on the consent checkbox:
      * no such page exists, and linking to one that 404s is worse than not
@@ -1771,10 +1819,14 @@ export const siteCopy = {
    *
    * What these must not say:
    *
-   *   - That an approved PRODUCT is live or visible to buyers. The marketplace
-   *     still renders from this file, not the database; approval does not
-   *     list anything. It says the product passed review, and reuses the
-   *     product form's own "we will be in touch about the listing".
+   *   - That an approved product appears INSTANTLY, or everywhere at once.
+   *     Approval does list it — /marketplace reads the `products` table — and
+   *     `approveProduct` expires the listings cache on the spot, so the next
+   *     page load normally shows it. But anything that misses that signal
+   *     only catches up on the hourly refresh in lib/listings.ts, so the
+   *     email says "usually straight away" and "up to about an hour", no
+   *     tighter. Change the wording if that refresh interval changes.
+   *   - That it can be bought. There is no checkout.
    *   - Any turnaround or SLA. None has been agreed.
    *   - Anything about payouts beyond `commissionTerms`.
    *
@@ -1814,7 +1866,9 @@ export const siteCopy = {
       body: [
         "Hi {name},",
         "",
-        "{product} has been reviewed and approved. We will be in touch about the listing.",
+        "{product} has been reviewed and approved, and is now listed on the PAKAI TechHub marketplace. It usually shows there straight away; some pages can take up to about an hour to catch up.",
+        "",
+        "It cannot be bought yet: checkout is still being built.",
         "",
         "You can submit another product at any time:",
         "{link}",

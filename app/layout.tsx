@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteFrame } from "@/components/site-frame";
 import { SiteNav } from "@/components/site-nav";
 import { siteCopy } from "@/content/site-copy";
+import { getListings } from "@/lib/listings";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +23,16 @@ export const metadata: Metadata = {
   description: siteCopy.meta.description,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  /*
+    The nav's Marketplace panel counts these and its search field filters
+    them, so they are read here, once, for every page. Same read as the grid
+    on /marketplace (lib/listings.ts): the count in the nav is the number of
+    listings the marketplace actually shows. Cached — this is not a database
+    query per page view.
+  */
+  const listings = await getListings();
+
   return (
     <html
       lang="en"
@@ -47,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         {/* The marketing nav, <main> and footer — except on routes with an
             application shell of their own. See components/site-frame.tsx. */}
-        <SiteFrame nav={<SiteNav />} footer={<SiteFooter />}>
+        <SiteFrame nav={<SiteNav listings={listings} />} footer={<SiteFooter />}>
           {children}
         </SiteFrame>
       </body>

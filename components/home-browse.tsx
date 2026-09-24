@@ -4,11 +4,11 @@ import { createContext, useContext, useId, useMemo, useRef, useState } from "rea
 
 import { HoverLift } from "@/components/motion/hover-lift";
 import { CategoryIcon } from "@/components/nav-icons";
-import { browseCategories, siteCopy } from "@/content/site-copy";
+import { browseCategories, siteCopy, type Listing } from "@/content/site-copy";
 import {
   ALL_CATEGORIES,
   categoryLabelFor,
-  searchExampleListings,
+  searchProducts,
 } from "@/lib/product-search";
 
 const { nav, marketplace, categoryBrowse } = siteCopy;
@@ -17,7 +17,7 @@ const { products } = marketplace;
 
 /**
  * The homepage's browse experience: the hero search field, the category bar
- * under it, and the example listings grid.
+ * under it, and the listings grid.
  *
  * They are three separate sections on the page but one piece of state, so they
  * live behind a small context rather than being lifted into `app/page.tsx`.
@@ -30,6 +30,11 @@ const { products } = marketplace;
  */
 
 type BrowseState = {
+  /**
+   * The approved listings, read on the server by lib/listings.ts and passed
+   * in by app/page.tsx; null when they could not be read.
+   */
+  listings: Listing[] | null;
   query: string;
   setQuery: (value: string) => void;
   categoryId: string;
@@ -49,13 +54,20 @@ function useBrowse(): BrowseState {
   return value;
 }
 
-export function BrowseProvider({ children }: { children: React.ReactNode }) {
+export function BrowseProvider({
+  listings,
+  children,
+}: {
+  listings: Listing[] | null;
+  children: React.ReactNode;
+}) {
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<string>(ALL_CATEGORIES);
   const listingsRef = useRef<HTMLDivElement | null>(null);
 
   const value = useMemo<BrowseState>(
     () => ({
+      listings,
       query,
       setQuery,
       categoryId,
@@ -64,7 +76,7 @@ export function BrowseProvider({ children }: { children: React.ReactNode }) {
       focusListings: () =>
         listingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
     }),
-    [query, categoryId],
+    [listings, query, categoryId],
   );
 
   return <BrowseContext.Provider value={value}>{children}</BrowseContext.Provider>;
@@ -138,9 +150,9 @@ export function HeroSearch() {
 /**
  * The horizontally scrolling category bar.
  *
- * All nine categories, including the five with nothing listed. Selecting an
+ * All nine categories, including those with nothing listed yet. Selecting an
  * empty one shows the grid's empty message, which is the honest answer — the
- * category is real, the listings are not there yet.
+ * category is real, no approved product is in it yet.
  *
  * A radio group rather than buttons: arrow keys move between options and the
  * group is one Tab stop, which is the behaviour a row of mutually exclusive
@@ -209,26 +221,31 @@ export function CategoryBar() {
 }
 
 /**
- * The example listings grid.
+ * The listings grid: the marketplace's approved products, filtered by the
+ * hero search and the category bar.
  *
- * Every card carries the "Example" badge and a disabled "Coming soon" button.
- * Neither is decoration: nothing here is buyable, there is no checkout, and no
- * provider has listed any of these. Do not remove the badge, do not enable the
- * button, and do not add a rating, a review count or an add-to-cart control —
- * there is no data behind any of them.
+ * Every card carries a disabled "Coming soon" button. It is not decoration:
+ * there is no checkout, so nothing here can be bought. An EXAMPLE listing
+ * (`Listing.example` — the house provider's placeholder-priced products) also
+ * carries the "Example" badge; a real provider's listing never does. Do not
+ * enable the button, do not show the badge on anything but an example, and do
+ * not add a rating, a review count or an add-to-cart control — there is no
+ * data behind any of them.
  */
-export function ExampleListings() {
-  const { query, categoryId, listingsRef } = useBrowse();
+export function ProductListings() {
+  const { listings, query, categoryId, listingsRef } = useBrowse();
 
   const visible = useMemo(
-    () => searchExampleListings({ query, categoryId }),
-    [query, categoryId],
+    () => searchProducts(listings ?? [], { query, categoryId }),
+    [listings, query, categoryId],
   );
 
   const countMessage =
-    visible.length === 1
-      ? products.resultCountOne
-      : products.resultCountOther.replace("{count}", String(visible.length));
+    listings === null
+      ? products.unavailableMessage
+      : visible.length === 1
+        ? products.resultCountOne
+        : products.resultCountOther.replace("{count}", String(visible.length));
 
   return (
     <div ref={listingsRef} className="scroll-mt-40">
@@ -239,7 +256,8 @@ export function ExampleListings() {
 
       {visible.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 px-6 py-12 text-center text-brand-navy/65">
-          {products.emptyMessage}
+          {/* "Could not check" is not "nothing listed": say which one. */}
+          {listings === null ? products.unavailableMessage : products.emptyMessage}
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -255,20 +273,28 @@ export function ExampleListings() {
                   {categoryLabelFor(product)}
                 </span>
                 {/*
-                  Same treatment as the "Coming soon" labels elsewhere on the
-                  page: a dashed outline rather than a solid fill, so it reads
-                  as a placeholder marker and not as a product attribute.
+                  Only on example listings, decided once in lib/listings.ts.
+                  A dashed outline rather than a solid fill, like the other
+                  "not yet" markers on the page, so it reads as a status and
+                  not as a product attribute.
                 */}
-                <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
-                  {products.exampleBadge}
-                </span>
+                {product.example ? (
+                  <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
+                    {products.exampleBadge}
+                  </span>
+                ) : null}
               </div>
 
               {/* Not a link. Product pages do not exist, and the card's own
-                  button already says the listing is not live. */}
+                  button already says it cannot be bought yet. */}
               <h3 className="mt-4 text-base leading-snug font-bold tracking-tight text-brand-navy">
                 {product.name}
               </h3>
+
+              {/* Who lists it — same line as the /marketplace card. */}
+              <p className="mt-1 text-sm text-brand-navy/65">
+                {products.byProvider.replace("{provider}", product.provider)}
+              </p>
 
               <p className="mt-3 flex-1 text-sm leading-relaxed text-brand-navy/70">
                 {product.description}

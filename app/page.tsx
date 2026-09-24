@@ -4,8 +4,8 @@ import {
   BrowseProvider,
   CategoryBar,
   CategoryGrid,
-  ExampleListings,
   HeroSearch,
+  ProductListings,
 } from "@/components/home-browse";
 import { HowItWorks } from "@/components/how-it-works";
 import { HeroBackdrop } from "@/components/motion/hero-backdrop";
@@ -17,6 +17,7 @@ import { OfferingTabs } from "@/components/offering-tabs";
 import { FlagshipArt } from "@/components/visuals/flagship-art";
 import { SkylineArt } from "@/components/visuals/skyline-art";
 import { siteCopy } from "@/content/site-copy";
+import { getListings } from "@/lib/listings";
 
 /** Shared heading treatment, so every section headline carries the same weight. */
 const sectionHeading =
@@ -33,7 +34,7 @@ const sectionHeading =
 const sectionPad = "px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32";
 const container = `mx-auto w-full max-w-6xl ${sectionPad}`;
 
-export default function Home() {
+export default async function Home() {
   const {
     nav,
     hero,
@@ -52,6 +53,13 @@ export default function Home() {
     finalCta,
   } = siteCopy;
 
+  /*
+    The approved products, from the database (lib/listings.ts) — the same
+    read /marketplace and the nav use. Null if it could not be read; the grid
+    then says so instead of showing every category as empty.
+  */
+  const listings = await getListings();
+
   return (
     /*
       Search, the category bar and the listings grid are three sections apart
@@ -59,7 +67,7 @@ export default function Home() {
       three separate widgets that each remember their own filter. Everything
       inside that is not one of those three still renders on the server.
     */
-    <BrowseProvider>
+    <BrowseProvider listings={listings}>
       {/* 1. Hero — headline, subhead, and the search field that leads the page */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
@@ -81,14 +89,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. Category bar and the example listings it filters */}
+      {/* 2. Category bar and the listings it filters */}
       {/*
         One section, not two. The bar is the grid's control — separating them
         with the page's usual section padding would put a band of white space
         between a filter and the thing it filters.
       */}
       <section
-        id="example-listings"
+        id="listings"
         className="scroll-mt-40 border-t border-black/5 bg-brand-navy/[0.02]"
       >
         <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
@@ -108,8 +116,14 @@ export default function Home() {
             <p className="mt-3 max-w-2xl leading-relaxed text-brand-navy/70">
               {marketplace.products.intro}
             </p>
+            {/* What the Example badge means — only when one is on show. */}
+            {listings?.some((listing) => listing.example) ? (
+              <p className="mt-2 max-w-2xl leading-relaxed text-brand-navy/70">
+                {marketplace.products.exampleNote}
+              </p>
+            ) : null}
             <div className="mt-8">
-              <ExampleListings />
+              <ProductListings />
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { SectionGlow } from "@/components/motion/section-glow";
 import { SocialIcon } from "@/components/social-icons";
 import { siteCopy } from "@/content/site-copy";
+import { getListings, productOptionNames } from "@/lib/listings";
 
 const { contact, footer } = siteCopy;
 
@@ -23,9 +24,15 @@ const sectionHeading =
 const sectionPad = "px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32";
 const container = `mx-auto w-full max-w-6xl ${sectionPad}`;
 
-export default function ContactPage() {
+export default async function ContactPage() {
   const { hero, details, reachUs, closingCta } = contact;
   const { connect } = footer;
+  /*
+    The product dropdown offers the marketplace's listed products — the same
+    read /marketplace renders — so it cannot name a product nobody can find.
+    lib/contact-actions.ts checks a submission against the same list.
+  */
+  const productNames = productOptionNames(await getListings());
 
   return (
     <>
@@ -77,7 +84,7 @@ export default function ContactPage() {
                 {contact.form.intro}
               </p>
               <div className="mt-10">
-                <ContactForm />
+                <ContactForm productNames={productNames} />
               </div>
             </div>
           </Reveal>
