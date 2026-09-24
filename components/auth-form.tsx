@@ -41,7 +41,7 @@ const label = "block text-sm font-semibold text-brand-navy";
 /**
  * Eye / eye-off, drawn the same way as the glyphs in components/nav-icons.tsx:
  * a 20×20 stroked outline in `currentColor`, hidden from assistive tech — the
- * button's label says what it does.
+ * button's fixed label and `aria-pressed` carry the same information.
  */
 function EyeIcon({ crossed }: { crossed: boolean }) {
   return (
@@ -280,18 +280,20 @@ export function AuthForm({
               Keyboard activation never fires mousedown, so a keyboard user's
               focus stays on the button, where they left it.
 
-              The label names the action and `aria-pressed` reports the state,
-              as the brief asked. The WAI-ARIA Authoring Practices advise
-              against a label that changes together with `aria-pressed`,
-              since a screen reader can then read out "Hide password,
-              pressed". The alternative is a fixed "Show password" label with
-              `aria-pressed` alone.
+              The label stays "Show password" in both states; `aria-pressed`
+              alone reports whether the password is shown, which exposes the
+              button as a toggle, pressed or not pressed. Do not switch the
+              label to "Hide password": the WAI-ARIA Authoring Practices
+              advise against a label that changes as well as `aria-pressed`,
+              which a screen reader could read out as "Hide password,
+              pressed". The eye / eye-off icon is the sighted equivalent of
+              the pressed state.
             */}
             <button
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={togglePassword}
-              aria-label={passwordVisible ? "Hide password" : "Show password"}
+              aria-label="Show password"
               aria-pressed={passwordVisible}
               aria-controls="password"
               className="absolute top-1/2 right-1.5 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-brand-navy/65 transition-colors hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-navy"
