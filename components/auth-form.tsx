@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useLayoutEffect, useRef, useState } from "react";
 
 import type { FormState } from "@/lib/auth-actions";
 
@@ -13,13 +13,55 @@ import type { FormState } from "@/lib/auth-actions";
  * page, and the submit button disables while the action is in flight.
  *
  * A password value lives only in the uncontrolled input and in the FormData
- * the browser posts; nothing here reads it, stores it or logs it.
+ * the browser posts; nothing here reads it, stores it or logs it. The
+ * show/hide toggle changes only the input's `type` — it never touches the
+ * value.
  */
 
-const field =
-  "w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-base text-brand-navy outline-none transition-colors placeholder:text-brand-navy/40 focus-visible:border-brand-navy/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+const fieldBase =
+  "w-full rounded-xl border border-black/10 bg-white py-2.5 text-base text-brand-navy outline-none transition-colors placeholder:text-brand-navy/40 focus-visible:border-brand-navy/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+const field = `${fieldBase} px-4`;
+
+/*
+  The password input's 48px right padding is the reveal button's lane. The
+  36px button sits 6px in from the input's outer edge, which leaves 7px
+  between it and the end of the text once the 1px border is counted. Typed
+  characters stop before the button at every width instead of running under
+  it.
+
+  `::-ms-reveal` is Edge's own built-in eye on password inputs. Hidden so Edge
+  does not show two. Browsers that do not know the pseudo-element ignore the
+  rule.
+*/
+const passwordField = `${fieldBase} pl-4 pr-12 [&::-ms-reveal]:hidden`;
 
 const label = "block text-sm font-semibold text-brand-navy";
+
+/**
+ * Eye / eye-off, drawn the same way as the glyphs in components/nav-icons.tsx:
+ * a 20×20 stroked outline in `currentColor`, hidden from assistive tech — the
+ * button's fixed label and `aria-pressed` carry the same information.
+ */
+function EyeIcon({ crossed }: { crossed: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      focusable="false"
+      viewBox="0 0 20 20"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1.75 10S4.75 4 10 4s8.25 6 8.25 6-3 6-8.25 6-8.25-6-8.25-6Z" />
+      <circle cx="10" cy="10" r="2.5" />
+      {crossed ? <path d="m3 3 14 14" /> : null}
+    </svg>
+  );
+}
 
 export function AuthForm({
   action,
@@ -50,6 +92,58 @@ export function AuthForm({
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [role, setRole] = useState<"buyer" | "provider">(initialRole);
+  /* Whether the password is shown as text. Only the input's `type` follows
+     this; the value stays in the uncontrolled input. */
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  /*
+    Where the caret was when the toggle was clicked.
+
+    When a focused input's `type` changes straight after a mouse click,
+    Chromium puts the caret back at the start — asynchronously, after the
+    click has been handled. (Reproduced with a bare input and button, no
+    React; a type change made from script alone does not do it.) Without a
+    fix, revealing the password mid-typing and carrying on would insert the
+    next characters at the FRONT of the password.
+
+    So the selection is read just before the toggle and, once React has
+    applied the new type, the field is blurred, focused again and the
+    selection put back. Re-focusing is what makes the restore stick: a plain
+    `setSelectionRange` was measured to lose to the reset every time, and a
+    second restore in the next animation frame still let a keystroke typed
+    before that frame land at the start. With the blur and focus, the caret
+    was measured correct straight after the click, with no wait. It all runs
+    inside the click, before paint, so the caret never visibly jumps.
+
+    `focus()` deliberately keeps its default scrolling: that is what scrolls
+    a long password back to where the caret is. With `preventScroll` the
+    field was measured showing the start of the text while the caret sat at
+    the end.
+  */
+  const caret = useRef<[number, number] | null>(null);
+
+  useLayoutEffect(() => {
+    const input = passwordRef.current;
+    const saved = caret.current;
+    if (!input || !saved) return;
+    caret.current = null;
+
+    input.blur();
+    input.focus();
+    input.setSelectionRange(saved[0], saved[1]);
+  }, [passwordVisible]);
+
+  function togglePassword() {
+    const input = passwordRef.current;
+    /* Only when the field has focus — i.e. a mouse click, which leaves focus
+       there. After keyboard activation focus is on the button instead, and
+       there is no caret to keep. */
+    caret.current =
+      input && document.activeElement === input
+        ? [input.selectionStart ?? 0, input.selectionEnd ?? 0]
+        : null;
+    setPasswordVisible((visible) => !visible);
+  }
 
   return (
     <div className="mx-auto w-full max-w-md">
@@ -58,7 +152,17 @@ export function AuthForm({
       </h1>
       <p className="mt-4 leading-relaxed text-brand-navy/70">{intro}</p>
 
-      <form action={formAction} className="mt-10 space-y-5">
+      <form
+        action={formAction}
+        /*
+          Back to hidden on every submit. A rejected login comes back with the
+          field emptied (React resets an uncontrolled form after an action), and
+          without this the next attempt would be typed in the clear because the
+          toggle was left on.
+        */
+        onSubmit={() => setPasswordVisible(false)}
+        className="mt-10 space-y-5"
+      >
         {showRoleChoice ? (
           <fieldset>
             <legend className={`${label} mb-3`}>Account type</legend>
@@ -154,15 +258,49 @@ export function AuthForm({
           <label htmlFor="password" className={label}>
             Password
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete={showRoleChoice ? "new-password" : "current-password"}
-            required
-            minLength={showRoleChoice ? 8 : undefined}
-            className={`mt-2 ${field}`}
-          />
+          <div className="relative mt-2">
+            <input
+              ref={passwordRef}
+              id="password"
+              name="password"
+              type={passwordVisible ? "text" : "password"}
+              autoComplete={showRoleChoice ? "new-password" : "current-password"}
+              required
+              minLength={showRoleChoice ? 8 : undefined}
+              className={passwordField}
+            />
+            {/*
+              A real button, after the input in the DOM so Tab reaches it
+              straight after the field, and Enter / Space toggle it.
+
+              `onMouseDown` preventDefault keeps a click or a tap from moving
+              focus: someone typing their password can check it and carry on
+              typing without going back into the field. (Checked with mouse
+              and with touch emulation in Chromium; not on a real phone.)
+              Keyboard activation never fires mousedown, so a keyboard user's
+              focus stays on the button, where they left it.
+
+              The label stays "Show password" in both states; `aria-pressed`
+              alone reports whether the password is shown, which exposes the
+              button as a toggle, pressed or not pressed. Do not switch the
+              label to "Hide password": the WAI-ARIA Authoring Practices
+              advise against a label that changes as well as `aria-pressed`,
+              which a screen reader could read out as "Hide password,
+              pressed". The eye / eye-off icon is the sighted equivalent of
+              the pressed state.
+            */}
+            <button
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={togglePassword}
+              aria-label="Show password"
+              aria-pressed={passwordVisible}
+              aria-controls="password"
+              className="absolute top-1/2 right-1.5 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-brand-navy/65 transition-colors hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-navy"
+            >
+              <EyeIcon crossed={passwordVisible} />
+            </button>
+          </div>
           {showRoleChoice ? (
             <p className="mt-2 text-sm text-brand-navy/65">
               At least 8 characters.
