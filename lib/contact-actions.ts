@@ -4,6 +4,7 @@ import { Resend } from "resend";
 
 import { countries } from "@/content/countries";
 import { siteCopy } from "@/content/site-copy";
+import { getListings, productOptionNames } from "@/lib/listings";
 
 /**
  * Contact form submission.
@@ -17,7 +18,7 @@ import { siteCopy } from "@/content/site-copy";
  * returns the mailto address so the sender is never left with a dead end.
  */
 
-const { contact, industries, marketplace } = siteCopy;
+const { contact, industries } = siteCopy;
 
 export type ContactState =
   | { status: "idle" }
@@ -29,18 +30,32 @@ export type ContactState =
 const TO_ADDRESS = contact.details.email.value;
 
 /**
- * Allow-lists for the four selects, derived from the same arrays the site
- * renders. Re-checked on the server because a client can post anything.
+ * Allow-lists for three of the four selects, derived from the same arrays the
+ * site renders. Re-checked on the server because a client can post anything.
+ *
+ * The fourth, product, is not fixed at start-up: it is the marketplace's
+ * listed products, which change when an admin approves one. It is read per
+ * submission by `allowedProducts()` below, from the same listings the form's
+ * dropdown was built from.
  */
 const ALLOWED = {
   country: new Set(countries.map((c) => c.name)),
   industry: new Set(industries.items.map((i) => i.name)),
   reason: new Set<string>(contact.form.reasons),
-  product: new Set<string>([
-    ...marketplace.products.items.map((p) => p.name),
-    contact.form.productUnsure,
-  ]),
 };
+
+/**
+ * The product names a submission may carry: the listed products the form
+ * offers (lib/listings.ts, cached — not a query per submission) plus "Not
+ * sure yet". If the listings cannot be read, only "Not sure yet" is accepted,
+ * which is also the only option the form shows in that case.
+ */
+async function allowedProducts(): Promise<Set<string>> {
+  return new Set([
+    ...productOptionNames(await getListings()),
+    contact.form.productUnsure,
+  ]);
+}
 
 /** Deliberately permissive — real addresses are stranger than most patterns. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -79,7 +94,7 @@ export async function submitContact(
   if (!ALLOWED.industry.has(values.industry)) errors.industry = required;
   if (!ALLOWED.reason.has(values.reason)) errors.reason = required;
   /* Product is optional, but if something was chosen it has to be real. */
-  if (values.product && !ALLOWED.product.has(values.product)) {
+  if (values.product && !(await allowedProducts()).has(values.product)) {
     errors.product = required;
   }
   if (!consent) errors.consent = consentMessage;

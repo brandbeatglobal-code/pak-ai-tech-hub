@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
@@ -13,6 +13,7 @@ import {
   siteCopy,
   type NavMenuSource,
   type CategoryFilter,
+  type Listing,
   type ProductCategory,
 } from "@/content/site-copy";
 
@@ -22,7 +23,8 @@ type PanelRow = {
   key: string;
   href: string;
   label: string;
-  detail: string;
+  /** Omitted rather than guessed when there is nothing true to put here. */
+  detail?: string;
   icon: React.ReactNode;
 };
 
@@ -61,63 +63,71 @@ function isCategory(
 /**
  * Panel rows are derived from the marketplace and academy source lists, never
  * retyped. A new product category or training tier appears in the nav from
- * that one edit, and the product counts below cannot disagree with the grid on
- * /marketplace because they are counted from the same array.
+ * that one edit.
+ *
+ * The marketplace panel's numbers are counted from `listings` — the same read
+ * (lib/listings.ts) that fills the grid on /marketplace — so "4 products"
+ * here is the four cards a visitor finds there. `listings` is null when the
+ * database could not be read; the panel then shows no numbers at all rather
+ * than zeros, which would say the marketplace is empty.
  */
-/** The tier the Academy panel features. First in the ladder, and the free one. */
-const entryTier = academy.tiers.items[0];
+function marketplacePanel(listings: Listing[] | null): Panel {
+  const { menus } = nav;
+  const countLabel = (count: number) =>
+    count === 1
+      ? menus.marketplace.countOne
+      : menus.marketplace.countOther.replace("{count}", String(count));
 
-const PANELS: Record<NavMenuSource, Panel> = {
-  marketplace: {
-    heading: nav.menus.marketplace.heading,
-    viewAll: { label: nav.menus.marketplace.viewAll, href: "/marketplace" },
+  return {
+    heading: menus.marketplace.heading,
+    viewAll: { label: menus.marketplace.viewAll, href: "/marketplace" },
     featured: {
-      eyebrow: nav.menus.marketplace.featured.eyebrow,
-      /* Counted from the product list, so the headline cannot overstate it. */
-      headline: nav.menus.marketplace.featured.headline.replace(
-        "{count}",
-        String(marketplace.products.items.length),
-      ),
-      body: nav.menus.marketplace.featured.body,
+      eyebrow: menus.marketplace.featured.eyebrow,
+      /* Counted from the listings, so the headline cannot overstate them. */
+      headline: listings
+        ? menus.marketplace.featured.headline.replace("{count}", String(listings.length))
+        : menus.marketplace.featured.headlineNoCount,
+      body: menus.marketplace.featured.body,
       href: "/marketplace",
       art: <FlagshipArt className="h-full w-auto" />,
     },
-    rows: marketplace.products.categories.filter(isCategory).map((category) => {
-      const count = marketplace.products.items.filter(
-        (product) => product.category === category.id,
-      ).length;
-      return {
-        key: category.id,
-        href: `/marketplace?category=${category.id}`,
-        label: category.label,
-        detail:
-          count === 1
-            ? nav.menus.marketplace.countOne
-            : nav.menus.marketplace.countOther.replace("{count}", String(count)),
-        icon: <CategoryIcon category={category.id} />,
-      };
-    }),
-  },
-  academy: {
-    heading: nav.menus.academy.heading,
-    viewAll: { label: nav.menus.academy.viewAll, href: "/academy" },
-    /* Name, price, duration and format all come off the tier itself. */
-    featured: {
-      eyebrow: nav.menus.academy.featured.eyebrow,
-      headline: entryTier.name,
-      meta: entryTier.price,
-      body: `${entryTier.duration}, ${entryTier.format} — ${nav.menus.academy.featured.body}`,
-      href: `/academy#tier-${entryTier.id}`,
-      art: <TierIcon step={Number(entryTier.step)} className="h-14 w-14" />,
-    },
-    rows: academy.tiers.items.map((tier) => ({
-      key: tier.id,
-      href: `/academy#tier-${tier.id}`,
-      label: tier.name,
-      detail: `${tier.audience} · ${tier.duration}`,
-      icon: <TierIcon step={Number(tier.step)} />,
+    rows: marketplace.products.categories.filter(isCategory).map((category) => ({
+      key: category.id,
+      href: `/marketplace?category=${category.id}`,
+      label: category.label,
+      /* Both sides are filter IDs: lib/listings.ts converted the table's
+         label before these ever reached the client. */
+      detail: listings
+        ? countLabel(listings.filter((product) => product.category === category.id).length)
+        : undefined,
+      icon: <CategoryIcon category={category.id} />,
     })),
+  };
+}
+
+/** The tier the Academy panel features. First in the ladder, and the free one. */
+const entryTier = academy.tiers.items[0];
+
+/* Static: nothing in it comes from the database. */
+const ACADEMY_PANEL: Panel = {
+  heading: nav.menus.academy.heading,
+  viewAll: { label: nav.menus.academy.viewAll, href: "/academy" },
+  /* Name, price, duration and format all come off the tier itself. */
+  featured: {
+    eyebrow: nav.menus.academy.featured.eyebrow,
+    headline: entryTier.name,
+    meta: entryTier.price,
+    body: `${entryTier.duration}, ${entryTier.format} — ${nav.menus.academy.featured.body}`,
+    href: `/academy#tier-${entryTier.id}`,
+    art: <TierIcon step={Number(entryTier.step)} className="h-14 w-14" />,
   },
+  rows: academy.tiers.items.map((tier) => ({
+    key: tier.id,
+    href: `/academy#tier-${tier.id}`,
+    label: tier.name,
+    detail: `${tier.audience} · ${tier.duration}`,
+    icon: <TierIcon step={Number(tier.step)} />,
+  })),
 };
 
 function Chevron({ open }: { open: boolean }) {
@@ -166,8 +176,12 @@ function Chevron({ open }: { open: boolean }) {
  * `md` upwards, the compact square mark below it, where the lockup would
  * shrink past legibility.
  */
-export function SiteNav() {
+export function SiteNav({ listings }: { listings: Listing[] | null }) {
   const [openMenu, setOpenMenu] = useState<NavMenuSource | null>(null);
+  const panels = useMemo<Record<NavMenuSource, Panel>>(
+    () => ({ marketplace: marketplacePanel(listings), academy: ACADEMY_PANEL }),
+    [listings],
+  );
   const prefersReducedMotion = useReducedMotion();
 
   /* Set when ArrowDown opens a panel, so the effect below knows to move focus
@@ -282,7 +296,7 @@ export function SiteNav() {
         </Link>
 
         {/* Takes the middle of the row and shrinks before anything else does. */}
-        <NavSearch className="min-w-0 flex-1 lg:max-w-2xl" />
+        <NavSearch listings={listings} className="min-w-0 flex-1 lg:max-w-2xl" />
 
         <div className="flex shrink-0 items-center gap-1 lg:gap-3">
           {/*
@@ -344,7 +358,7 @@ export function SiteNav() {
               );
             }
 
-            const panel = PANELS[source];
+            const panel = panels[source];
             const open = openMenu === source;
 
             return (
@@ -458,9 +472,11 @@ export function SiteNav() {
                                     <span className="block text-sm font-semibold text-brand-navy">
                                       {row.label}
                                     </span>
-                                    <span className="mt-0.5 block text-xs text-brand-navy/65">
-                                      {row.detail}
-                                    </span>
+                                    {row.detail ? (
+                                      <span className="mt-0.5 block text-xs text-brand-navy/65">
+                                        {row.detail}
+                                      </span>
+                                    ) : null}
                                   </span>
                                 </Link>
                               </li>

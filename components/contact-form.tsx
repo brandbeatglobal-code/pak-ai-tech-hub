@@ -15,8 +15,10 @@ import { submitContact, type ContactState } from "@/lib/contact-actions";
  * the platform's own mobile picker and correct screen-reader semantics, none of
  * which a div-based replacement gets for free.
  *
- * The industry and product options are derived from the same arrays
- * /marketplace renders, so the dropdowns cannot drift from what the site
+ * The industry options come from the industry taxonomy; the product options
+ * are the names of the marketplace's listed products, passed in by
+ * app/contact/page.tsx from the same read /marketplace renders
+ * (lib/listings.ts). So the dropdowns cannot drift from what the site
  * actually offers.
  *
  * Validation runs in two places on purpose: the browser's own constraint
@@ -24,13 +26,9 @@ import { submitContact, type ContactState } from "@/lib/contact-actions";
  * the one that counts.
  */
 
-const { contact, industries, marketplace } = siteCopy;
+const { contact, industries } = siteCopy;
 const { form } = contact;
 
-const PRODUCT_OPTIONS = [
-  ...marketplace.products.items.map((p) => p.name),
-  form.productUnsure,
-];
 const INDUSTRY_OPTIONS = industries.items.map((i) => i.name);
 
 const controlBase =
@@ -66,7 +64,17 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function ContactForm() {
+export function ContactForm({
+  productNames,
+}: {
+  /**
+   * Listed product names, each once (`productOptionNames`). Empty when the
+   * listings could not be read, leaving "Not sure yet" as the only option —
+   * which is also all the server will then accept.
+   */
+  productNames: string[];
+}) {
+  const productOptions = [...productNames, form.productUnsure];
   const [state, formAction, pending] = useActionState<ContactState, FormData>(
     submitContact,
     { status: "idle" },
@@ -266,7 +274,7 @@ export function ContactForm() {
             {...invalid("product")}
           >
             <option value="">{form.selectPlaceholder}</option>
-            {PRODUCT_OPTIONS.map((name) => (
+            {productOptions.map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>

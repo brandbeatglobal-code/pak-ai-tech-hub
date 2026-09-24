@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 
 import { HoverLift } from "@/components/motion/hover-lift";
-import type { CategoryFilter, Product } from "@/content/site-copy";
+import type { CategoryFilter, Listing } from "@/content/site-copy";
 
 type MarketplaceProductsProps = {
-  products: Product[];
+  /**
+   * The approved listings (lib/listings.ts), or null when they could not be
+   * read — which is not the same as there being none, and is shown
+   * differently.
+   */
+  listings: Listing[] | null;
   categories: CategoryFilter[];
   /**
    * Category to start on, from the `?category=` search param. The page
@@ -19,18 +24,26 @@ type MarketplaceProductsProps = {
     filterLegend: string;
     trainingBadge: string;
     emptyMessage: string;
+    unavailableMessage: string;
     resultCountOne: string;
     resultCountOther: string;
     /** Prepended to the stored amount, which has no "from" baked in. */
     pricePrefix: string;
+    /** "by {provider}". */
+    byProvider: string;
   };
 };
 
 /**
  * Category filter plus the product grid.
  *
- * Client component only because the selected category is local state — all
- * eight products are known at build time, so nothing is fetched.
+ * Client component only because the selected category is local state. The
+ * listings arrive as a prop, read on the server by lib/listings.ts; nothing is
+ * fetched from here.
+ *
+ * Filtering compares `product.category` — a filter ID, converted from the
+ * table's label by lib/listings.ts — with the selected radio's value, which is
+ * an ID from the same `categories` list. Both sides are IDs by construction.
  *
  * The filter is a native radio group in a `fieldset`. That buys the full
  * keyboard contract for free — arrow keys move between options, Tab enters and
@@ -39,7 +52,7 @@ type MarketplaceProductsProps = {
  * that, so it is deliberately avoided here.
  */
 export function MarketplaceProducts({
-  products,
+  listings,
   categories,
   initialCategory,
   labels,
@@ -47,13 +60,12 @@ export function MarketplaceProducts({
   const [selected, setSelected] = useState<string>(initialCategory);
   const groupName = useId();
 
-  const visible = useMemo(
-    () =>
-      selected === "all"
-        ? products
-        : products.filter((product) => product.category === selected),
-    [products, selected],
-  );
+  const visible = useMemo(() => {
+    const all = listings ?? [];
+    return selected === "all"
+      ? all
+      : all.filter((product) => product.category === selected);
+  }, [listings, selected]);
 
   const categoryLabels = useMemo(
     () => new Map(categories.map((category) => [category.id, category.label])),
@@ -61,9 +73,11 @@ export function MarketplaceProducts({
   );
 
   const countMessage =
-    visible.length === 1
-      ? labels.resultCountOne
-      : labels.resultCountOther.replace("{count}", String(visible.length));
+    listings === null
+      ? labels.unavailableMessage
+      : visible.length === 1
+        ? labels.resultCountOne
+        : labels.resultCountOther.replace("{count}", String(visible.length));
 
   return (
     <div className="mt-10 grid gap-8 lg:grid-cols-[13rem_1fr] lg:gap-12">
@@ -118,7 +132,9 @@ export function MarketplaceProducts({
           {countMessage}
         </p>
 
-        {visible.length === 0 ? (
+        {listings === null ? (
+          <p className="text-brand-navy/65">{labels.unavailableMessage}</p>
+        ) : visible.length === 0 ? (
           <p className="text-brand-navy/65">{labels.emptyMessage}</p>
         ) : (
           <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -147,6 +163,12 @@ export function MarketplaceProducts({
                     {product.name}
                   </Link>
                 </h3>
+
+                {/* Who lists it. Now that these are real listings, the
+                    provider is part of what a buyer is looking at. */}
+                <p className="mt-1 text-sm text-brand-navy/65">
+                  {labels.byProvider.replace("{provider}", product.provider)}
+                </p>
 
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-brand-navy/70">
                   {product.description}

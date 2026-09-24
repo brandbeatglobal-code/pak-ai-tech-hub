@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { siteCopy } from "@/content/site-copy";
+import { siteCopy, type Listing } from "@/content/site-copy";
 import {
   ALL_CATEGORIES,
   categoryLabelFor,
   resultHref,
   searchCategoryOptions,
-  searchExampleListings,
+  searchProducts,
 } from "@/lib/product-search";
 
 const { nav, marketplace } = siteCopy;
@@ -39,9 +39,11 @@ function SearchGlyph() {
 /**
  * The marketplace search in the nav bar.
  *
- * A real filter over the eight example listings, not a decorative field: the
- * matching is shared with the hero's search (see lib/product-search.ts) so the
- * two controls always agree.
+ * A real filter over the marketplace's approved listings, not a decorative
+ * field. `listings` is the same read the grid on /marketplace renders
+ * (lib/listings.ts), passed down by the root layout; the matching is shared
+ * with the hero's search (see lib/product-search.ts) so the two controls
+ * always agree.
  *
  * There is no search results page, so a result points at the marketplace
  * filtered to that listing's category — the nearest destination that actually
@@ -59,7 +61,14 @@ function SearchGlyph() {
  * the homepage and the marketplace, so nothing is hidden behind this — without
  * scripting the field simply does not narrow anything.
  */
-export function NavSearch({ className = "" }: { className?: string }) {
+export function NavSearch({
+  listings,
+  className = "",
+}: {
+  /** Null when the listings could not be read — the panel then says so. */
+  listings: Listing[] | null;
+  className?: string;
+}) {
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<string>(ALL_CATEGORIES);
   const [open, setOpen] = useState(false);
@@ -73,7 +82,15 @@ export function NavSearch({ className = "" }: { className?: string }) {
 
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const results = searchExampleListings({ query, categoryId }).slice(0, MAX_RESULTS);
+  const results = searchProducts(listings ?? [], { query, categoryId }).slice(
+    0,
+    MAX_RESULTS,
+  );
+  /* "Could not check" is not "nothing matches": say which one it is. */
+  const emptyMessage =
+    listings === null
+      ? marketplace.products.unavailableMessage
+      : search.noResults.replace("{query}", query);
   const showPanel = open && query.trim().length > 0;
 
   /* A click outside the control dismisses the results, like any other popup. */
@@ -180,15 +197,11 @@ export function NavSearch({ className = "" }: { className?: string }) {
         <div className="absolute top-full right-0 left-0 z-10 mt-2 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xl">
           {/* Polite: typing should not interrupt whatever is being read. */}
           <p aria-live="polite" className="sr-only">
-            {results.length === 0
-              ? search.noResults.replace("{query}", query)
-              : countMessage}
+            {results.length === 0 ? emptyMessage : countMessage}
           </p>
 
           {results.length === 0 ? (
-            <p className="px-4 py-3.5 text-sm text-brand-navy/65">
-              {search.noResults.replace("{query}", query)}
-            </p>
+            <p className="px-4 py-3.5 text-sm text-brand-navy/65">{emptyMessage}</p>
           ) : (
             <ul id={listboxId} role="listbox" aria-label={search.resultsLabel}>
               {results.map((product, index) => (
@@ -220,12 +233,12 @@ export function NavSearch({ className = "" }: { className?: string }) {
           )}
 
           {/*
-            The example listings are not purchasable, and the results above are
-            those same listings — so the panel says so rather than letting a
-            tidy result list imply a working catalogue.
+            The listings are real but not purchasable — there is no checkout —
+            so the panel says so rather than letting a tidy result list imply
+            a working catalogue. Same sentence as the listings intro.
           */}
           <p className="border-t border-black/5 bg-brand-navy/[0.02] px-4 py-2.5 text-xs text-brand-navy/60">
-            {marketplace.products.exampleBadge} listings — {marketplace.products.buyLabel}
+            {marketplace.products.searchFootnote}
           </p>
         </div>
       ) : null}

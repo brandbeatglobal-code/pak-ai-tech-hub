@@ -1,13 +1,14 @@
 "use server";
 
 import { and, eq, ne, sql } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { headers } from "next/headers";
 
 import { auth } from "@/auth";
 import { siteCopy } from "@/content/site-copy";
 import { db } from "@/db";
 import { products, providers, users } from "@/db/schema";
+import { LISTINGS_TAG } from "@/lib/listings";
 import { sendReviewEmail, type EmailOutcome } from "@/lib/review-email";
 import { REASON_MAX, REASON_MIN, type ReviewResult } from "@/lib/review-shared";
 
@@ -28,6 +29,11 @@ import { REASON_MAX, REASON_MIN, type ReviewResult } from "@/lib/review-shared";
  * Email goes out AFTER the decision is committed, so nobody is ever told about
  * a decision that rolled back. A failed send does not undo the decision; the
  * admin is told in the result line.
+ *
+ * Approving a PRODUCT lists it: /marketplace, the homepage grid, the nav and
+ * the contact form all read approved products (lib/listings.ts). So an
+ * approval, once committed, expires the cached listings — see
+ * `refreshListings` below.
  *
  * NOTHING AFTER THE COMMIT MAY THROW OUT OF AN ACTION. Once the decision is
  * saved, the admin must be told it is saved — even if looking up the
@@ -117,6 +123,29 @@ function done(decision: string, outcome: EmailOutcome): ReviewResult {
 }
 
 const refused = (message: string): ReviewResult => ({ ok: false, message });
+
+/**
+ * Expire the cached listings, so the next page load of /marketplace, the
+ * homepage, the contact page or any page's nav reads the table again.
+ *
+ * `updateTag`, not `revalidateTag`: the admin who approves a product and then
+ * opens /marketplace should see it on that load, not on the one after.
+ * `revalidateTag(tag, "max")` would serve that load the old page while it
+ * refreshed in the background. `updateTag` makes the next request wait for
+ * fresh data instead, and is only callable from a Server Action — which this
+ * is.
+ *
+ * Called after the commit, so it must not throw (see NOTHING AFTER THE COMMIT
+ * above). If it ever fails, the approval stands and the hourly refresh in
+ * lib/listings.ts lists the product anyway, just later.
+ */
+function refreshListings(): void {
+  try {
+    updateTag(LISTINGS_TAG);
+  } catch (cause) {
+    console.error("[review] Could not expire the cached listings:", cause);
+  }
+}
 
 /* Someone else got there first: the admin's list is out of date. */
 const alreadyDecided = (): ReviewResult => ({
@@ -298,6 +327,9 @@ async function decideProduct(
   if (!decided) return alreadyDecided();
 
   const approved = decision === "approved";
+  /* A decline changes nothing listed — only a pending product can be
+     declined, and pending products are not listed. */
+  if (approved) refreshListings();
   const { name: product, providerId } = decided;
   const outcome = await afterCommit(async () => {
     const owner = await productOwner(providerId);

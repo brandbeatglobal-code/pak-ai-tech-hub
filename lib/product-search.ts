@@ -1,6 +1,5 @@
 import {
   browseCategories,
-  siteCopy,
   type BrowseCategory,
   type Product,
 } from "@/content/site-copy";
@@ -9,10 +8,12 @@ import {
  * The search behind the nav field and the hero field.
  *
  * Both controls run this, so they can never disagree about what matches. It is
- * a plain function over the eight example listings that are already in the
- * bundle — there is no index, no request and no backend, because there is
- * nothing to ask. When real listings arrive this is the single place that has
- * to change, and both fields change with it.
+ * a plain function over the listings the page was rendered with — the approved
+ * products from lib/listings.ts, handed to the client as props. There is no
+ * index and no request per keystroke: at this catalogue size the whole list is
+ * already on the page, so filtering it in the browser is instant and exact. If
+ * the catalogue grows past what is sensible to send with every page, this is
+ * the single place that turns into a query, and both fields change with it.
  *
  * A product matches on its name, its description, or the label of the category
  * it sits in. The category label matters: "healthcare" appears in neither the
@@ -30,9 +31,10 @@ const categoryLabels = new Map(
 /**
  * Which browse category a product belongs to.
  *
- * Products carry a `ProductCategory`, and every one of those is also a browse
- * category id, so the product's own category is the answer. Kept as a function
- * rather than inlined because both the matcher and the cards need it.
+ * Products carry a `ProductCategory` ID (lib/listings.ts converts the table's
+ * label to it), and every one of those is also a browse category id, so the
+ * product's own category is the answer. Kept as a function rather than
+ * inlined because both the matcher and the cards need it.
  */
 export function categoryLabelFor(product: Product): string {
   return categoryLabels.get(product.category) ?? product.category;
@@ -73,23 +75,19 @@ export type SearchCriteria = {
 /**
  * The listings matching both the query and the selected category.
  *
- * Source order is preserved — there is no relevance ranking, because with
- * eight items ranking would be invented precision rather than help.
+ * Source order is preserved — lib/listings.ts puts the most recently approved
+ * first — and there is no relevance ranking, because at this size ranking
+ * would be invented precision rather than help.
  */
-export function searchProducts(
-  products: Product[],
+export function searchProducts<T extends Product>(
+  products: T[],
   { query, categoryId }: SearchCriteria,
-): Product[] {
+): T[] {
   const normalized = normalize(query);
   return products.filter(
     (product) =>
       matchesCategory(product, categoryId) && matchesQuery(product, normalized),
   );
-}
-
-/** The eight example listings, searched with the same rules. */
-export function searchExampleListings(criteria: SearchCriteria): Product[] {
-  return searchProducts(siteCopy.marketplace.products.items, criteria);
 }
 
 /**

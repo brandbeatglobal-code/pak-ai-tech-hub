@@ -35,10 +35,12 @@ import {
  * see the warning at the top of
  * `node_modules/next/dist/docs/01-app/02-guides/forms.md`.
  *
- * Nothing here is cache-revalidated because nothing reads these rows: the
- * marketing site, /marketplace included, still renders from
- * `content/site-copy.ts`. Add a `revalidatePath` when a page actually queries
- * this table.
+ * Nothing here is cache-revalidated, and nothing needs to be. The site does
+ * read this table now (lib/listings.ts), but only APPROVED rows, and this
+ * action only ever writes a pending one. The listings change when an admin
+ * approves — `approveProduct` in lib/review-actions.ts refreshes them then. If
+ * this action ever writes a row that is listed straight away, it must call
+ * `updateTag(LISTINGS_TAG)` the same way.
  *
  * Only `submitProduct` is exported. A `"use server"` module may export async
  * functions and nothing else, which is why the constants, types and helpers

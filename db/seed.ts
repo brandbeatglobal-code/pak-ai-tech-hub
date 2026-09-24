@@ -1,25 +1,114 @@
 import { eq } from "drizzle-orm";
 
-import { siteCopy } from "@/content/site-copy";
+import { siteCopy, type Product } from "@/content/site-copy";
 import { db } from "./index";
 import { products, providers } from "./schema";
 
 /**
  * Seeds the first-party provider and its eight products.
  *
- * The product rows are read from `siteCopy.marketplace.products.items` — the
- * same array `/marketplace` renders — rather than retyped, so
- * the seed cannot disagree with what the site shows.
+ * FOR A FRESH DATABASE. The site reads its listings from the `products` table
+ * (lib/listings.ts); this is how a new local database gets any. The eight
+ * entries below used to be the marketplace itself — an array in
+ * content/site-copy.ts that every surface rendered. They moved here, unchanged,
+ * when the site started reading the table, because this file is now the only
+ * thing that uses them.
  *
- * This is seed data only. The marketing pages still render from the static
- * file; nothing reads these rows yet. The point is to prove the schema holds
- * real data.
+ * They are what the site showed at the time: the current product names, and
+ * the INTERIM prices converted from PKR. The HOSTED database was seeded from
+ * an older version of this list, and its eight rows still carry the old
+ * "TechHub …" names — read the next paragraph before running this there.
  *
- * Idempotent: re-running updates the existing rows instead of duplicating
- * them, so it is safe to run against an already-seeded database.
+ * Re-running updates rows it recognises BY NAME and inserts the rest. Against
+ * a database whose names differ from these (the hosted one), that means eight
+ * new rows beside the old eight, not a rename.
+ *
+ * Seeding writes straight to the table, so it does not refresh the site's
+ * cached listings. A running site picks the change up on the hourly refresh in
+ * lib/listings.ts, or at the next deploy.
  */
 
 const FIRST_PARTY_COMPANY = siteCopy.brand.name;
+
+/**
+ * The eight first-party products. Category is the filter ID and price the
+ * display string, as they were in content/site-copy.ts; `seed()` converts both
+ * into what the table stores (the label, and an amount and currency).
+ */
+const SEED_PRODUCTS = [
+  {
+    id: "chatbot",
+    name: "AI Customer Support Chatbot",
+    category: "cross-industry",
+    description:
+      "Multi-channel AI customer service for web, WhatsApp, and SMS. Available around the clock.",
+    price: "$55/mo",
+    href: "#",
+  },
+  {
+    id: "analytics",
+    name: "AI Predictive Analytics Dashboard",
+    category: "cross-industry",
+    description:
+      "Predictive analytics dashboard with real-time insights and AI recommendations.",
+    price: "$90/mo",
+    href: "#",
+  },
+  {
+    id: "content",
+    name: "AI Content Generator",
+    category: "cross-industry",
+    description:
+      "Blog posts, social media, email campaigns, and product descriptions, generated with AI.",
+    price: "$35/mo",
+    href: "#",
+  },
+  {
+    id: "crm",
+    name: "AI Sales CRM",
+    category: "cross-industry",
+    description:
+      "Lead scoring, automated follow-ups, and customer segmentation powered by AI.",
+    price: "$70/mo",
+    href: "#",
+  },
+  {
+    id: "health",
+    name: "AI Patient Triage & Diagnostics",
+    category: "healthcare",
+    description:
+      "Patient triage bots, diagnostic imaging support, and EHR analysis for hospitals.",
+    price: "$180/mo",
+    href: "#",
+  },
+  {
+    id: "agri",
+    name: "AI Crop Monitoring",
+    category: "agriculture",
+    description:
+      "Crop monitoring, yield prediction, and soil analysis for farmers.",
+    price: "$70/mo",
+    href: "#",
+  },
+  {
+    id: "edu",
+    name: "AI Adaptive Learning Platform",
+    category: "education",
+    description:
+      "Adaptive learning, automated grading, and student engagement prediction.",
+    price: "$55/mo",
+    href: "#",
+  },
+  {
+    id: "retail",
+    name: "AI Demand Forecasting",
+    category: "retail",
+    description:
+      "Customer behavior analysis, demand forecasting, and dynamic pricing for stores.",
+    price: "$90/mo",
+    href: "#",
+  },
+] satisfies Product[];
 
 /** Maps a category id to the label the marketplace filter shows. */
 const CATEGORY_LABELS = new Map(
@@ -49,7 +138,7 @@ function parseCurrency(price: string): string {
 }
 
 async function seed() {
-  const items = siteCopy.marketplace.products.items;
+  const items = SEED_PRODUCTS;
   console.log(`Seeding ${FIRST_PARTY_COMPANY} with ${items.length} products…`);
 
   const [existing] = await db
@@ -93,9 +182,10 @@ async function seed() {
       priceAmount: parseAmount(item.price),
       priceCurrency: parseCurrency(item.price),
       /*
-        These eight are already live on the marketing site, so they are
-        approved by definition. Anything submitted through the (not yet built)
-        provider form will default to "pending" instead.
+        These eight are PAKAI TechHub's own listings, so they are approved by
+        definition — and approved is what puts them on /marketplace. Anything
+        submitted through the provider form starts as "pending" and is listed
+        only once an admin approves it.
       */
       status: "approved" as const,
       reviewedAt: new Date(),

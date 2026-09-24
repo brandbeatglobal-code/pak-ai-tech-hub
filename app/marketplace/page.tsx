@@ -8,6 +8,7 @@ import { HoverScale } from "@/components/motion/hover-scale";
 import { Reveal } from "@/components/motion/reveal";
 import { SectionGlow } from "@/components/motion/section-glow";
 import { siteCopy } from "@/content/site-copy";
+import { getListings } from "@/lib/listings";
 
 const { marketplace, worksWith } = siteCopy;
 
@@ -40,6 +41,12 @@ export default async function MarketplacePage({
 }) {
   const { hero, products, partners } = marketplace;
   const initialCategory = resolveCategory((await searchParams).category);
+  /*
+    The approved products, from the database (lib/listings.ts). Null when the
+    database could not be read — the grid then says so rather than claiming
+    every category is empty.
+  */
+  const listings = await getListings();
 
   return (
     <>
@@ -81,6 +88,11 @@ export default async function MarketplacePage({
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
           <Reveal>
             <h2 className={sectionHeading}>{products.heading}</h2>
+            {/* Says, above the grid, that nothing here can be bought yet —
+                the listings are real, the checkout is not. */}
+            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+              {products.intro}
+            </p>
             {/*
               Keyed on the resolved category so arriving from the nav dropdown
               while already on this page resets the filter. Without it the
@@ -88,16 +100,18 @@ export default async function MarketplacePage({
             */}
             <MarketplaceProducts
               key={initialCategory}
-              products={products.items}
+              listings={listings}
               categories={products.categories}
               initialCategory={initialCategory}
               labels={{
                 filterLegend: products.filterLegend,
                 trainingBadge: products.trainingBadge,
                 emptyMessage: products.emptyMessage,
+                unavailableMessage: products.unavailableMessage,
                 resultCountOne: products.resultCountOne,
                 resultCountOther: products.resultCountOther,
                 pricePrefix: products.pricePrefix,
+                byProvider: products.byProvider,
               }}
             />
           </Reveal>
