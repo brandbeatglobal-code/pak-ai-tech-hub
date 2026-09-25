@@ -107,6 +107,37 @@ function marketplacePanel(listings: Listing[] | null): Panel {
 }
 
 /** The tier the Academy panel features. First in the ladder, and the free one. */
+/*
+  HOVER TIMING for the two dropdowns, mouse only (touch and pen use taps).
+
+  CLOSE: leaving an item closes its panel after this long, not at once. A
+  cursor on its way to the panel can graze the few pixels between items, or
+  overshoot an edge, and come straight back — that must not shut it.
+
+  SWITCH: while one panel is open, another trigger takes over only if the
+  cursor rests on it this long. A diagonal path from Marketplace to the far
+  side of its panel passes over the Academy trigger on the way; without this
+  it switched panels under the cursor.
+
+  Sized from measured cursor paths (trigger to panel, straight down and
+  diagonally, at 768–1440px), not picked. The hard case is a shallow
+  diagonal from Marketplace to the far top corner of its panel: it runs
+  along the menu row and over the Academy trigger before it drops in. At
+  200ms / 150ms that path switched to Academy at ordinary speeds (~530–660
+  px/s, once at ~1200). At 300ms / 250ms every path at those speeds held.
+  What still closes or switches is the same shallow path at a crawl (~200–
+  280 px/s), which spends over half a second in the row — no delay short
+  enough to feel responsive covers that. A pointer-direction "safe
+  triangle" does not either: the panel is so wide and so close under the
+  row that heading for its far corner is almost the same line as moving
+  sideways to the next trigger.
+
+  The gaps themselves are closed in the layout (see the menu row below);
+  these only cover what a real mouse path does between them.
+*/
+const HOVER_CLOSE_DELAY_MS = 300;
+const HOVER_SWITCH_DELAY_MS = 250;
+
 const entryTier = academy.tiers.items[0];
 
 /* Static: nothing in it comes from the database. */
@@ -204,6 +235,31 @@ export function SiteNav({
   const triggerRefs = useRef<Partial<Record<NavMenuSource, HTMLButtonElement | null>>>({});
   const panelRefs = useRef<Partial<Record<NavMenuSource, HTMLDivElement | null>>>({});
 
+  /* The one pending hover change (a delayed close or switch), if any. A
+     deliberate action — click, key, blur, outside click — cancels it, so a
+     timer started by the mouse can never undo what the person just did. */
+  const hoverTimer = useRef<{ id?: number }>({});
+  function cancelHover() {
+    window.clearTimeout(hoverTimer.current.id);
+    hoverTimer.current.id = undefined;
+  }
+  function hoverTo(next: NavMenuSource | null, delay: number) {
+    cancelHover();
+    if (delay === 0) {
+      setOpenMenu(next);
+      return;
+    }
+    hoverTimer.current.id = window.setTimeout(() => {
+      hoverTimer.current.id = undefined;
+      setOpenMenu(next);
+    }, delay);
+  }
+  /* Nothing may fire after the nav unmounts. */
+  useEffect(() => {
+    const timer = hoverTimer.current;
+    return () => window.clearTimeout(timer.id);
+  }, []);
+
   function panelLinks(source: NavMenuSource) {
     const panel = panelRefs.current[source];
     return panel ? Array.from(panel.querySelectorAll<HTMLAnchorElement>("a[href]")) : [];
@@ -211,6 +267,7 @@ export function SiteNav({
 
   /** Escape's contract: dismiss the panel and put focus back on its trigger. */
   function closeAndRefocus() {
+    cancelHover();
     if (openMenu) triggerRefs.current[openMenu]?.focus();
     setOpenMenu(null);
   }
@@ -219,7 +276,10 @@ export function SiteNav({
   useEffect(() => {
     if (!openMenu) return;
     function onPointerDown(event: PointerEvent) {
-      if (!headerRef.current?.contains(event.target as Node)) setOpenMenu(null);
+      if (!headerRef.current?.contains(event.target as Node)) {
+        cancelHover();
+        setOpenMenu(null);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -249,6 +309,7 @@ export function SiteNav({
          usual meaning of "nothing above this". */
       if (event.key !== "ArrowDown") return;
       event.preventDefault();
+      cancelHover();
       focusFirstRow.current = true;
       setOpenMenu(source);
       return;
@@ -383,24 +444,41 @@ export function SiteNav({
       {/*
         Row 2 — the section links, and the only nav landmark.
 
-        `relative` here rather than on each <li>: the dropdown panels are wide
-        enough that they need to be centred in the nav container, not under
-        their own trigger.
+        THE HOVER PATH HAS NO GAPS — keep it that way. A dropdown stays open
+        while the pointer is inside its <li>, and the panel is a DOM child of
+        that <li>, so the pointer can go from trigger to panel only if the two
+        touch. Two things make them touch:
+
+          - The row's vertical padding sits on each <li> (`py-1`), not on
+            this <ul>. On the <ul> it left a 4px strip under every trigger
+            that belonged to nothing, and a slow move down stopped in it and
+            closed the panel.
+          - The panel hangs from this <ul>'s left edge (`relative` is here),
+            so it always starts under both triggers. It used to be centred in
+            the nav; from 1024px up that left the Marketplace trigger outside
+            the panel's span, and reaching the panel meant crossing open page
+            — or the Academy trigger, which switched panels.
+
+        The hover delays (HOVER_CLOSE_DELAY_MS, HOVER_SWITCH_DELAY_MS) cover
+        the rest of a real mouse path: the few pixels between items, and
+        passing over the other trigger. Checked by driving a real cursor from
+        each trigger to its panel — straight down and diagonally, fast and
+        slow — at 768, 1024, 1280 and 1440px.
       */}
       <nav
         aria-label="Main"
-        className="relative mx-auto w-full max-w-6xl border-t border-black/5 px-4 sm:px-6 lg:px-8"
+        className="mx-auto w-full max-w-6xl border-t border-black/5 px-4 sm:px-6 lg:px-8"
       >
         <ul
           data-nav-menus
-          className="hidden items-center gap-1 py-1 md:flex lg:gap-2"
+          className="relative hidden items-center gap-1 md:flex lg:gap-2"
         >
           {nav.items.map((item) => {
             const source = item.menu;
 
             if (!source) {
               return (
-                <li key={item.href}>
+                <li key={item.href} className="py-1">
                   <Link
                     href={item.href}
                     className="rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy lg:px-3"
@@ -417,17 +495,24 @@ export function SiteNav({
             return (
               <li
                 key={item.href}
+                className="py-1"
                 onKeyDown={(event) => onItemKeyDown(event, source)}
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    cancelHover();
                     setOpenMenu(null);
                   }
                 }}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === "mouse") setOpenMenu(source);
+                  if (event.pointerType !== "mouse") return;
+                  /* Back on the open item (its trigger or its panel): stay.
+                     Nothing open: open now. Another one open: switch only if
+                     the pointer settles here. */
+                  if (openMenu === source) cancelHover();
+                  else hoverTo(source, openMenu === null ? 0 : HOVER_SWITCH_DELAY_MS);
                 }}
                 onPointerLeave={(event) => {
-                  if (event.pointerType === "mouse") setOpenMenu(null);
+                  if (event.pointerType === "mouse") hoverTo(null, HOVER_CLOSE_DELAY_MS);
                 }}
               >
                 <button
@@ -437,7 +522,10 @@ export function SiteNav({
                   }}
                   aria-expanded={open}
                   aria-controls={`nav-panel-${source}`}
-                  onClick={() => setOpenMenu(open ? null : source)}
+                  onClick={() => {
+                    cancelHover();
+                    setOpenMenu(open ? null : source);
+                  }}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3 ${
                     open ? "text-brand-navy" : "text-brand-navy/70 hover:text-brand-navy"
                   }`}
@@ -448,12 +536,14 @@ export function SiteNav({
 
                 {open ? (
                   /*
-                    Positioned against the <nav>, not this <li> — the li is no
-                    longer `relative`. The panel stays a DOM child of the li,
-                    which is what keeps pointer-leave and focus-out working,
-                    but it is laid out and centred inside the nav container, so
-                    a panel this wide cannot hang off the edge of a narrow
-                    window the way a trigger-anchored one would.
+                    Positioned against the menu row (<ul>), not this <li>, and
+                    from its left edge — under both triggers, never off the
+                    right edge of a narrow window: it starts at the nav's
+                    padding and is at most 100vw − 3rem wide. It stays a DOM
+                    child of the li, which is what keeps pointer-leave and
+                    focus-out working. The `pt-3` above the card is part of
+                    this element, so the space between the row and the card
+                    still counts as inside the item. See Row 2's note.
                   */
                   <motion.div
                     id={`nav-panel-${source}`}
@@ -463,7 +553,7 @@ export function SiteNav({
                     initial={prefersReducedMotion ? false : { opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: prefersReducedMotion ? 0 : 0.16, ease: "easeOut" }}
-                    className="absolute top-full left-1/2 w-[min(44rem,calc(100vw_-_3rem))] -translate-x-1/2 pt-3"
+                    className="absolute top-full left-0 w-[min(44rem,calc(100vw_-_3rem))] pt-3"
                   >
                     <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xl shadow-brand-navy/10">
                       <div className="grid grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
