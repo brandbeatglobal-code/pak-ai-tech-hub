@@ -1,24 +1,28 @@
 import { relations } from "drizzle-orm";
 import {
+  integer,
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { AdapterAccountType } from "next-auth/adapters";
 
 /**
  * Database schema for the marketplace platform.
  *
- * Accounts, provider records and product listings, each of the last two with a
- * review state. Two things write a pending row: the product-submission form
- * (`lib/product-actions.ts`) and the provider application
- * (`lib/application-actions.ts`). One thing moves a row out of "pending": the
- * admin review queue at /dashboard/admin (`lib/review-actions.ts`).
+ * User accounts (plus `accounts`, their Google sign-ins), provider records and
+ * product listings, each of the last two with a review state. Two things write
+ * a pending row: the product-submission form (`lib/product-actions.ts`) and
+ * the provider application (`lib/application-actions.ts`). One thing moves a
+ * row out of "pending": the admin review queue at /dashboard/admin
+ * (`lib/review-actions.ts`).
  *
- * The marketing site does not read from this database. `/marketplace` still
- * renders from `content/site-copy.ts`.
+ * The marketing site reads approved products from here through one cached
+ * read, `getListings()` in lib/listings.ts.
  */
 
 export const userRole = pgEnum("user_role", ["buyer", "provider", "admin"]);
@@ -52,16 +56,73 @@ export const users = pgTable("users", {
    * Written only by `hashPassword()` in lib/passwords.ts and read only by
    * `verifyPassword()`. Nothing else in the codebase should touch this column,
    * and no query that returns it should reach a client component.
+   *
+   * NULL for an account created by signing in with Google: it has no password,
+   * and `authorize()` in auth.ts refuses a password login for it. Nothing sets
+   * one later yet — there is no set- or reset-password flow.
    */
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"),
   role: userRole("role").notNull().default("buyer"),
   name: text("name").notNull(),
   /** Optional: B2B buyers may give a company, individuals may not. */
   companyName: text("company_name"),
+  /*
+    `emailVerified` and `image` are here because the Auth.js Drizzle adapter's
+    users-table contract requires them, not because anything uses them. Both
+    stay NULL: the adapter's `createUser` is replaced in auth.ts with one that
+    writes neither. Password sign-ups do not verify the address either, which
+    is why a Google sign-in is never linked to an existing account by email —
+    see the note on account linking in auth.ts.
+  */
+  emailVerified: timestamp("email_verified", {
+    mode: "date",
+    withTimezone: true,
+  }),
+  image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Sign-in accounts from outside providers — today, Google only. One row says
+ * "this Google account signs in as this user".
+ *
+ * The shape is the Auth.js Drizzle adapter's accounts table (its JavaScript
+ * property names, `refresh_token` and the rest, are what the adapter reads and
+ * writes). The token columns are part of that contract but are never filled:
+ * `linkAccount` in auth.ts stores who the account is, not Google's tokens,
+ * because nothing here calls a Google API. They stay NULL.
+ *
+ * Password accounts have no row here; they live entirely in `users`.
+ */
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").$type<AdapterAccountType>().notNull(),
+    /** "google". */
+    provider: text("provider").notNull(),
+    /** Google's stable id for the person (the ID token's `sub`) — not the email. */
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+    /** When the Google account was first used to sign in. */
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (account) => [
+    primaryKey({ columns: [account.provider, account.providerAccountId] }),
+  ],
+);
 
 export const providers = pgTable("providers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -229,6 +290,11 @@ export const products = pgTable("products", {
 export const usersRelations = relations(users, ({ many }) => ({
   providers: many(providers),
   reviewedProducts: many(products),
+  accounts: many(accounts),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
 
 export const providersRelations = relations(providers, ({ one, many }) => ({

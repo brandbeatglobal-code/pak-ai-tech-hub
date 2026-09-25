@@ -79,4 +79,18 @@ export const db = new Proxy({} as PostgresJsDatabase<typeof schema>, {
   },
 });
 
+/**
+ * The real client behind `db`, for code that checks what KIND of client it
+ * was given rather than just calling it.
+ *
+ * The Auth.js Drizzle adapter is the one case: it picks its SQL dialect with
+ * `is(db, PgDatabase)`, and the proxy above is a plain object to that check,
+ * so the adapter rejects it ("Unsupported database type"). This connects, so
+ * call it inside a request — never at module scope, or the laziness above is
+ * lost. auth.ts builds its adapter on first use for exactly that reason.
+ */
+export function getDb(): PostgresJsDatabase<typeof schema> {
+  return connect();
+}
+
 export { schema };

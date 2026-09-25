@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 
-import { signIn, signOut } from "@/auth";
+import { googleSignInEnabled, signIn, signOut } from "@/auth";
 import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/passwords";
@@ -121,6 +121,28 @@ export async function logIn(
   }
 
   redirect("/dashboard");
+}
+
+/**
+ * Starts a Google sign-in, from /login or /sign-up. Auth.js takes it from
+ * here: off to Google, back to /api/auth/callback/google, then to the path
+ * below — or to /login with a message if the sign-in is refused.
+ *
+ * Same rule as `signUp`: the sign-up page's "Provider" choice is intent, not
+ * a role. It only decides where a Google sign-up lands — the provider
+ * application instead of the dashboard. The account is a buyer either way
+ * (`createUser` in auth.ts). Only these two fixed paths can come out of here,
+ * so the posted value cannot send anyone anywhere else.
+ *
+ * /login posts no intent, so it always lands on the dashboard.
+ */
+export async function signInWithGoogle(formData: FormData) {
+  if (!googleSignInEnabled) redirect("/login");
+
+  const wantsToList = formData.get("intent") === "provider";
+  await signIn("google", {
+    redirectTo: wantsToList ? "/dashboard/apply" : "/dashboard",
+  });
 }
 
 export async function logOut() {

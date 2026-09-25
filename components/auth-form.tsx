@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useLayoutEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 
+import { siteCopy } from "@/content/site-copy";
 import type { FormState } from "@/lib/auth-actions";
 
 /**
@@ -16,7 +18,14 @@ import type { FormState } from "@/lib/auth-actions";
  * the browser posts; nothing here reads it, stores it or logs it. The
  * show/hide toggle changes only the input's `type` — it never touches the
  * value.
+ *
+ * "Continue with Google" sits under the email form, after an "or", in a form
+ * of its own — it posts no email or password, only the sign-up page's
+ * account-type choice. The page passes `googleAction` only when Google
+ * sign-in is configured (`googleSignInEnabled` in auth.ts).
  */
+
+const { googleSignIn } = siteCopy;
 
 const fieldBase =
   "w-full rounded-xl border border-black/10 bg-white py-2.5 text-base text-brand-navy outline-none transition-colors placeholder:text-brand-navy/40 focus-visible:border-brand-navy/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
@@ -63,6 +72,57 @@ function EyeIcon({ crossed }: { crossed: boolean }) {
   );
 }
 
+/**
+ * Google's "G", in its own four colours — the mark Google's sign-in branding
+ * guidelines ask a "Continue with Google" button to carry, unaltered. Hidden
+ * from assistive tech: the button's text says the same thing.
+ */
+function GoogleMark() {
+  return (
+    <svg aria-hidden focusable="false" viewBox="0 0 48 48" className="h-5 w-5 shrink-0">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The Google button. Disabled once pressed, while the browser is on its way
+ * to Google, so a second press cannot start a second sign-in.
+ *
+ * The outline style is the dashboard's secondary button (its log-out), at the
+ * primary button's size and full width, so the two choices line up. `py-[11px]`
+ * rather than the primary's `py-3` because the border adds 1px top and bottom:
+ * both buttons come out 48px tall.
+ */
+function GoogleButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex w-full items-center justify-center gap-3 rounded-full border border-brand-navy/15 bg-white px-6 py-[11px] text-base font-semibold text-brand-navy transition-colors hover:border-brand-navy/40 disabled:opacity-60"
+    >
+      <GoogleMark />
+      {googleSignIn.label}
+    </button>
+  );
+}
+
 export function AuthForm({
   action,
   heading,
@@ -72,6 +132,8 @@ export function AuthForm({
   footer,
   showRoleChoice = false,
   initialRole = "buyer",
+  googleAction,
+  notice,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   heading: string;
@@ -89,6 +151,14 @@ export function AuthForm({
    * this one.
    */
   initialRole?: "buyer" | "provider";
+  /** `signInWithGoogle`, or nothing when Google sign-in is not configured. */
+  googleAction?: (formData: FormData) => Promise<void>;
+  /**
+   * A message to show on arrival — on /login, why a Google sign-in was
+   * refused. Separate from the form's own error, which only an attempt here
+   * sets.
+   */
+  notice?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [role, setRole] = useState<"buyer" | "provider">(initialRole);
@@ -151,6 +221,12 @@ export function AuthForm({
         {heading}
       </h1>
       <p className="mt-4 leading-relaxed text-brand-navy/70">{intro}</p>
+
+      {notice ? (
+        <p role="alert" className="mt-6 text-sm font-medium text-red-700">
+          {notice}
+        </p>
+      ) : null}
 
       <form
         action={formAction}
@@ -323,6 +399,25 @@ export function AuthForm({
           {pending ? pendingLabel : submitLabel}
         </button>
       </form>
+
+      {googleAction ? (
+        <>
+          <div className="mt-6 flex items-center gap-4">
+            <span aria-hidden className="h-px flex-1 bg-black/10" />
+            <span className="text-sm text-brand-navy/65">{googleSignIn.divider}</span>
+            <span aria-hidden className="h-px flex-1 bg-black/10" />
+          </div>
+          <form action={googleAction} className="mt-6">
+            {/*
+              The account type chosen above, so a Google sign-up lands where
+              an email sign-up with the same choice would. Intent only — see
+              `signInWithGoogle`.
+            */}
+            {showRoleChoice ? <input type="hidden" name="intent" value={role} /> : null}
+            <GoogleButton />
+          </form>
+        </>
+      ) : null}
 
       <p className="mt-8 text-sm text-brand-navy/70">{footer}</p>
     </div>

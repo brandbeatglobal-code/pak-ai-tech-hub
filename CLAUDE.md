@@ -67,7 +67,7 @@ back `delivered`, so the mailbox does accept mail.
 
 ### Environment variables
 
-Four, all documented in `.env.example`. Every read in tracked source:
+Six, all documented in `.env.example`. Every read in tracked source:
 
 | Variable | Read by | Needed for |
 |---|---|---|
@@ -75,6 +75,12 @@ Four, all documented in `.env.example`. Every read in tracked source:
 | `AUTH_SECRET` | Auth.js (implicit) | session JWT signing |
 | `RESEND_API_KEY` | `lib/contact-actions.ts` | contact form delivery |
 | `CONTACT_FROM_EMAIL` | `lib/contact-actions.ts` | must be on the verified domain |
+| `GOOGLE_CLIENT_ID` | `auth.ts` | Google sign-in — optional; off unless both Google vars are set |
+| `GOOGLE_CLIENT_SECRET` | `auth.ts` | as above |
+
+The Google redirect URI to register is `{origin}/api/auth/callback/google`, once
+per origin that serves the app. (Added after the 2026-09-16 snapshot this file
+was written from.)
 
 `RESEND_BASE_URL` is honoured by the Resend SDK but is **not** application
 config. It is useful for pointing a local build at a mock endpoint to inspect
@@ -119,13 +125,16 @@ rediscovering them:
   client in `db/index.ts` is a lazy `Proxy` — `DATABASE_URL` is read on the
   first query, not at module scope, so a missing variable breaks only the routes
   that need a database instead of failing the whole build.
-- **Auth.js v5 beta** (`next-auth ^5.0.0-beta.32`) — **Credentials provider,
-  JWT session strategy, and deliberately no Drizzle adapter.** Those do not
-  combine: Auth.js only calls an adapter's session methods under the `database`
-  strategy, and the Credentials provider requires JWT. An adapter would also
-  demand `accounts`/`sessions`/`verificationTokens` tables that nothing needs.
-  Drizzle is still the data layer — `authorize()` reads users through it. Add
-  the adapter when a second, OAuth provider arrives. `trustHost: true` is set
+- **Auth.js v5 beta** (`next-auth ^5.0.0-beta.32`) — **Credentials provider
+  plus Google, JWT session strategy, and the Drizzle adapter
+  (`@auth/drizzle-adapter`)**, added with Google — the second, OAuth provider
+  it was held back for. Sessions stay JWT (Credentials requires it), so there
+  are no `sessions`/`verificationTokens` tables; the adapter finds, creates and
+  links users through `users` and `accounts`. It is wrapped in `auth.ts`: a
+  Google sign-up creates a **buyer only**, Google's tokens are not stored, and a
+  Google sign-in whose email already has a password account is **refused, not
+  linked** — the reasoning is in `auth.ts`; do not switch on
+  `allowDangerousEmailAccountLinking`. `trustHost: true` is set
   because Vercel validates the Host; set `AUTH_URL` instead if this ever sits
   behind a proxy forwarding arbitrary Host headers.
 - **bcryptjs 3.0.3, cost 12** (`lib/passwords.ts`). Passwords are hashed, never
@@ -236,6 +245,15 @@ code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
 
 ### Hosted database — stale, verified 2026-09-16
 
+> **Migration 0003 (`db/migrations/0003_google_sign_in.sql`) is NOT applied to
+> Neon** — checked read-only on 2026-09-25: three migrations, no `accounts`
+> table, `users.password_hash` still NOT NULL. Apply it **before** deploying any
+> code that includes Google sign-in: that code names the new columns in its
+> user queries, so sign-up and login fail against an unmigrated database. The
+> other order is safe — the code on `main` at `a752dfb` was run against a
+> migrated local database and its sign-up, login, application and review
+> suites all passed.
+
 Queried live via Neon MCP:
 
 - `users`: **0 rows** (no admin account exists anywhere)
@@ -296,8 +314,8 @@ file, not a wish-list.
    `CONTACT_FROM_EMAIL` are actually set in Vercel has never been verified — see
    the env-var note in §2. A submission through the live form is the check that
    closes it.
-7. **`pakaitechub.com` may not be attached to the Vercel project.** The project
-   record lists only `pak-ai-tech-hub.vercel.app` and two generated hostnames.
-   The domain is verified in *Resend*, which is email only and says nothing
-   about web hosting. Confirm in the Vercel dashboard before assuming the custom
-   domain serves the site.
+7. ~~`pakaitechub.com` may not be attached to the Vercel project.~~ **Resolved —
+   verified 2026-09-25 via the Vercel API:** `pakaitechub.com` is attached and
+   verified, and `www.pakaitechub.com` and `pak-ai-tech-hub.vercel.app` both
+   301 to it. It is therefore the one production origin to register with
+   Google: `https://pakaitechub.com/api/auth/callback/google`.
