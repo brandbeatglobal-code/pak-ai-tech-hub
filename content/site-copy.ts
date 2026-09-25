@@ -421,6 +421,33 @@ export const siteCopy = {
     logOut: logOutLabel,
   },
 
+  /**
+   * The Google option on /login and /sign-up (components/auth-form.tsx), and
+   * what /login says when a Google sign-in comes back refused. THE ONLY PLACE
+   * TO WRITE THEM — both pages read `label` from here.
+   *
+   * "Continue with Google" is one of the three wordings Google's branding
+   * guidelines allow, and the one that is true on both pages: the same button
+   * signs an existing Google user in and creates an account for a new one.
+   *
+   * `accountExists` is the account-linking decision, in words: a Google
+   * sign-in is never merged into an existing password account (see the note
+   * on account linking in auth.ts). It must keep telling people what to do
+   * instead, not just that it failed.
+   */
+  googleSignIn: {
+    label: "Continue with Google",
+    divider: "or",
+    errors: {
+      accountExists:
+        "That email already has an account here, set up with a password. Log in with your email and password instead — Google can't be added to an existing account yet.",
+      emailUnverified:
+        "Google hasn't verified that email address, so it can't be used to sign in here. Verify it with Google first, or sign up with your email and a password.",
+      failed:
+        "Signing in with Google didn't work. Try again, or log in with your email and password.",
+    },
+  },
+
   brand: {
     name: "PAKAI TechHub",
     tagline: "AI for every business, everywhere.",
