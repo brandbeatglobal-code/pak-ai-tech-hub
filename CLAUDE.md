@@ -86,12 +86,24 @@ was written from.)
 config. It is useful for pointing a local build at a mock endpoint to inspect
 the outgoing payload without touching app code.
 
-**Which Vercel environments each variable is scoped to could not be verified.**
-No tool available in this sandbox reads Vercel environment variables — the
-Vercel MCP surface exposes projects, deployments, logs and protection settings,
-but not env vars. Ask a human with dashboard access; do not infer scoping from
-a successful deployment, because `db/index.ts` connects lazily and the whole
-marketing site builds and serves with no database configured at all.
+**Which Vercel environments each variable is scoped to CAN be read here.** The
+Vercel MCP tool `filter_project_envs` (project `prj_RM4LJEUWTn1efHByziguVXZrKLqx`,
+team `team_J3MUNAkilCMYOmClgcjy6yzw`) returns each variable's name, type and
+target environments. Always pass `decrypt: "false"`: a `sensitive` variable's
+value then comes back empty. (A `plain` variable's value is returned as-is —
+`GOOGLE_CLIENT_ID` and `CONTACT_FROM_EMAIL` are plain.) Still do not infer
+scoping from a successful deployment, because `db/index.ts` connects lazily and
+the whole marketing site builds and serves with no database configured at all.
+
+Read on 2026-09-25 — presence and environments only, no values:
+
+| Variable | Production | Preview |
+|---|---|---|
+| `DATABASE_URL` (Neon integration, plus its `DATABASE_*` siblings) | yes | yes |
+| `AUTH_SECRET` | yes | yes |
+| `RESEND_API_KEY` | yes | yes |
+| `CONTACT_FROM_EMAIL` | yes | yes |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | yes | **no** — deliberate; Google accepts no wildcard redirect URIs, so preview hosts cannot sign in with Google |
 
 ### Known sandbox limitations
 
@@ -245,14 +257,17 @@ code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
 
 ### Hosted database — stale, verified 2026-09-16
 
-> **Migration 0003 (`db/migrations/0003_google_sign_in.sql`) is NOT applied to
-> Neon** — checked read-only on 2026-09-25: three migrations, no `accounts`
-> table, `users.password_hash` still NOT NULL. Apply it **before** deploying any
-> code that includes Google sign-in: that code names the new columns in its
-> user queries, so sign-up and login fail against an unmigrated database. The
-> other order is safe — the code on `main` at `a752dfb` was run against a
-> migrated local database and its sign-up, login, application and review
-> suites all passed.
+> **All four migrations, 0003 (Google sign-in) included, are applied to Neon**
+> — checked read-only on 2026-09-25, before PR #28 merged: four rows in
+> `drizzle.__drizzle_migrations`, the `accounts` table with all 12 columns and
+> its primary and foreign keys, `users.password_hash` nullable, and
+> `users.email_verified` / `users.image` present.
+>
+> The order that made it safe is the rule for the next one: apply a migration
+> to Neon **before** merging code that reads its columns. Drizzle names every
+> column in its queries, so new code against an unmigrated database fails;
+> old code against a migrated one kept working (checked for 0003, against a
+> migrated local database).
 
 Queried live via Neon MCP:
 
@@ -310,10 +325,12 @@ file, not a wish-list.
    `/contact`, 3 on `/marketplace`.** Not a new regression; it predates the
    recent work and the fix is site-wide, so it has been left alone deliberately
    rather than patched piecemeal.
-6. **Production Resend config is unconfirmed.** Whether `RESEND_API_KEY` and
-   `CONTACT_FROM_EMAIL` are actually set in Vercel has never been verified — see
-   the env-var note in §2. A submission through the live form is the check that
-   closes it.
+6. **Production Resend values are unconfirmed.** Both variables EXIST: on
+   2026-09-25 the Vercel API showed `RESEND_API_KEY` and `CONTACT_FROM_EMAIL`
+   set for Production (and for Preview) — see the env-var table in §2. Only
+   their presence was confirmed, not their values: nothing here has checked
+   that the key is valid or that Resend accepts the sender. A submission
+   through the live form is the check that closes it.
 7. ~~`pakaitechub.com` may not be attached to the Vercel project.~~ **Resolved —
    verified 2026-09-25 via the Vercel API:** `pakaitechub.com` is attached and
    verified, and `www.pakaitechub.com` and `pak-ai-tech-hub.vercel.app` both
