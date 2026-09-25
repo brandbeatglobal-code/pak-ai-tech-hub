@@ -24,7 +24,8 @@ import {
  * Validation runs in the browser for immediate feedback and again in the server
  * action, which is the one that counts.
  *
- * ONE THING IT DOES THAT THE CONTACT FORM DOES NOT: it puts the values back.
+ * It puts the values back after a rejection — as the contact form now does
+ * too, by the same pattern.
  *
  * React resets an uncontrolled form once a server action resolves, so a
  * rejected submission would otherwise wipe a 600-character description and make

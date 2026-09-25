@@ -77,7 +77,7 @@ export default async function DashboardPage() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <p className="text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-        Signed in as {role}
+        {siteCopy.account.signedInAs} {role}
       </p>
       <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-brand-navy sm:text-4xl">
         {stub.heading}
@@ -119,7 +119,7 @@ export default async function DashboardPage() {
           type="submit"
           className="rounded-full border border-brand-navy/15 px-6 py-3 text-base font-semibold text-brand-navy transition-colors hover:border-brand-navy/40"
         >
-          Log out
+          {siteCopy.account.logOut}
         </button>
       </form>
     </section>
