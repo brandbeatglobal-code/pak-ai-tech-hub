@@ -9,6 +9,7 @@ import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
 import { NavSearch } from "@/components/nav-search";
 import { FlagshipArt } from "@/components/visuals/flagship-art";
+import { logOut } from "@/lib/auth-actions";
 import {
   siteCopy,
   type NavMenuSource,
@@ -176,7 +177,17 @@ function Chevron({ open }: { open: boolean }) {
  * `md` upwards, the compact square mark below it, where the lockup would
  * shrink past legibility.
  */
-export function SiteNav({ listings }: { listings: Listing[] | null }) {
+/** The signed-in person, as the root layout passes them: a display name only. */
+type Account = { name: string } | null;
+
+export function SiteNav({
+  listings,
+  account,
+}: {
+  listings: Listing[] | null;
+  /** From `auth()` in the root layout. Null for a visitor with no session. */
+  account: Account;
+}) {
   const [openMenu, setOpenMenu] = useState<NavMenuSource | null>(null);
   const panels = useMemo<Record<NavMenuSource, Panel>>(
     () => ({ marketplace: marketplacePanel(listings), academy: ACADEMY_PANEL }),
@@ -300,21 +311,63 @@ export function SiteNav({ listings }: { listings: Listing[] | null }) {
 
         <div className="flex shrink-0 items-center gap-1 lg:gap-3">
           {/*
-            Both auth links are hidden below `md`, where the flat row underneath
+            The auth links, hidden below `md`, where the flat row underneath
             carries them instead — without that they would render twice.
+
+            Signed in, they become who is signed in (the admin shell's "Signed
+            in as {name}" treatment, linking to /dashboard, where the account
+            details are) and a log-out button posting to the same `logOut`
+            action /dashboard uses.
+
+            Same rhythm as signed out: one link from `md`, both from `lg`. Log
+            out takes Sign in's place — near enough the same width — and the
+            name waits for `lg`, as Sign up does. Between `md` and `lg` the
+            search field has almost no width to give (see above); a name there,
+            at any length, squeezed it down to its icon.
           */}
-          <Link
-            href={nav.signIn.href}
-            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy md:inline-flex"
-          >
-            {nav.signIn.label}
-          </Link>
-          <Link
-            href={nav.signUp.href}
-            className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy lg:inline-flex"
-          >
-            {nav.signUp.label}
-          </Link>
+          {account ? (
+            <>
+              <Link
+                href={nav.account.href}
+                className="hidden min-w-0 rounded-lg px-2 py-1 text-left transition-colors hover:bg-brand-navy/[0.04] lg:block"
+              >
+                <span className="block text-xs text-brand-navy/65">
+                  {nav.account.signedInAs}
+                </span>
+                {/* A real space between the two lines. They are separate
+                    blocks, so it changes nothing on screen, but without it the
+                    link's text reads "Signed in asName" to anything that
+                    reads text rather than layout. */}{" "}
+                {/* Truncated visually only — a screen reader hears it whole. */}
+                <span className="block max-w-40 truncate text-sm font-semibold text-brand-navy">
+                  {account.name}
+                </span>
+              </Link>
+              <form action={logOut} className="hidden md:block">
+                <button
+                  type="submit"
+                  className="rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy"
+                >
+                  {nav.account.logOut}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link
+                href={nav.signIn.href}
+                className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy md:inline-flex"
+              >
+                {nav.signIn.label}
+              </Link>
+              <Link
+                href={nav.signUp.href}
+                className="hidden rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-brand-navy/70 transition-colors hover:text-brand-navy lg:inline-flex"
+              >
+                {nav.signUp.label}
+              </Link>
+            </>
+          )}
           <HoverScale>
             <Link
               href={nav.cta.href}
@@ -522,17 +575,33 @@ export function SiteNav({ listings }: { listings: Listing[] | null }) {
           ))}
           {/* Appended rather than added to `nav.items`, which would also put
               the auth links in the desktop menu row, where they do not belong
-              — row 1 carries them at those widths. */}
-          {[nav.signIn, nav.signUp].map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-              >
-                {link.label}
-              </Link>
+              — row 1 carries them at those widths. Signed in: log out only.
+              Sign in and Sign up only just fit this row at 390px; a name
+              beside log out, even a short one, pushed log out off its edge.
+              The name is row 1's, from `lg`. */}
+          {account ? (
+            <li>
+              <form action={logOut}>
+                <button
+                  type="submit"
+                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                >
+                  {nav.account.logOut}
+                </button>
+              </form>
             </li>
-          ))}
+          ) : (
+            [nav.signIn, nav.signUp].map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))
+          )}
         </ul>
       </nav>
     </header>

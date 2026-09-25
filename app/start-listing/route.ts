@@ -19,13 +19,15 @@ import { auth } from "@/auth";
  *   admin      -> /dashboard. Not an audience for this CTA; their own
  *                 dashboard is the least surprising place to land.
  *
- * WHY A ROUTE HANDLER AND NOT A STATE-AWARE LINK. Rendering a different href
- * per visitor would mean reading the session while rendering the homepage,
- * which turns a statically prerendered page dynamic for everyone to serve a
- * link most visitors never click. Deciding here keeps every marketing page
- * static, costs one redirect on click, and is never stale — the role is read
- * from the database at the moment of the click (see the `jwt` callback in
- * auth.ts), not whenever the page happened to render.
+ * WHY A ROUTE HANDLER AND NOT A STATE-AWARE LINK. It was first chosen so
+ * that the marketing pages would not have to read the session and could stay
+ * statically prerendered. That reason is gone — the root layout now reads the
+ * session for the nav's signed-in state, so every page renders per request.
+ * The handler stays because the rest of the case still holds: the routing
+ * rules live in one place instead of in every CTA, it costs one redirect on
+ * click, and it is never stale — the role is read from the database at the
+ * moment of the click (see the `jwt` callback in auth.ts), not whenever the
+ * page happened to render.
  *
  * `redirect()` in a route handler is a 307. Keep it temporary: the answer
  * changes per visitor and over time, and a permanent 308 would be cached by

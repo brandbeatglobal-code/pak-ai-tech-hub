@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useRef } from "react";
 
 import { countries } from "@/content/countries";
 import { siteCopy } from "@/content/site-copy";
-import { submitContact, type ContactState } from "@/lib/contact-actions";
+import { submitContact } from "@/lib/contact-actions";
+import { attemptOf, draftOf, type ContactState } from "@/lib/contact-submission";
 
 /**
  * The contact form.
@@ -24,12 +25,25 @@ import { submitContact, type ContactState } from "@/lib/contact-actions";
  * Validation runs in two places on purpose: the browser's own constraint
  * validation for immediate feedback, and again in the server action, which is
  * the one that counts.
+ *
+ * It PUTS THE VALUES BACK after a rejection, the same way the product form
+ * (components/product-form.tsx) does. React resets an uncontrolled form once a
+ * server action resolves, so a rejected submission — one bad field, or a
+ * failed delivery — used to empty all ten controls. The action echoes what it
+ * received, the controls read it through `defaultValue` / `defaultChecked`, and
+ * the `<form>` is keyed on the attempt number so it remounts and actually picks
+ * those values up — re-rendering alone would not, since `defaultValue` only
+ * applies at mount.
+ *
+ * Remounting drops focus, so the effect below moves it to the first field with
+ * an error, which is where it should go after a rejection anyway.
  */
 
 const { contact, industries } = siteCopy;
 const { form } = contact;
 
 const INDUSTRY_OPTIONS = industries.items.map((i) => i.name);
+const countryOptions = countries.map((country) => country.name);
 
 const controlBase =
   "w-full rounded-xl border bg-white px-4 py-2.5 text-base text-brand-navy outline-none transition-colors placeholder:text-brand-navy/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
@@ -80,6 +94,31 @@ export function ContactForm({
     { status: "idle" },
   );
   const uid = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const attempt = attemptOf(state);
+  const values = draftOf(state);
+
+  /*
+    Moves focus to the first rejected control after a failed submission. Runs
+    on the attempt number rather than on `errors`, so a second rejection of the
+    same field still moves focus back to it.
+  */
+  useEffect(() => {
+    if (attempt === 0) return;
+    const firstInvalid = formRef.current?.querySelector<HTMLElement>(
+      '[aria-invalid="true"]',
+    );
+    firstInvalid?.focus();
+  }, [attempt]);
+
+  /*
+    A select only gets back a value it actually offers. Anything else — a
+    tampered post, or a product that stopped being listed between attempts —
+    falls back to the placeholder rather than leaving the browser to pick the
+    first real option on its own.
+  */
+  const offered = (value: string, options: readonly string[]) =>
+    options.includes(value) ? value : "";
 
   const errors = state.status === "invalid" ? state.errors : {};
   const id = (name: string) => `${uid}-${name}`;
@@ -119,6 +158,9 @@ export function ContactForm({
 
   return (
     <form
+      /* Remounts after every rejection so the echoed defaultValues take. */
+      key={attempt}
+      ref={formRef}
       action={formAction}
       noValidate={false}
       className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm sm:p-10"
@@ -134,6 +176,7 @@ export function ContactForm({
             type="text"
             autoComplete="given-name"
             required
+            defaultValue={values.firstName}
             className={`mt-2 ${cls("firstName")}`}
             {...invalid("firstName")}
           />
@@ -150,6 +193,7 @@ export function ContactForm({
             type="text"
             autoComplete="family-name"
             required
+            defaultValue={values.lastName}
             className={`mt-2 ${cls("lastName")}`}
             {...invalid("lastName")}
           />
@@ -166,6 +210,7 @@ export function ContactForm({
             type="text"
             autoComplete="organization-title"
             required
+            defaultValue={values.jobTitle}
             className={`mt-2 ${cls("jobTitle")}`}
             {...invalid("jobTitle")}
           />
@@ -181,7 +226,7 @@ export function ContactForm({
             name="country"
             autoComplete="country-name"
             required
-            defaultValue=""
+            defaultValue={offered(values.country, countryOptions)}
             className={`mt-2 ${cls("country")}`}
             {...invalid("country")}
           >
@@ -207,6 +252,7 @@ export function ContactForm({
             type="email"
             autoComplete="email"
             required
+            defaultValue={values.email}
             className={`mt-2 ${cls("email")}`}
             {...invalid("email")}
           />
@@ -221,7 +267,7 @@ export function ContactForm({
             id={id("industry")}
             name="industry"
             required
-            defaultValue=""
+            defaultValue={offered(values.industry, INDUSTRY_OPTIONS)}
             className={`mt-2 ${cls("industry")}`}
             {...invalid("industry")}
           >
@@ -245,7 +291,7 @@ export function ContactForm({
             id={id("reason")}
             name="reason"
             required
-            defaultValue=""
+            defaultValue={offered(values.reason, form.reasons)}
             className={`mt-2 ${cls("reason")}`}
             {...invalid("reason")}
           >
@@ -269,7 +315,7 @@ export function ContactForm({
           <select
             id={id("product")}
             name="product"
-            defaultValue=""
+            defaultValue={offered(values.product, productOptions)}
             className={`mt-2 ${cls("product")}`}
             {...invalid("product")}
           >
@@ -292,6 +338,7 @@ export function ContactForm({
             id={id("message")}
             name="message"
             rows={5}
+            defaultValue={values.message}
             className={`mt-2 ${cls("message")} resize-y`}
           />
         </div>
@@ -307,6 +354,7 @@ export function ContactForm({
               name="consent"
               type="checkbox"
               required
+              defaultChecked={values.consent}
               className="mt-1 h-5 w-5 shrink-0 rounded border-black/20 accent-brand-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
               {...invalid("consent")}
             />

@@ -347,10 +347,10 @@ const browseProductsCta = {
  *   provider     -> /dashboard/products/new
  *
  * The decision is made on the server when the link is followed, not when the
- * marketing page renders — so the homepage stays statically rendered and the
- * link is never stale. Every "list your product" link on the site points here,
- * including the nav button and the contact page card, which read this `href`
- * rather than repeating it.
+ * marketing page renders — so the link is never stale, and the routing rules
+ * live in one place rather than in every CTA. Every "list your product" link
+ * on the site points here, including the nav button and the contact page
+ * card, which read this `href` rather than repeating it.
  */
 const startListingCta = {
   label: "Start listing — it's free",
@@ -399,7 +399,28 @@ const contactEmail = "hello@pakaitechub.com";
  */
 const notBuyableYet = "None of these are buyable yet — checkout is still being built.";
 
+/**
+ * The words that say whose session this is, and the action that ends it.
+ *
+ * THE ONLY PLACE TO WRITE THEM. `signedInAs` is read by the nav's account link,
+ * the admin shell's top bar and the dashboard's eyebrow; `logOutLabel` by the
+ * nav's log-out buttons and the one on /dashboard. They were typed separately
+ * in each before the nav had a signed-in state.
+ */
+const signedInAs = "Signed in as";
+const logOutLabel = "Log out";
+
 export const siteCopy = {
+  /**
+   * Session words shared by every signed-in surface outside the nav — today
+   * /dashboard's eyebrow and log-out button. The nav reads the same constants
+   * through `nav.account`, the admin top bar through `adminReview.topbar`.
+   */
+  account: {
+    signedInAs,
+    logOut: logOutLabel,
+  },
+
   brand: {
     name: "PAKAI TechHub",
     tagline: "AI for every business, everywhere.",
@@ -478,15 +499,27 @@ export const siteCopy = {
       },
     },
     /*
-     * Logged-out entry point to the auth pages, shown beside the CTA.
+     * The auth links, beside the CTA: signed-out and signed-in variants.
      *
-     * There is deliberately no logged-in variant yet. Swapping this for
-     * "Dashboard" means reading the session server-side in the nav, which
-     * turns a static shared component into a dynamic one across every page —
-     * a bigger change than this one, and not something to improvise here.
+     * Signed out: `signIn` and `signUp`. Signed in: `account` — who is signed
+     * in, linking to /dashboard, where the account details live — and a
+     * log-out button that posts to the same `logOut` action /dashboard uses.
+     * Nothing new is designed here: the identity is the admin shell's "Signed
+     * in as {name}" treatment, the action is the dashboard's. The name shows
+     * from `lg` up, log out at every width — components/site-nav.tsx says why.
+     *
+     * The nav knows which to show because the root layout reads the session
+     * (`auth()`) and passes the signed-in person's name down. That makes every
+     * page render per request rather than being prerendered — see the note in
+     * app/layout.tsx for why that was the trade taken.
      */
     signIn: { label: "Sign in", href: "/login" },
     signUp: { label: "Sign up", href: "/sign-up" },
+    account: {
+      signedInAs,
+      href: "/dashboard",
+      logOut: logOutLabel,
+    },
     /*
      * The nav CTA speaks to providers, not buyers.
      *
@@ -1719,7 +1752,7 @@ export const siteCopy = {
       searchLabel: "Search the queue (not available yet)",
       searchPlaceholder: "Search — not available yet",
       notifications: "Notifications (not available yet)",
-      signedInAs: "Signed in as",
+      signedInAs,
       role: "Admin",
     },
     heading: "Review Queue",

@@ -4,6 +4,11 @@ import { Resend } from "resend";
 
 import { countries } from "@/content/countries";
 import { siteCopy } from "@/content/site-copy";
+import {
+  attemptOf,
+  type ContactDraft,
+  type ContactState,
+} from "@/lib/contact-submission";
 import { getListings, productOptionNames } from "@/lib/listings";
 
 /**
@@ -16,15 +21,14 @@ import { getListings, productOptionNames } from "@/lib/listings";
  * The success state is only returned AFTER Resend confirms the send, so the
  * page never claims a message went out when it did not. Every failure path
  * returns the mailto address so the sender is never left with a dead end.
+ *
+ * Every path that sends the form back — a rejected field or a failed
+ * delivery — also returns what was sent and an attempt count, so the form can
+ * put all ten controls back (see lib/contact-submission.ts). Without that,
+ * React's reset of the form after the action would empty them.
  */
 
 const { contact, industries } = siteCopy;
-
-export type ContactState =
-  | { status: "idle" }
-  | { status: "success" }
-  | { status: "error"; message: string }
-  | { status: "invalid"; errors: Record<string, string> };
 
 /** Destination inbox — the same address the hero's mailto uses. */
 const TO_ADDRESS = contact.details.email.value;
@@ -65,10 +69,12 @@ function field(data: FormData, name: string): string {
 }
 
 export async function submitContact(
-  _previous: ContactState,
+  previous: ContactState,
   formData: FormData,
 ): Promise<ContactState> {
-  const values = {
+  const attempt = attemptOf(previous) + 1;
+
+  const values: ContactDraft = {
     firstName: field(formData, "firstName"),
     lastName: field(formData, "lastName"),
     jobTitle: field(formData, "jobTitle"),
@@ -78,8 +84,9 @@ export async function submitContact(
     reason: field(formData, "reason"),
     product: field(formData, "product"),
     message: field(formData, "message"),
+    consent: formData.get("consent") === "on",
   };
-  const consent = formData.get("consent") === "on";
+  const { consent } = values;
 
   const { required, email: emailMessage, consent: consentMessage } =
     contact.form.validation;
@@ -99,7 +106,9 @@ export async function submitContact(
   }
   if (!consent) errors.consent = consentMessage;
 
-  if (Object.keys(errors).length > 0) return { status: "invalid", errors };
+  if (Object.keys(errors).length > 0) {
+    return { status: "invalid", attempt, errors, values };
+  }
 
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.CONTACT_FROM_EMAIL;
@@ -114,7 +123,7 @@ export async function submitContact(
         (apiKey ? "" : " RESEND_API_KEY missing.") +
         (from ? "" : " CONTACT_FROM_EMAIL missing."),
     );
-    return { status: "error", message: fallbackMessage() };
+    return { status: "error", attempt, message: fallbackMessage(), values };
   }
 
   const subject = `${values.firstName} ${values.lastName} — ${values.reason}`;
@@ -150,18 +159,18 @@ export async function submitContact(
     if (error) {
       /* Log the reason for us; show the visitor something they can act on. */
       console.error("[contact] Resend rejected the send:", error);
-      return { status: "error", message: fallbackMessage() };
+      return { status: "error", attempt, message: fallbackMessage(), values };
     }
 
     if (!data?.id) {
       console.error("[contact] Resend returned no message id.");
-      return { status: "error", message: fallbackMessage() };
+      return { status: "error", attempt, message: fallbackMessage(), values };
     }
 
     return { status: "success" };
   } catch (cause) {
     console.error("[contact] Send threw:", cause);
-    return { status: "error", message: fallbackMessage() };
+    return { status: "error", attempt, message: fallbackMessage(), values };
   }
 }
 

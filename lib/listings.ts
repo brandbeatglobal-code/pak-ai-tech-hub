@@ -23,20 +23,24 @@ import { products, providers } from "@/db/schema";
  * result as props; they never import this file.
  *
  * FRESHNESS. The query result is cached (`unstable_cache`) under
- * `LISTINGS_TAG`, and the pages that use it are prerendered with it. Two
- * things refresh it:
+ * `LISTINGS_TAG`. Pages render per request — the root layout reads the
+ * session for the nav, which makes every page dynamic — but each render reads
+ * this cached result, not the database. Two things refresh it:
  *
  *   1. On demand — the main path. `approveProduct` in lib/review-actions.ts
  *      calls `updateTag(LISTINGS_TAG)` once the approval is committed. That
- *      expires the cached rows and every page built from them, and the next
- *      request for any of those pages waits for a fresh read — so the product
- *      is on /marketplace the next time anyone loads it. No redeploy.
+ *      expires the cached rows, and the next request reads fresh ones — so
+ *      the product is on /marketplace the next time anyone loads it. No
+ *      redeploy.
  *   2. Hourly — a backstop, for changes that never pass through
  *      `approveProduct`: a row edited directly in the database (renaming the
- *      eight first-party products would be one), `npm run db:seed`, or a page
- *      built while the database could not be reached. After REVALIDATE_SECONDS
- *      the next request serves the cached page and refreshes it behind the
- *      scenes, so the one after sees the change.
+ *      eight first-party products would be one), or `npm run db:seed`. After
+ *      REVALIDATE_SECONDS the next request is served the cached rows and
+ *      refreshes them behind the scenes, so the one after sees the change.
+ *
+ * A failed read is never cached (see `getListings`), so an outage clears on
+ * the first request after the database is back — it does not wait for either
+ * of the above.
  *
  * Nothing else changes which products are listed today: a pending
  * submission is not listed, a decline only ever applies to a pending one, and
