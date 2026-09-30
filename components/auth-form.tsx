@@ -20,9 +20,13 @@ import type { FormState } from "@/lib/auth-actions";
  * value.
  *
  * "Continue with Google" sits under the email form, after an "or", in a form
- * of its own — it posts no email or password, only the sign-up page's
- * account-type choice. The page passes `googleAction` only when Google
- * sign-in is configured (`googleSignInEnabled` in auth.ts).
+ * of its own — it posts no email or password. The page passes `googleAction`
+ * only when Google sign-in is configured (`googleSignInEnabled` in auth.ts).
+ *
+ * On /sign-up, choosing "Provider" swaps the rest of the form for a link to
+ * the listing form (/list-your-product): providers sign up there, account
+ * and application together. Nothing else on this page can lead anywhere
+ * near provider status.
  */
 
 const { googleSignIn } = siteCopy;
@@ -131,7 +135,6 @@ export function AuthForm({
   pendingLabel,
   footer,
   showRoleChoice = false,
-  initialRole = "buyer",
   googleAction,
   notice,
 }: {
@@ -141,16 +144,8 @@ export function AuthForm({
   submitLabel: string;
   pendingLabel: string;
   footer: React.ReactNode;
+  /** /sign-up: the Buyer/Provider choice. Buyer starts selected. */
   showRoleChoice?: boolean;
-  /**
-   * Which option starts selected, from `?role=` on the sign-up page.
-   *
-   * It is only ever a starting point — the radio group stays editable, so
-   * arriving from a provider link and deciding to sign up as a buyer takes one
-   * click. The value the server acts on is the one posted in the form, not
-   * this one.
-   */
-  initialRole?: "buyer" | "provider";
   /** `signInWithGoogle`, or nothing when Google sign-in is not configured. */
   googleAction?: (formData: FormData) => Promise<void>;
   /**
@@ -161,7 +156,7 @@ export function AuthForm({
   notice?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
-  const [role, setRole] = useState<"buyer" | "provider">(initialRole);
+  const [role, setRole] = useState<"buyer" | "provider">("buyer");
   /* Whether the password is shown as text. Only the input's `type` follows
      this; the value stays in the uncontrolled input. */
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -249,8 +244,8 @@ export function AuthForm({
                   {
                     value: "provider",
                     title: "Provider",
-                    /* "Apply", not "List": this creates a buyer account and
-                       opens the application — see `signUp`. */
+                    /* "Apply", not "List": it leads to the listing form,
+                       which is reviewed before anything is listed. */
                     detail: "Apply to list your AI product",
                   },
                 ] as const
@@ -283,7 +278,21 @@ export function AuthForm({
           </fieldset>
         ) : null}
 
-        {showRoleChoice ? (
+        {/* Provider chosen: no account is made here — the listing form is
+            the way in. Everything below is the buyer (and login) form. */}
+        {showRoleChoice && role === "provider" ? (
+          <div className="rounded-2xl border border-brand-navy/10 bg-brand-navy/[0.03] p-5">
+            <p className="leading-relaxed text-brand-navy">{siteCopy.signUp.providerRoute.body}</p>
+            <Link
+              href={siteCopy.signUp.providerRoute.cta.href}
+              className="mt-4 inline-flex rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              {siteCopy.signUp.providerRoute.cta.label}
+            </Link>
+          </div>
+        ) : null}
+
+        {showRoleChoice && role === "buyer" ? (
           <div>
             <label htmlFor="name" className={label}>
               Name
@@ -299,121 +308,118 @@ export function AuthForm({
           </div>
         ) : null}
 
-        {showRoleChoice ? (
+        {showRoleChoice && role === "buyer" ? (
           <div>
             <label htmlFor="companyName" className={label}>
               Company{" "}
-              <span className="font-normal text-brand-navy/60">
-                {role === "provider" ? "(required)" : "(optional)"}
-              </span>
+              <span className="font-normal text-brand-navy/60">(optional)</span>
             </label>
             <input
               id="companyName"
               name="companyName"
               type="text"
               autoComplete="organization"
-              required={role === "provider"}
               className={`mt-2 ${field}`}
             />
           </div>
         ) : null}
 
-        <div>
-          <label htmlFor="email" className={label}>
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className={`mt-2 ${field}`}
-          />
-        </div>
+        {role === "provider" && showRoleChoice ? null : (
+          <>
+            <div>
+              <label htmlFor="email" className={label}>
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className={`mt-2 ${field}`}
+              />
+            </div>
 
-        <div>
-          <label htmlFor="password" className={label}>
-            Password
-          </label>
-          <div className="relative mt-2">
-            <input
-              ref={passwordRef}
-              id="password"
-              name="password"
-              type={passwordVisible ? "text" : "password"}
-              autoComplete={showRoleChoice ? "new-password" : "current-password"}
-              required
-              minLength={showRoleChoice ? 8 : undefined}
-              className={passwordField}
-            />
-            {/*
-              A real button, after the input in the DOM so Tab reaches it
-              straight after the field, and Enter / Space toggle it.
+            <div>
+              <label htmlFor="password" className={label}>
+                Password
+              </label>
+              <div className="relative mt-2">
+                <input
+                  ref={passwordRef}
+                  id="password"
+                  name="password"
+                  type={passwordVisible ? "text" : "password"}
+                  autoComplete={showRoleChoice ? "new-password" : "current-password"}
+                  required
+                  minLength={showRoleChoice ? 8 : undefined}
+                  className={passwordField}
+                />
+                {/*
+                  A real button, after the input in the DOM so Tab reaches it
+                  straight after the field, and Enter / Space toggle it.
 
-              `onMouseDown` preventDefault keeps a click or a tap from moving
-              focus: someone typing their password can check it and carry on
-              typing without going back into the field. (Checked with mouse
-              and with touch emulation in Chromium; not on a real phone.)
-              Keyboard activation never fires mousedown, so a keyboard user's
-              focus stays on the button, where they left it.
+                  `onMouseDown` preventDefault keeps a click or a tap from moving
+                  focus: someone typing their password can check it and carry on
+                  typing without going back into the field. (Checked with mouse
+                  and with touch emulation in Chromium; not on a real phone.)
+                  Keyboard activation never fires mousedown, so a keyboard user's
+                  focus stays on the button, where they left it.
 
-              The label stays "Show password" in both states; `aria-pressed`
-              alone reports whether the password is shown, which exposes the
-              button as a toggle, pressed or not pressed. Do not switch the
-              label to "Hide password": the WAI-ARIA Authoring Practices
-              advise against a label that changes as well as `aria-pressed`,
-              which a screen reader could read out as "Hide password,
-              pressed". The eye / eye-off icon is the sighted equivalent of
-              the pressed state.
-            */}
-            <button
-              type="button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={togglePassword}
-              aria-label="Show password"
-              aria-pressed={passwordVisible}
-              aria-controls="password"
-              className="absolute top-1/2 right-1.5 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-brand-navy/65 transition-colors hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-navy"
-            >
-              <EyeIcon crossed={passwordVisible} />
-            </button>
-          </div>
-          {showRoleChoice ? (
-            <p className="mt-2 text-sm text-brand-navy/65">
-              At least 8 characters.
+                  The label stays "Show password" in both states; `aria-pressed`
+                  alone reports whether the password is shown, which exposes the
+                  button as a toggle, pressed or not pressed. Do not switch the
+                  label to "Hide password": the WAI-ARIA Authoring Practices
+                  advise against a label that changes as well as `aria-pressed`,
+                  which a screen reader could read out as "Hide password,
+                  pressed". The eye / eye-off icon is the sighted equivalent of
+                  the pressed state.
+                */}
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={togglePassword}
+                  aria-label="Show password"
+                  aria-pressed={passwordVisible}
+                  aria-controls="password"
+                  className="absolute top-1/2 right-1.5 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-brand-navy/65 transition-colors hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-navy"
+                >
+                  <EyeIcon crossed={passwordVisible} />
+                </button>
+              </div>
+              {showRoleChoice ? (
+                <p className="mt-2 text-sm text-brand-navy/65">
+                  At least 8 characters.
+                </p>
+              ) : null}
+            </div>
+
+            {/* Announced when it appears, so it is not missed by a screen reader. */}
+            <p role="alert" aria-live="polite" className="text-sm font-medium text-red-700">
+              {state?.error ?? ""}
             </p>
-          ) : null}
-        </div>
 
-        {/* Announced when it appears, so it is not missed by a screen reader. */}
-        <p role="alert" aria-live="polite" className="text-sm font-medium text-red-700">
-          {state?.error ?? ""}
-        </p>
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {pending ? pendingLabel : submitLabel}
-        </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="w-full rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {pending ? pendingLabel : submitLabel}
+            </button>
+          </>
+        )}
       </form>
 
-      {googleAction ? (
+      {googleAction && !(showRoleChoice && role === "provider") ? (
         <>
           <div className="mt-6 flex items-center gap-4">
             <span aria-hidden className="h-px flex-1 bg-black/10" />
             <span className="text-sm text-brand-navy/65">{googleSignIn.divider}</span>
             <span aria-hidden className="h-px flex-1 bg-black/10" />
           </div>
+          {/* Buyer or login only — a provider signs up through the listing
+              form, which has its own Google button. */}
           <form action={googleAction} className="mt-6">
-            {/*
-              The account type chosen above, so a Google sign-up lands where
-              an email sign-up with the same choice would. Intent only — see
-              `signInWithGoogle`.
-            */}
-            {showRoleChoice ? <input type="hidden" name="intent" value={role} /> : null}
             <GoogleButton />
           </form>
         </>

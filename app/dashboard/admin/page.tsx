@@ -396,9 +396,18 @@ function ProviderRow({ item }: { item: ProviderQueueItem }) {
         </>
       }
       controls={
-        reviewed ? null : <ReviewControls kind="provider" id={item.id} name={item.business} />
+        reviewed ? null : (
+          <>
+            {/* No e-signature in the app: this line holds the order. */}
+            <p className="mb-3 rounded-xl border border-brand-navy/10 bg-brand-navy/[0.03] px-3 py-2 text-sm font-medium text-brand-navy">
+              {copy.agreementNote}
+            </p>
+            <ReviewControls kind="provider" id={item.id} name={item.business} />
+          </>
+        )
       }
     >
+      <Field label={fields.providerType}>{copy.providerTypes[item.providerType]}</Field>
       <Field label={fields.applicant}>
         {item.applicantName}
         {item.applicantEmail ? (
@@ -424,6 +433,12 @@ function ProviderRow({ item }: { item: ProviderQueueItem }) {
         ) : (
           <span className="text-brand-navy/65">{fields.noWebsite}</span>
         )}
+      </Field>
+      <Field label={fields.phone}>
+        {item.contactPhone ?? <span className="text-brand-navy/65">{fields.notGiven}</span>}
+      </Field>
+      <Field label={fields.jobTitle}>
+        {item.contactTitle ?? <span className="text-brand-navy/65">{fields.notGiven}</span>}
       </Field>
       <Field label={fields.submitted}>
         <When date={item.submittedAt} />

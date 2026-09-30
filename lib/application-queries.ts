@@ -2,15 +2,12 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { providers, users, type ProviderStatus } from "@/db/schema";
-import {
-  EMPTY_APPLICATION,
-  type ApplicationDraft,
-} from "@/lib/provider-application";
+import { EMPTY_LISTING, type ListingDraft } from "@/lib/provider-listing";
 
 /**
- * Server-side reads for the provider application.
+ * Server-side reads for the provider application (the listing form).
  *
- * WHY THIS IS NOT IN lib/application-actions.ts.
+ * WHY THIS IS NOT IN lib/listing-actions.ts.
  *
  * Every async function exported from a `"use server"` module is a public
  * endpoint, callable by anyone with any arguments. A `getApplication(userId)`
@@ -27,7 +24,9 @@ import {
 
 export type Application = {
   status: ProviderStatus;
-  draft: ApplicationDraft;
+  /* Steps 2 and 3 of the listing form, as last submitted. No email: step 1
+     is skipped for someone signed in. */
+  draft: ListingDraft;
 };
 
 /**
@@ -41,6 +40,10 @@ export async function getApplication(userId: string): Promise<Application | null
   const [row] = await db
     .select({
       status: providers.status,
+      providerType: providers.providerType,
+      contactPhone: providers.contactPhone,
+      contactTitle: providers.contactTitle,
+      name: users.name,
       companyName: providers.companyName,
       description: providers.description,
       category: providers.category,
@@ -48,6 +51,7 @@ export async function getApplication(userId: string): Promise<Application | null
       reasonForListing: providers.reasonForListing,
     })
     .from(providers)
+    .innerJoin(users, eq(users.id, providers.userId))
     .where(eq(providers.userId, userId))
     .limit(1);
 
@@ -56,28 +60,37 @@ export async function getApplication(userId: string): Promise<Application | null
   return {
     status: row.status,
     draft: {
+      ...EMPTY_LISTING,
+      providerType: row.providerType,
+      fullName: row.name,
+      phone: row.contactPhone ?? "",
+      jobTitle: row.contactTitle ?? "",
       businessName: row.companyName,
       description: row.description ?? "",
       category: row.category ?? "",
       website: row.website ?? "",
       reason: row.reasonForListing ?? "",
+      /* Consent is given afresh on every submit, never carried over. */
+      consent: false,
     },
   };
 }
 
 /**
- * The starting answers for someone who has never applied.
- *
- * Only the business name can be known in advance: sign-up asks for a company
- * when "Provider" is chosen, and keeps it on `users.company_name`. Everything
+ * The starting answers for a signed-in buyer who has never applied: their
+ * name, and the company they gave at sign-up if they gave one. Everything
  * else starts empty — nothing is guessed.
  */
-export async function getFirstDraft(userId: string): Promise<ApplicationDraft> {
+export async function getFirstDraft(userId: string): Promise<ListingDraft> {
   const [row] = await db
-    .select({ companyName: users.companyName })
+    .select({ name: users.name, companyName: users.companyName })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
 
-  return { ...EMPTY_APPLICATION, businessName: row?.companyName ?? "" };
+  return {
+    ...EMPTY_LISTING,
+    fullName: row?.name ?? "",
+    businessName: row?.companyName ?? "",
+  };
 }

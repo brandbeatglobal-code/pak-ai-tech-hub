@@ -317,6 +317,23 @@ const commissionTerms =
   "We take a 20% commission only when you make a sale — nothing upfront.";
 
 /**
+ * "Free to list." plus the commission sentence.
+ *
+ * THE ONLY PLACE TO WRITE IT. The homepage's For AI Providers view and the
+ * listing form both open with it.
+ */
+const listingTerms = `Free to list. ${commissionTerms}`;
+
+/**
+ * What an email that already has an account is told.
+ *
+ * THE ONLY PLACE TO WRITE IT. /sign-up (`signUp` in lib/auth-actions.ts) and
+ * the listing form say exactly the same thing, so neither tells an attacker
+ * anything the other does not.
+ */
+const emailTakenMessage = "That email already has an account.";
+
+/**
  * The two calls to action that appear in more than one place.
  *
  * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
@@ -343,9 +360,9 @@ const browseProductsCta = {
  * `/start-listing` is not a page. It is a route handler that looks at who is
  * asking and sends them on (app/start-listing/route.ts):
  *
- *   signed out   -> /sign-up?role=provider, which creates a buyer account and
- *                   lands on the provider application
- *   buyer        -> /dashboard/apply, the application form (or its
+ *   signed out   -> /list-your-product, the listing form from step 1, which
+ *                   creates the account and the application together
+ *   buyer        -> /list-your-product, the same form from step 2 (or its
  *                   "under review" state, if they have already applied)
  *   provider     -> /dashboard/products/new
  *
@@ -444,6 +461,20 @@ export const siteCopy = {
   account: {
     signedInAs,
     logOut: logOutLabel,
+    /* /sign-up's answer for an email in use — see `emailTakenMessage`. */
+    emailTaken: emailTakenMessage,
+  },
+
+  /*
+   * /sign-up is for buyers. Its Buyer/Provider choice stays, but choosing
+   * Provider only leads to the listing form — it no longer creates anything
+   * (components/auth-form.tsx, and `signUp` refuses "provider").
+   */
+  signUp: {
+    providerRoute: {
+      body: "Providers sign up through the listing form: your account, your details and your company, in three short steps.",
+      cta: { label: "Continue to the listing form", href: "/list-your-product" },
+    },
   },
 
   /**
@@ -595,13 +626,13 @@ export const siteCopy = {
     /*
      * The nav CTA speaks to providers, not buyers.
      *
-     * Buyers already have the search field, the category bar and the whole
-     * listings grid as their entry point; the supply side of the marketplace
-     * has none, so the one button in the bar is theirs.
+     * Buyers already have the search field and AI Solutions as their entry
+     * point; the supply side of the marketplace has none, so the one button
+     * in the bar is theirs.
      *
      * Its own label, but `startListingCta`'s destination — the state-aware
-     * `/start-listing` redirect. It used to point straight at
-     * `/sign-up?role=provider`, which sent a signed-in buyer to a sign-up form.
+     * `/start-listing` redirect, which sends a would-be provider to the
+     * listing form.
      */
     cta: listProductCta,
     /*
@@ -723,8 +754,8 @@ export const siteCopy = {
     providers: {
       metaTitle: `For AI Providers — ${brandName}`,
       heading: `List your AI product on ${brandName}`,
-      /* "Free to list." plus the one commission sentence — see `commissionTerms`. */
-      intro: `Free to list. ${commissionTerms}`,
+      /* "Free to list." plus the one commission sentence — see `listingTerms`. */
+      intro: listingTerms,
       stepsHeading: "How listing works",
       /*
        * The provider's four steps, in the order the listing form and the
@@ -1610,65 +1641,102 @@ export const siteCopy = {
     },
   },
   /*
-   * The provider application, at /dashboard/apply, and the application panel
-   * on a buyer's /dashboard.
+   * The provider listing form, at /list-your-product (and at /dashboard/apply,
+   * which shows the same form), plus the states shown instead of it and the
+   * application panel on a buyer's /dashboard.
    *
-   * A buyer applies; an admin reviews it in the queue at /dashboard/admin;
-   * approval makes them a provider, and either decision emails them (see
-   * `reviewEmails`). Nothing here may promise a turnaround — no SLA has been
-   * agreed.
+   * ONE FORM, THREE STEPS: Account, Personal, Company (called Business for an
+   * individual). It replaced a separate provider sign-up followed by an
+   * application. Submitting it creates a buyer account if the visitor has
+   * none, and the pending application, in one transaction
+   * (lib/listing-actions.ts). Nobody becomes a provider here: an admin
+   * approves in the queue at /dashboard/admin — after the provider agreement
+   * is signed — and either decision emails them (see `reviewEmails`).
    *
-   * The category options are not listed here. The form reuses
-   * `CATEGORY_LABELS` from lib/product-submission.ts, the same five the
-   * product form offers, so a provider and their products are filed under one
-   * vocabulary. The commission line reads `commissionTerms`.
-   *
-   * The decline reason is stored (`providers.rejection_reason`) and sent in
-   * the decline email, but deliberately NOT shown anywhere in this block: the
-   * review-queue pass left the applicant-facing resubmit flow exactly as it
-   * was. Showing it on /dashboard/apply is a small, separate change.
+   * Nothing here may promise a review turnaround — no SLA has been agreed.
+   * The category options are not listed here: the form uses
+   * `CATEGORY_LABELS` (from `marketplace.products.categories`), the same list
+   * as the product form. The commission line is `listingTerms`.
    */
-  providerApplication: {
+  providerListing: {
     meta: {
-      title: `Apply to become a provider — ${brandName}`,
+      title: `List your product — ${brandName}`,
     },
-    heading: "Apply to become a provider",
+    heading: "List your AI product",
     intro:
-      "Tell us about your business. Every provider is reviewed before they can list products in the marketplace.",
-    commission: commissionTerms,
-    /* Shown above the form when a rejected applicant comes back to it. */
+      "Three short steps. Every provider is reviewed, and signs a provider agreement with us, before anything is listed.",
+    terms: listingTerms,
+    /* Shown above the form when a declined applicant comes back to it. */
     resubmitNote:
       "Your previous application was not approved. Your answers are below — update them and submit again.",
+    /* Step 1 is skipped for someone already signed in; this says why. */
+    signedInNote: "You are signed in, so your application will be linked to this account.",
+    stepper: {
+      label: "Progress",
+      /* {n} of 3 — read before each step's name. */
+      stepOf: "Step {n} of 3",
+      account: "Account",
+      personal: "Personal",
+      company: "Company",
+      /* Step 3's name for an individual. */
+      business: "Business",
+    },
+    registeringAs: {
+      legend: "I am registering as",
+      organisation: {
+        title: "Organisation",
+        detail: "A company or team listing its product",
+      },
+      individual: {
+        title: "Individual",
+        detail: "An independent developer or creator",
+      },
+    },
     fields: {
+      email: "Work email",
+      password: "Password",
+      confirmPassword: "Confirm password",
+      fullName: "Full name",
+      phone: "Phone number",
+      jobTitle: "Job title",
+      companyName: "Company name",
       businessName: "Business name",
-      description: "What does your business do?",
-      category: "Category",
       website: "Website",
+      category: "Category",
+      description: "Short description",
       reason: `Why do you want to list on ${brandName}?`,
+      /* Required. Worded by the owner; do not soften it. */
+      consent: `I understand ${brandName} will contact me to sign a provider agreement before any product is listed.`,
     },
     selectPlaceholder: "Select a category",
     optionalLabel: "optional",
     notes: {
-      description: "40 to 600 characters.",
-      website: "For example, example.com.",
+      password: "At least 8 characters.",
+      phone: "Include your country code, for example +92 300 1234567.",
+      description: "What the product does, in 40 to 600 characters.",
       reason: "20 to 600 characters.",
+      website: "For example, example.com.",
     },
+    continue: "Continue",
+    back: "Back",
     submit: "Submit application",
     submitting: "Submitting…",
-    /* Shown only after the row is actually written, never optimistically. */
-    successHeading: "Application submitted",
-    successBody:
-      "Your application is pending review. Your dashboard will show when that changes.",
-    backToDashboard: "Back to dashboard",
+    haveAccount: "Already have an account?",
+    logIn: { label: "Log in", href: "/login" },
     /*
-     * What the page shows instead of the form. `pending` and `approved` are
-     * reached by a buyer; `alreadyProvider` by a provider who follows an old
-     * link here.
+     * The page shown after a successful submit, and the states shown instead
+     * of the form. `pending` and `approved` are reached by a buyer;
+     * `alreadyProvider` by a provider who follows an old link here.
      */
+    submitted: {
+      heading: "Application submitted",
+      body: "Your application is pending review. We will contact you to sign the provider agreement; your dashboard shows where it stands.",
+      cta: { label: "Go to your dashboard", href: "/dashboard" },
+    },
     states: {
       pending: {
         heading: "Your application is under review",
-        body: "We have your application and will review it before you can list products. You do not need to do anything else.",
+        body: "We have your application. We will contact you to sign the provider agreement before anything is listed. You do not need to do anything else.",
       },
       /*
        * Approved, but the account is still a buyer. Only reachable if a review
@@ -1687,15 +1755,26 @@ export const siteCopy = {
         cta: submitProductCta,
       },
     },
+    /* Checked in the browser before Continue, and again on the server. */
     validation: {
+      providerType: "Choose Organisation or Individual.",
+      email: "Enter a valid email address.",
+      password: "Use at least 8 characters.",
+      confirmPassword: "The passwords do not match.",
+      fullName: "Use between 2 and 100 characters.",
+      phone: "Enter a phone number with 7 to 15 digits, for example +92 300 1234567.",
+      jobTitle: "Enter your job title, up to 100 characters.",
       businessNameLength: "Use between 2 and 100 characters.",
       descriptionLength: "Use between 40 and 600 characters.",
       category: "Choose a category.",
       website: "Enter a web address, for example example.com.",
       reasonLength: "Use between 20 and 600 characters.",
+      consent: "Tick this box to continue.",
     },
     errors: {
-      notBuyer: "Only signed-in buyer accounts can apply to become a provider.",
+      /* Word for word what /sign-up says — see `emailTakenMessage`. */
+      emailTaken: emailTakenMessage,
+      notBuyer: "This account cannot apply to list products.",
       alreadyPending: "You already have an application under review.",
       alreadyApproved: "Your application has already been approved.",
       write: "We could not save that. Please try again.",
@@ -1708,11 +1787,11 @@ export const siteCopy = {
     dashboard: {
       heading: `Sell on ${brandName}`,
       none: {
-        body: "Apply to become a provider and list your AI products in the marketplace.",
-        cta: "Apply to become a provider",
+        body: "List your AI product: one short form, then a review and a provider agreement.",
+        cta: "Start your listing",
       },
       pending: {
-        body: "Your provider application is under review.",
+        body: "Your provider application is under review. We will contact you to sign the provider agreement.",
       },
       rejected: {
         body: "Your provider application was not approved. You can update your answers and apply again.",
@@ -1796,6 +1875,11 @@ export const siteCopy = {
     truncated: "Showing the {shown} oldest of {total}. Decide these to see the rest.",
     fields: {
       applicant: "Applicant",
+      /* From the listing form's first two steps. */
+      providerType: "Registering as",
+      phone: "Phone",
+      jobTitle: "Job title",
+      notGiven: "Not given",
       website: "Website",
       noWebsite: "No website given",
       description: "What they do",
@@ -1817,6 +1901,17 @@ export const siteCopy = {
       approved: "Approved",
       rejected: "Declined",
     },
+    providerTypes: {
+      organisation: "Organisation",
+      individual: "Individual",
+    },
+    /*
+     * Over the Approve button of every pending application. There is no
+     * e-signature in the app: the agreement is signed outside it, and this
+     * line is the only thing holding the order. Approving is what makes
+     * someone a provider.
+     */
+    agreementNote: "Approve only after the provider agreement is signed.",
     actions: {
       approve: "Approve",
       decline: "Decline",

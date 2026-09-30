@@ -141,7 +141,7 @@ export default async function DashboardPage() {
  * reaches here: it gets the provider panel and its product-submission link.
  */
 function ApplicationPanel({ status }: { status: ProviderStatus | null }) {
-  const { dashboard, states } = siteCopy.providerApplication;
+  const { dashboard, states } = siteCopy.providerListing;
   const headingId = "provider-application-heading";
 
   const link = (label: string, href: string) => (

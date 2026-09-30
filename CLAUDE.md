@@ -245,7 +245,10 @@ one was left materially false.
 
 - `user_role`: `buyer` | `provider` | `admin` — default `buyer`
 - `product_status`: `pending` | `approved` | `rejected` — default `pending`
-- Tables: `users`, `providers`, `products` (+ Drizzle relations)
+- `provider_status`: `pending` | `approved` | `rejected` — default `pending`
+- `provider_type`: `organisation` | `individual` — default `organisation`
+  (migration 0004, with `providers.contact_phone` / `contact_title`)
+- Tables: `users`, `accounts`, `providers`, `products` (+ Drizzle relations)
 - `providers.user_id` is **nullable on purpose**: PAK AI TechHub is itself a
   provider with no person to sign in as. Null means first-party, and
   first-party products are not listed (§5.4).
@@ -260,7 +263,17 @@ one was left materially false.
 - Homepage: one view at a time, each one screen from 1024×700 up (measured
   document height; the homepage uses a one-line footer for this). Cut content
   rather than shrinking type if a view grows
-- Auth end to end: `/sign-up`, `/login`, logout, role-gated `/dashboard`
+- Auth end to end: `/sign-up` (buyers), `/login`, logout, role-gated `/dashboard`,
+  Google sign-in
+- **Provider listing form** at `/list-your-product` (also rendered at
+  `/dashboard/apply`): Account, Personal, Company/Business in ONE form, steps
+  hidden but mounted. `submitListing` (lib/listing-actions.ts) checks
+  everything, then in one transaction creates the buyer (if signed out) and the
+  pending application. The role stays `buyer` until an admin approves.
+  `/start-listing` routes every "List your product" / "Start listing" button;
+  `/sign-up`'s Provider choice only links here
+- Admin review queue at `/dashboard/admin` (approve / decline, emails);
+  provider product submission at `/dashboard/products/new`
 - Contact form delivering real email through Resend
 - `/pricing` **removed**; a 308 redirect to `/marketplace` lives in
   `next.config.ts`. Do not re-add the page without removing the redirect first —
@@ -268,19 +281,20 @@ one was left materially false.
 
 ### Stubbed — not built
 
-`app/dashboard/page.tsx` is a **role-gated stub** that exists to prove the role
-system works end to end. Each role gets a "coming soon" panel. Do not grow the
-real features inside it; each is a separate pass:
+`app/dashboard/page.tsx` is a role-gated landing page with a panel per role
+linking out to the real features. Do not grow features inside it.
 
-- **Admin product review queue** — not built
-- **Provider product-submission form** — not built
-- **Buyer purchase / subscription flow** — not built
+- **Buyer purchase / subscription flow** — not built (no checkout; every card's
+  "Coming soon" button is disabled)
+- **Provider agreement signing** — not in the app; the admin queue says
+  "Approve only after the provider agreement is signed"
 
-### The marketing site does not read the database
+### What reads the database
 
-`/marketplace` and every other page render from `content/site-copy.ts`. The only
-code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
-`db/seed.ts`. Changing a product on the site means editing `site-copy.ts`.
+Listings come from ONE cached read, `getListings()` in `lib/listings.ts`
+(approved products of providers with a user account only — §5.4): /marketplace,
+the homepage Categories view counts, the nav and the contact form use it. Copy
+still lives in `content/site-copy.ts`; products do not.
 
 ### Hosted database — stale, verified 2026-09-16
 
@@ -289,6 +303,11 @@ code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
 > `drizzle.__drizzle_migrations`, the `accounts` table with all 12 columns and
 > its primary and foreign keys, `users.password_hash` nullable, and
 > `users.email_verified` / `users.image` present.
+>
+> **Migration 0004 (`0004_provider_listing_form.sql`) is NOT applied to Neon**
+> as of 2026-09-30 — generated and applied to local databases only. The
+> listing form, `/dashboard/apply` and the admin queue read its columns, so
+> apply it to Neon **before** this work merges.
 >
 > The order that made it safe is the rule for the next one: apply a migration
 > to Neon **before** merging code that reads its columns. Drizzle names every

@@ -10,11 +10,12 @@ import { auth } from "@/auth";
  * state, the contact page card — points here rather than at a fixed page, because the right
  * destination depends on who clicks:
  *
- *   signed out -> /sign-up?role=provider. Sign-up creates a buyer account and,
- *                 because of the parameter, lands it on the application.
- *   buyer      -> /dashboard/apply. The application form, or its "under
- *                 review" / reapply state if they have applied before —
- *                 that page decides, so this handler does not duplicate it.
+ *   signed out -> /list-your-product: the listing form from step 1, which
+ *                 creates the account and the application together.
+ *   buyer      -> /list-your-product: the same form from step 2, or its
+ *                 "under review" / reapply state if they have applied
+ *                 before — that page decides, so this handler does not
+ *                 duplicate it.
  *   provider   -> /dashboard/products/new.
  *   admin      -> /dashboard. Not an audience for this CTA; their own
  *                 dashboard is the least surprising place to land.
@@ -36,11 +37,11 @@ import { auth } from "@/auth";
 export async function GET() {
   const session = await auth();
 
-  if (!session?.user) redirect("/sign-up?role=provider");
+  if (!session?.user) redirect("/list-your-product");
 
   switch (session.user.role) {
     case "buyer":
-      redirect("/dashboard/apply");
+      redirect("/list-your-product");
     case "provider":
       redirect("/dashboard/products/new");
     default:

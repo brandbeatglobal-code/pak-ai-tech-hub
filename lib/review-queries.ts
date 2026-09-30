@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { products, providers, users } from "@/db/schema";
+import { products, providers, users, type ProviderType } from "@/db/schema";
 
 /**
  * Reads for the admin review queue.
@@ -102,6 +102,10 @@ export type ProviderQueueItem = {
   reason: string | null;
   applicantName: string | null;
   applicantEmail: string | null;
+  /* From the listing form. Older applications have no phone or title. */
+  providerType: ProviderType;
+  contactPhone: string | null;
+  contactTitle: string | null;
   submittedAt: Date;
   reviewedAt: Date | null;
   rejectionReason: string | null;
@@ -117,6 +121,9 @@ const providerColumns = {
   reason: providers.reasonForListing,
   applicantName: users.name,
   applicantEmail: users.email,
+  providerType: providers.providerType,
+  contactPhone: providers.contactPhone,
+  contactTitle: providers.contactTitle,
   submittedAt: providers.submittedAt,
   reviewedAt: providers.reviewedAt,
   rejectionReason: providers.rejectionReason,
