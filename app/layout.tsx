@@ -17,6 +17,7 @@ import { getListings } from "@/lib/listings";
   to 0.58 with the fonts held back 800ms (2026-09-30). The files are preloaded,
   so an ordinary load has them before first paint and shows Geist; a slow first
   visit shows the fallback until the next page, and nothing moves.
+  The generic family after these is added in app/globals.css (`--font-sans`).
 */
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -109,6 +110,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <noscript>
           <style>{`[data-reveal]{opacity:1!important;transform:none!important}[data-nav-menus]{display:none!important}[data-nav-plain]{display:flex!important}`}</style>
         </noscript>
+        {/*
+          No first paint until the whole page has been parsed — up to the
+          marker at the end of <body>. On a slow phone the browser otherwise
+          paints half a document, and what is already on screen moves as the
+          rest arrives: the vertically centred homepage views, the hero glows
+          (positioned in % of a box that is still growing), the footer.
+          Measured with the CPU throttled 6x (2026-09-30): 17 of 150 cold
+          loads shifted by more than 0.001, up to 0.26.
+
+          It waits only for the HTML of this page, not for scripts, images or
+          the RSC payload that follows the marker. A browser without
+          `rel="expect"` ignores the tag and paints as before.
+        */}
+        <link rel="expect" href="#page-end" blocking="render" />
       </head>
       <body className="flex min-h-full flex-col font-sans">
         {/* The marketing nav, <main> and footer — except on routes with an
@@ -120,6 +135,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         >
           {children}
         </SiteFrame>
+        {/* The end of the page for `<link rel="expect">` above. Keep it last. */}
+        <div id="page-end" hidden />
       </body>
     </html>
   );

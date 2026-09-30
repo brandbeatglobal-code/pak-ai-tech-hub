@@ -165,7 +165,16 @@ rediscovering them:
 - **Fonts: Geist and Geist Mono via `next/font/google`, `display: "optional"`**
   (`app/layout.tsx`). Do not switch back to the default `swap`: a late font
   swap re-wrapped lines on every page, CLS up to 0.58 with the fonts held back
-  800ms (measured 2026-09-30); with `optional` it is 0.
+  800ms (measured 2026-09-30); with `optional` it is 0. `--font-sans` in
+  `app/globals.css` ends on `sans-serif` — without it, a machine with no Arial
+  rendered the fallback in the default serif face. (next/font's own `fallback`
+  option is not used: under Turbopack it drops the size-adjusted fallback.)
+- **First paint waits for the whole page's HTML**: `<link rel="expect"
+  href="#page-end" blocking="render">` in the root layout's `<head>`, and
+  `<div id="page-end" hidden>` last in `<body>`. Keep the marker last. Without
+  it a slow phone painted half a page and it moved as the rest arrived (6x CPU
+  throttle: 17/150 cold loads over CLS 0.001, up to 0.26; with it 0/150). Cost:
+  first paint 8–48ms later at normal speed, 72–212ms at 6x (medians).
 
 Module augmentation for `session.user.role` targets **`@auth/core/jwt`**, not
 `next-auth/jwt` — the latter is a re-export barrel and TypeScript cannot augment
