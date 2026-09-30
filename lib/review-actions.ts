@@ -30,8 +30,8 @@ import { REASON_MAX, REASON_MIN, type ReviewResult } from "@/lib/review-shared";
  * a decision that rolled back. A failed send does not undo the decision; the
  * admin is told in the result line.
  *
- * Approving a PRODUCT lists it: /marketplace, the homepage grid, the nav and
- * the contact form all read approved products (lib/listings.ts). So an
+ * Approving a PRODUCT lists it: /marketplace, the homepage's category counts,
+ * the nav and the contact form all read approved products (lib/listings.ts). So an
  * approval, once committed, expires the cached listings — see
  * `refreshListings` below.
  *
@@ -126,7 +126,8 @@ const refused = (message: string): ReviewResult => ({ ok: false, message });
 
 /**
  * Expire the cached listings, so the next page load of /marketplace, the
- * homepage, the contact page or any page's nav reads the table again.
+ * homepage's Categories view, the contact page or any page's nav reads the
+ * table again.
  *
  * `updateTag`, not `revalidateTag`: the admin who approves a product and then
  * opens /marketplace should see it on that load, not on the one after.

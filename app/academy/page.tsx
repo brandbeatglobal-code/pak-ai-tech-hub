@@ -8,7 +8,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { SectionGlow } from "@/components/motion/section-glow";
 import { siteCopy } from "@/content/site-copy";
 
-const { academy } = siteCopy;
+const { academy, resources } = siteCopy;
 
 export const metadata: Metadata = {
   title: academy.meta.title,
@@ -195,7 +195,42 @@ export default function AcademyPage() {
         </Reveal>
       </section>
 
-      {/* 5. Closing CTA */}
+      {/* 5. Resources — moved here from the old long homepage. */}
+      {/*
+        Honest empty state. Each card shows only the kind of resource the slot
+        will hold — no headline, author, date or thumbnail, because no article
+        exists yet. Do not dress these up as real posts.
+      */}
+      <section className="border-y border-black/5 bg-brand-navy/[0.02]">
+        <div className={container}>
+          <Reveal>
+            <h2 className={sectionHeading}>{resources.heading}</h2>
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+              {resources.intro}
+            </p>
+            <ul className="mt-12 grid gap-5 sm:grid-cols-3">
+              {resources.slots.map((slot) => (
+                <li
+                  key={slot.category}
+                  className="flex flex-col rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 p-8"
+                >
+                  {/* Decorative placeholder where a cover image will sit. */}
+                  <span
+                    aria-hidden
+                    className="block h-28 rounded-2xl bg-gradient-to-br from-brand-blue/10 to-brand-green/10"
+                  />
+                  <h3 className="mt-6 text-sm font-bold tracking-wide text-brand-navy uppercase">
+                    {slot.category}
+                  </h3>
+                  <p className="mt-2 text-sm text-brand-navy/65">{resources.comingSoonLabel}</p>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 6. Closing CTA */}
       <section className="bg-gradient-to-r from-brand-blue to-brand-green">
         <Reveal>
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-9 px-4 py-24 text-center sm:px-6 lg:px-8">

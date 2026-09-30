@@ -3,30 +3,56 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { auth } from "@/auth";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteFooter, SiteFooterSlim } from "@/components/site-footer";
 import { SiteFrame } from "@/components/site-frame";
 import { SiteNav } from "@/components/site-nav";
 import { siteCopy } from "@/content/site-copy";
 import { getListings } from "@/lib/listings";
 
+/*
+  display "optional", not the default "swap": if a font file is not in within
+  the browser's short block period, that page view keeps the fallback instead
+  of swapping. A swap re-wraps lines — the fallback's metrics are close to
+  Geist's, not equal — and every page moved when it happened: measured CLS up
+  to 0.58 with the fonts held back 800ms (2026-09-30). The files are preloaded,
+  so an ordinary load has them before first paint and shows Geist; a slow first
+  visit shows the fallback until the next page, and nothing moves.
+  The generic family after these is added in app/globals.css (`--font-sans`).
+*/
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "optional",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "optional",
 });
 
 export const metadata: Metadata = {
   title: siteCopy.meta.title,
   description: siteCopy.meta.description,
+  /*
+    What a shared link previews as (WhatsApp, LinkedIn, Slack). Without it
+    those fall back to whatever they scrape, which is how an old spelling of
+    the brand lingers in previews. Next merges metadata per top-level key, so
+    every page inherits this block as-is — a page's own `title` does not
+    change `openGraph.title`. A page that wants its own preview title sets its
+    own `openGraph`.
+  */
+  openGraph: {
+    siteName: siteCopy.brand.name,
+    title: siteCopy.meta.title,
+    description: siteCopy.meta.description,
+    type: "website",
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   /*
-    The nav's Marketplace panel counts these and its search field filters
+    The nav's AI Solutions panel counts these and its search field filters
     them, so they are read here, once, for every page. Same read as the grid
     on /marketplace (lib/listings.ts): the count in the nav is the number of
     listings the marketplace actually shows. Cached — this is not a database
@@ -76,13 +102,28 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
              Motion. With JavaScript disabled that never happens, so force
              them to their final state.
           2. The desktop nav's dropdown triggers are buttons, which do nothing
-             without JavaScript. Fall back to the plain link row — normally
-             the narrow-screen nav — at every width, so Marketplace and
-             Academy stay reachable.
+             without JavaScript. Fall back to the plain link rows — normally
+             the narrow-screen nav — at every width, so AI Solutions and
+             Academy stay reachable. The homepage tabs are plain links in
+             both and work either way.
         */}
         <noscript>
           <style>{`[data-reveal]{opacity:1!important;transform:none!important}[data-nav-menus]{display:none!important}[data-nav-plain]{display:flex!important}`}</style>
         </noscript>
+        {/*
+          No first paint until the whole page has been parsed — up to the
+          marker at the end of <body>. On a slow phone the browser otherwise
+          paints half a document, and what is already on screen moves as the
+          rest arrives: the vertically centred homepage views, the hero glows
+          (positioned in % of a box that is still growing), the footer.
+          Measured with the CPU throttled 6x (2026-09-30): 17 of 150 cold
+          loads shifted by more than 0.001, up to 0.26.
+
+          It waits only for the HTML of this page, not for scripts, images or
+          the RSC payload that follows the marker. A browser without
+          `rel="expect"` ignores the tag and paints as before.
+        */}
+        <link rel="expect" href="#page-end" blocking="render" />
       </head>
       <body className="flex min-h-full flex-col font-sans">
         {/* The marketing nav, <main> and footer — except on routes with an
@@ -90,9 +131,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SiteFrame
           nav={<SiteNav listings={listings} account={account} />}
           footer={<SiteFooter />}
+          slimFooter={<SiteFooterSlim />}
         >
           {children}
         </SiteFrame>
+        {/* The end of the page for `<link rel="expect">` above. Keep it last. */}
+        <div id="page-end" hidden />
       </body>
     </html>
   );

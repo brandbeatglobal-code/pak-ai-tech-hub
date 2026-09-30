@@ -1,531 +1,287 @@
+import type { Metadata } from "next";
+import Form from "next/form";
 import Link from "next/link";
 
-import {
-  BrowseProvider,
-  CategoryBar,
-  CategoryGrid,
-  HeroSearch,
-  ProductListings,
-} from "@/components/home-browse";
-import { HowItWorks } from "@/components/how-it-works";
+import { DocumentTitle } from "@/components/document-title";
 import { HeroBackdrop } from "@/components/motion/hero-backdrop";
-import { HoverLift } from "@/components/motion/hover-lift";
-import { HoverScale } from "@/components/motion/hover-scale";
-import { Reveal } from "@/components/motion/reveal";
-import { SectionGlow } from "@/components/motion/section-glow";
-import { OfferingTabs } from "@/components/offering-tabs";
-import { FlagshipArt } from "@/components/visuals/flagship-art";
-import { SkylineArt } from "@/components/visuals/skyline-art";
-import { siteCopy } from "@/content/site-copy";
+import { CategoryIcon, SearchGlyph } from "@/components/nav-icons";
+import { browseCategories, siteCopy, type Step } from "@/content/site-copy";
+import { resolveHomeTab } from "@/lib/home-tabs";
 import { getListings } from "@/lib/listings";
 
-/** Shared heading treatment, so every section headline carries the same weight. */
-const sectionHeading =
-  "text-3xl font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display";
+const { hero, home, meta, nav } = siteCopy;
 
 /**
- * Section rhythm.
+ * The homepage: three views, one at a time, chosen by `?tab=` —
+ * `/` (For Businesses), `/?tab=providers`, `/?tab=categories`.
  *
- * Wider than the previous py-20 so each block sits in its own space rather
- * than running into the next — the main thing the reference layout gets from
- * generous vertical air. Scales down on small screens so the page does not
- * become a long scroll of padding on a phone.
+ * The tabs themselves are links in the nav's menu row
+ * (components/site-nav.tsx), on every page. Each view is its own URL, so it
+ * can be shared, reloaded and reached with Back and Forward, and each has its
+ * own title — which is also what the route announcer reads out when the view
+ * changes.
+ *
+ * ONE SCREEN EACH. From 1024×700 up, a view fits between the header and the
+ * slim homepage footer with no page scroll (checked by measuring the
+ * document height). If something here grows, cut content rather than
+ * shrinking the type. On a phone a view runs to about two screens.
+ *
+ * Everything the old long-scroll homepage held beyond these three views was
+ * moved or removed; the note at `home` in content/site-copy.ts lists where
+ * each piece went.
+ *
+ * No `Reveal` on these views: switching tabs should show the view at once,
+ * not fade it in each time.
  */
-const sectionPad = "px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32";
-const container = `mx-auto w-full max-w-6xl ${sectionPad}`;
 
-export default async function Home() {
-  const {
-    nav,
-    hero,
-    trustStrip,
-    marketplace,
-    flagship,
-    howItWorks,
-    providerCta,
-    categoryBrowse,
-    offering,
-    whyPakai,
-    worksWith,
-    founder,
-    resources,
-    academyTeaser,
-    finalCta,
-  } = siteCopy;
+/** Each view's title. For Businesses keeps the site's own (app/layout.tsx). */
+const TITLES = {
+  businesses: meta.title,
+  providers: home.providers.metaTitle,
+  categories: home.categories.metaTitle,
+} as const;
 
-  /*
-    The approved products, from the database (lib/listings.ts) — the same
-    read /marketplace and the nav use. Null if it could not be read; the grid
-    then says so instead of showing every category as empty.
-  */
+export async function generateMetadata({
+  searchParams,
+}: PageProps<"/">): Promise<Metadata> {
+  const tab = resolveHomeTab((await searchParams).tab);
+  return tab === "businesses" ? {} : { title: TITLES[tab] };
+}
+
+/** Section eyebrow over each view's steps. */
+const stepsHeading =
+  "text-xs font-bold tracking-[0.16em] text-brand-navy/65 uppercase";
+
+const primaryButton =
+  "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold whitespace-nowrap text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+function StepNumber({ number }: { number: string }) {
+  return (
+    <span
+      aria-hidden
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-navy text-sm font-bold text-white"
+    >
+      {number}
+    </span>
+  );
+}
+
+/**
+ * A numbered step. The number is drawn, not read: the `<ol>` already gives
+ * each step its position, so a screen reader would otherwise hear it twice.
+ *
+ * The detail runs the full width under the number, not indented beside it:
+ * indented, the buyer steps wrapped to three lines at 1024px and pushed the
+ * view past one screen.
+ */
+function StepItem({ step }: { step: Step }) {
+  return (
+    <li>
+      <div className="flex items-center gap-3">
+        <StepNumber number={step.number} />
+        <h3 className="text-base font-bold tracking-tight text-brand-navy">{step.title}</h3>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-brand-navy/70">{step.detail}</p>
+    </li>
+  );
+}
+
+/**
+ * For Businesses — the default view: the hero, its search, the three buyer
+ * steps and one way into AI Solutions.
+ *
+ * The search is a plain GET form to /marketplace?q=…, the AI Solutions
+ * search. `next/form` makes the submit a client-side navigation when
+ * JavaScript is available; without it, it is an ordinary form submit to the
+ * same URL. The homepage no longer has a grid of its own to filter.
+ */
+function BusinessesView() {
+  const view = home.businesses;
+  return (
+    <>
+      <div className="text-center">
+        <h1 className="mx-auto max-w-4xl text-[2.75rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg lg:text-display-xl">
+          {hero.headline}
+        </h1>
+        {/* One line from lg up (no max width there): two lines of it were
+            part of what pushed this view past one screen at 1024×700. */}
+        <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl lg:max-w-none">
+          {hero.subhead}
+        </p>
+        <Form action="/marketplace" role="search" className="mx-auto mt-8 w-full max-w-2xl lg:mt-6">
+          <label htmlFor="home-search" className="sr-only">
+            {nav.search.label}
+          </label>
+          <div className="flex items-center gap-3 rounded-full border border-black/10 bg-white py-2 pr-2 pl-5 shadow-lg shadow-brand-navy/5 transition-colors focus-within:border-brand-navy/40 focus-within:ring-2 focus-within:ring-brand-navy/15">
+            <SearchGlyph className="h-5 w-5" />
+            <input
+              id="home-search"
+              name="q"
+              type="search"
+              autoComplete="off"
+              placeholder={nav.search.placeholder}
+              className="w-full min-w-0 bg-transparent py-1.5 text-base text-brand-navy outline-none placeholder:text-brand-navy/45 sm:text-lg [&::-webkit-search-cancel-button]:hidden"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-full bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+            >
+              {view.searchSubmit}
+            </button>
+          </div>
+        </Form>
+        <p className="mt-3 text-sm text-brand-navy/65">{hero.reassurance}</p>
+      </div>
+
+      <section aria-labelledby="home-steps" className="mt-10 lg:mt-6">
+        <h2 id="home-steps" className={stepsHeading}>
+          {view.stepsHeading}
+        </h2>
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-10">
+          <ol className="grid flex-1 gap-5 sm:grid-cols-3">
+            {view.steps.map((step) => (
+              <StepItem key={step.number} step={step} />
+            ))}
+          </ol>
+          <Link href={view.cta.href} className={`${primaryButton} self-start lg:self-center`}>
+            {view.cta.label}
+          </Link>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/**
+ * For AI Providers — the four steps from form to buyers, and one way in.
+ *
+ * The payout line and the "Free to list" intro are the commission split,
+ * read from `commissionTerms`; both are flagged in site-copy.ts as needing
+ * the owner's confirmation and are left exactly as written.
+ */
+function ProvidersView() {
+  const view = home.providers;
+  return (
+    <div className="grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
+      <div>
+        <h1 className="text-3xl leading-[1.1] font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display">
+          {view.heading}
+        </h1>
+        <p className="mt-5 max-w-xl text-lg leading-relaxed text-brand-navy/70">
+          {view.intro}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Link href={view.cta.href} className={primaryButton}>
+            {view.cta.label}
+          </Link>
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-brand-navy">
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-r from-brand-blue to-brand-green"
+            />
+            {view.payout}
+          </p>
+        </div>
+      </div>
+
+      <section
+        aria-labelledby="home-steps"
+        className="rounded-3xl border border-black/5 bg-white/80 p-6 shadow-sm sm:p-8"
+      >
+        <h2 id="home-steps" className={stepsHeading}>
+          {view.stepsHeading}
+        </h2>
+        <ol className="mt-5 space-y-4">
+          {view.steps.map((step) => (
+            <StepItem key={step.number} step={step} />
+          ))}
+        </ol>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Categories — all eight, each a link to AI Solutions filtered to it.
+ *
+ * A count shows only when something is listed in the category; "0" would
+ * read as a dead marketplace rather than a new one (the same rule as the
+ * nav's panel). Counted from the one listings read, so it matches the grid
+ * the link lands on.
+ */
+async function CategoriesView() {
+  const view = home.categories;
   const listings = await getListings();
+  const { countOne, countOther } = nav.menus.marketplace;
 
   return (
-    /*
-      Search, the category bar and the listings grid are three sections apart
-      on the page but one selection, so they share a context rather than being
-      three separate widgets that each remember their own filter. Everything
-      inside that is not one of those three still renders on the server.
-    */
-    <BrowseProvider listings={listings}>
-      {/* 1. Hero — headline, subhead, and the search field that leads the page */}
-      <section className="relative isolate overflow-hidden">
-        <HeroBackdrop />
-        {/* Shorter than it was: the category bar and the first row of listings
-            are meant to be reachable without scrolling far, which is the whole
-            point of leading with search. */}
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-          <Reveal className="mx-auto max-w-4xl text-center">
-            <h1 className="text-[2.75rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg lg:text-display-xl">
-              {hero.headline}
-            </h1>
-            <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
-              {hero.subhead}
-            </p>
-            <HeroSearch />
-            {/* Same trial terms the How it works steps state — not a new claim. */}
-            <p className="mt-5 text-sm text-brand-navy/65">{hero.reassurance}</p>
-          </Reveal>
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+        <div>
+          <h1 className="text-3xl leading-[1.1] font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display">
+            {view.heading}
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+            {view.intro}
+          </p>
         </div>
-      </section>
+        <Link
+          href={view.viewAll.href}
+          className="text-sm font-semibold text-brand-navy underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
+        >
+          {view.viewAll.label} <span aria-hidden>&rarr;</span>
+        </Link>
+      </div>
 
-      {/* 2. Category bar and the listings it filters */}
-      {/*
-        One section, not two. The bar is the grid's control — separating them
-        with the page's usual section padding would put a band of white space
-        between a filter and the thing it filters.
-      */}
-      <section
-        id="listings"
-        className="scroll-mt-40 border-t border-black/5 bg-brand-navy/[0.02]"
-      >
-        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-          <CategoryBar />
-          <div className="mt-10">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-              <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
-                {marketplace.products.heading}
-              </h2>
+      <ul className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {browseCategories.map((category) => {
+          const count =
+            listings?.filter((listing) => listing.category === category.id).length ?? 0;
+          return (
+            <li key={category.id}>
               <Link
-                href="/marketplace"
-                className="text-sm font-semibold text-brand-navy underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
+                href={`/marketplace?category=${category.id}`}
+                className="flex h-full flex-col gap-3 rounded-2xl border border-black/5 bg-white p-5 shadow-sm transition-colors hover:border-brand-navy/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy sm:p-6"
               >
-                {nav.menus.marketplace.viewAll} &rarr;
+                <span aria-hidden className="text-brand-navy/55">
+                  <CategoryIcon category={category.id} className="h-7 w-7" />
+                </span>
+                <span className="text-base font-bold text-brand-navy">{category.label}</span>
+                {count > 0 ? (
+                  <span className="-mt-2 text-xs text-brand-navy/65">
+                    {count === 1 ? countOne : countOther.replace("{count}", String(count))}
+                  </span>
+                ) : null}
               </Link>
-            </div>
-            <p className="mt-3 max-w-2xl leading-relaxed text-brand-navy/70">
-              {marketplace.products.intro}
-            </p>
-            {/* What the Example badge means — only when one is on show. */}
-            {listings?.some((listing) => listing.example) ? (
-              <p className="mt-2 max-w-2xl leading-relaxed text-brand-navy/70">
-                {marketplace.products.exampleNote}
-              </p>
-            ) : null}
-            <div className="mt-8">
-              <ProductListings />
-            </div>
-          </div>
-        </div>
-      </section>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
 
-      {/* 3. Trust strip */}
-      <section
-        aria-label="Why PAKAI TechHub"
-        className="border-y border-black/5 bg-brand-navy/[0.02]"
-      >
-        <Reveal>
-          <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-y-4 px-4 py-7 sm:px-6 lg:grid-cols-4 lg:px-8">
-            {trustStrip.items.map((item) => (
-              <li
-                key={item}
-                className="flex items-center gap-2 text-sm font-medium text-brand-navy/80"
-              >
-                <span
-                  aria-hidden
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-r from-brand-blue to-brand-green"
-                />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-      </section>
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const tab = resolveHomeTab((await searchParams).tab);
 
-      {/* 4. How it works, split by which side of the marketplace you are on */}
-      {/*
-        /marketplace links here as /#how-it-works, and so does the flagship
-        banner below. scroll-mt clears the two-row sticky nav so the heading is
-        not hidden behind it on arrival.
-
-        Two columns, because a marketplace has two journeys and the page used
-        to describe only the buyer's. The provider column ends on the
-        commission split, which is the one settled economic term the
-        marketplace has — see the note on `howItWorks` for what not to add.
-      */}
-      <section
-        id="how-it-works"
-        className="relative isolate scroll-mt-40 border-y border-black/5 bg-brand-navy/[0.02]"
-      >
-        <SectionGlow placement="left" />
-        <div className={`relative ${container}`}>
-          <Reveal>
-            <h2 className={sectionHeading}>{howItWorks.heading}</h2>
-          </Reveal>
-          {/*
-            Outside the Reveal above, not inside it: the steps manage their own
-            expansion state and draw their own connectors, each of which
-            reveals on scroll in turn. See components/how-it-works.tsx.
-          */}
-          <HowItWorks sides={howItWorks.sides} />
-        </div>
-      </section>
-
-      {/* 5. Provider recruitment */}
-      {/*
-        The supply side's own band. The commission sentence is the same 80/20
-        split the provider column above ends on — if one changes, both change.
-      */}
-      <section className={container}>
-        <Reveal>
-          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-            <div>
-              <h2 className={sectionHeading}>{providerCta.heading}</h2>
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-brand-navy/70">
-                {providerCta.body}
-              </p>
-              <HoverScale className="mt-9 inline-block">
-                <Link
-                  href={providerCta.cta.href}
-                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90"
-                >
-                  {providerCta.cta.label}
-                </Link>
-              </HoverScale>
-            </div>
-
-            {/*
-              Illustration, not a photograph — see the note in
-              components/visuals/skyline-art.tsx for why, and for what to do
-              when a licensed stock photo is available. The caption stays
-              generic either way.
-            */}
-            <figure className="flex flex-col">
-              <div className="aspect-[4/3] overflow-hidden rounded-3xl border border-black/5 sm:aspect-[16/9] lg:aspect-auto lg:min-h-56 lg:flex-1">
-                <SkylineArt className="h-full w-full" />
-              </div>
-              <figcaption className="mt-3 text-sm text-brand-navy/65">
-                {providerCta.figureCaption}
-              </figcaption>
-            </figure>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* 6. Browse by category — the same nine categories as the bar above */}
-      <section className="border-y border-black/5 bg-brand-navy/[0.02]">
-        <div className={container}>
-          <Reveal>
-            <h2 className={sectionHeading}>{categoryBrowse.heading}</h2>
-            <CategoryGrid />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 7. Flagship platform banner */}
-      {/*
-        Full-width dark band introducing the platform as a whole. The three-up
-        row underneath is rendered from `offering.tabs` and links down to that
-        section, so the banner previews what is on the platform without
-        restating it.
-      */}
-      <section className="relative isolate overflow-hidden bg-brand-navy">
-        <div className="mx-auto w-full max-w-6xl px-4 py-24 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
-          <Reveal>
-            <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-              <div>
-                <p className="text-xs font-bold tracking-[0.18em] text-brand-green uppercase">
-                  {flagship.eyebrow}
-                </p>
-                <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-display">
-                  {flagship.headline}
-                </h2>
-                <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/70">
-                  {flagship.body}
-                </p>
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                  <HoverScale>
-                    <Link
-                      href={flagship.primaryCta.href}
-                      className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy transition-opacity hover:opacity-90"
-                    >
-                      {flagship.primaryCta.label}
-                    </Link>
-                  </HoverScale>
-                  <HoverScale>
-                    <Link
-                      href={flagship.secondaryCta.href}
-                      className="inline-flex items-center justify-center rounded-full border border-white/25 px-6 py-3 text-base font-semibold text-white transition-colors hover:border-white/60"
-                    >
-                      {flagship.secondaryCta.label}
-                    </Link>
-                  </HoverScale>
-                </div>
-              </div>
-
-              {/* Generated artwork, extending the hero's gradient mesh into a
-                  single form. Decorative — see visuals/flagship-art.tsx.
-                  Capped below lg: stacked under the text it would otherwise
-                  run to the full column width and swamp the banner. */}
-              <FlagshipArt className="mx-auto h-auto w-full max-w-sm lg:max-w-none" />
-            </div>
-
-            <div className="mt-16 border-t border-white/10 pt-10">
-              <h3 className="sr-only">{flagship.linksLabel}</h3>
-              <ul className="grid gap-8 sm:grid-cols-3 sm:gap-10">
-                {offering.tabs.map((tab) => (
-                  <li key={tab.id}>
-                    <Link href="#what-you-get" className="group block">
-                      <span className="flex items-center gap-2 text-base font-bold text-white">
-                        {tab.label}
-                        <span
-                          aria-hidden
-                          className="transition-transform duration-200 group-hover:translate-x-1"
-                        >
-                          &rarr;
-                        </span>
-                      </span>
-                      <span className="mt-2 block text-sm leading-relaxed text-white/70">
-                        {tab.headline}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/*
-        REMOVED: the dark stat bar ("8 products", "8 industries", "24/7
-        support"). See the note where `stats` used to be in site-copy.ts —
-        every number available today counts placeholder data, so the section
-        went rather than being restated with different figures. Do not
-        reinstate it with invented metrics.
-      */}
-
-      {/* 8. Tabbed offering */}
-      {/* The flagship banner's three-up row links here. scroll-mt clears the
-          two-row sticky nav so the heading is not hidden behind it. */}
-      <section id="what-you-get" className={`scroll-mt-40 ${container}`}>
-        <Reveal>
-          <h2 className={sectionHeading}>{offering.heading}</h2>
-          <OfferingTabs tabs={offering.tabs} />
-        </Reveal>
-      </section>
-
-      {/* 9. Why PAKAI TechHub */}
-      <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
-        <SectionGlow placement="left" />
-        <div className={`relative ${container}`}>
-          <Reveal>
-            <h2 className={sectionHeading}>{whyPakai.heading}</h2>
-            <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {whyPakai.cards.map((card) => (
-                <HoverLift
-                  key={card.headline}
-                  as="li"
-                  className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
-                >
-                  <h3 className="text-xl font-bold tracking-tight text-brand-navy">
-                    {card.headline}
-                  </h3>
-                  <p className="mt-4 text-sm leading-relaxed text-brand-navy/70">
-                    {card.body}
-                  </p>
-                </HoverLift>
-              ))}
-            </ul>
-          </Reveal>
-        </div>
-      </section>
-
-      {/*
-        REMOVED: the "Industries we cover" grid.
-
-        It listed the same eight industries the category browse grid above now
-        shows, four of them with a description and four bare, which read as an
-        unfinished list. The browse grid shows all nine consistently and, being
-        a control rather than a display, takes you to the listings in that
-        category. The industry descriptions are still in site-copy.ts — see the
-        note on `industries` for what they are kept for.
-      */}
-
-      {/* 10. Works with */}
-      <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
-        <SectionGlow placement="right" />
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-          <Reveal>
-            <h2 className="text-sm font-semibold tracking-wide text-brand-navy/65 uppercase">
-              {worksWith.heading}
-            </h2>
-            <ul className="mt-10 grid gap-8 md:grid-cols-3 md:gap-10">
-              {worksWith.items.map((item, index) => (
-                <HoverLift
-                  key={item.name ?? `pending-${index}`}
-                  as="li"
-                  distance={3}
-                  className="rounded-lg border-t border-black/10 px-3 pt-6 pb-4"
-                >
-                  {item.confirmed && item.name ? (
-                    <>
-                      <h3 className="text-lg font-bold tracking-tight text-brand-navy">
-                        {item.href ? (
-                          <a
-                            href={item.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
-                          >
-                            {item.name}
-                          </a>
-                        ) : (
-                          item.name
-                        )}
-                      </h3>
-                      <p className="mt-3 text-sm leading-relaxed text-brand-navy/70">
-                        {item.description}
-                      </p>
-                    </>
-                  ) : (
-                    /* Unconfirmed partner slot — keep the descriptive label, do
-                       not substitute a brand name until the partnership is
-                       confirmed. */
-                    <>
-                      <h3 className="text-lg font-bold tracking-tight text-brand-navy/65">
-                        {item.description}
-                      </h3>
-                      <p className="mt-3 text-sm leading-relaxed text-brand-navy/65">
-                        {worksWith.pendingLabel}
-                      </p>
-                    </>
-                  )}
-                </HoverLift>
-              ))}
-            </ul>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 11. Founder */}
-      <section className={container}>
-        <Reveal>
-          <h2 className={sectionHeading}>{founder.heading}</h2>
-          {/*
-            Deliberately lighter than the founder card on /about: no initials
-            mark, smaller type, plain shadow. The about page is where the team
-            is introduced properly — this is a summary that points there.
-          */}
-          <article className="mt-12 max-w-3xl rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-10">
-            <h3 className="text-xl font-bold tracking-tight text-brand-navy">
-              {founder.name}
-            </h3>
-            <p className="mt-1 text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-              {founder.title}
-            </p>
-            <p className="mt-5 leading-relaxed text-brand-navy/70">{founder.bio}</p>
-          </article>
-        </Reveal>
-      </section>
-
-      {/* 12. Resources */}
-      {/*
-        Honest empty state. Each card shows only the kind of resource the slot
-        will hold — no headline, author, date or thumbnail, because no article
-        exists yet. Do not dress these up as real posts.
-      */}
-      <section className="border-y border-black/5 bg-brand-navy/[0.02]">
-        <div className={container}>
-          <Reveal>
-            <h2 className={sectionHeading}>{resources.heading}</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-              {resources.intro}
-            </p>
-            {/* One featured slot beside two smaller ones, matching the
-                reference's insights band. Still an empty state — the shape
-                changed, the honesty did not. */}
-            <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
-              {resources.slots.map((slot, index) => {
-                const featured = index === 0;
-                return (
-                  <li
-                    key={slot.category}
-                    className={`flex flex-col rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 p-8 ${
-                      featured ? "sm:col-span-2 lg:row-span-2" : ""
-                    }`}
-                  >
-                    {/* Decorative placeholder where a cover image will sit. */}
-                    <span
-                      aria-hidden
-                      className={`block rounded-2xl bg-gradient-to-br from-brand-blue/10 to-brand-green/10 ${
-                        featured ? "min-h-44 flex-1" : "h-28"
-                      }`}
-                    />
-                    <h3 className="mt-6 text-sm font-bold tracking-wide text-brand-navy uppercase">
-                      {slot.category}
-                    </h3>
-                    <p className="mt-2 text-sm text-brand-navy/65">
-                      {resources.comingSoonLabel}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 13. Closing pair — academy teaser and final CTA, side by side */}
-      {/* The reference closes on two cards rather than one full-bleed band;
-          the gradient moves onto the right-hand card so the page still ends
-          on the brand colours. */}
-      <section className={container}>
-        <Reveal>
-          <div className="grid gap-5 lg:grid-cols-2">
-            <div className="flex flex-col rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-12">
-              <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
-                {academyTeaser.heading}
-              </h2>
-              <p className="mt-5 text-lg leading-relaxed text-brand-navy/70">
-                {academyTeaser.body}
-              </p>
-              <HoverScale className="mt-auto self-start pt-9">
-                <Link
-                  href={academyTeaser.cta.href}
-                  className="inline-flex items-center justify-center rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
-                >
-                  {academyTeaser.cta.label}
-                </Link>
-              </HoverScale>
-            </div>
-
-            <div className="flex flex-col rounded-3xl bg-gradient-to-br from-brand-blue to-brand-green p-8 shadow-sm sm:p-12">
-              <h2 className="max-w-sm text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
-                {finalCta.heading}
-              </h2>
-              <HoverScale className="mt-auto self-start pt-9">
-                <Link
-                  href={finalCta.cta.href}
-                  className="inline-flex items-center justify-center rounded-full bg-brand-navy px-8 py-3 text-base font-semibold text-white shadow-lg shadow-brand-navy/20 transition-opacity hover:opacity-90"
-                >
-                  {finalCta.cta.label}
-                </Link>
-              </HoverScale>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-    </BrowseProvider>
+  return (
+    <div className="relative isolate flex flex-1 flex-col overflow-hidden">
+      {/* generateMetadata covers a full load; this covers switching views,
+          where Next.js keeps the old title. See the component's note. */}
+      <DocumentTitle title={TITLES[tab]} />
+      <HeroBackdrop />
+      {/* Vertically centred in the room between header and footer, so a
+          taller screen spaces the view out and the padding here only has to
+          be the minimum at 1024×700. */}
+      <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-5">
+        {tab === "providers" ? (
+          <ProvidersView />
+        ) : tab === "categories" ? (
+          <CategoriesView />
+        ) : (
+          <BusinessesView />
+        )}
+      </div>
+    </div>
   );
 }

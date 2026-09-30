@@ -5,9 +5,11 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { googleSignInEnabled, signIn, signOut } from "@/auth";
+import { siteCopy } from "@/content/site-copy";
 import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/passwords";
+import { isProviderType } from "@/lib/provider-listing";
 
 /**
  * Server actions for the auth slice.
@@ -18,17 +20,21 @@ import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/passwords";
  * the error strings returned to the client never echo one back.
  */
 
-export type FormState = { error?: string } | undefined;
-
-const SIGNUP_ROLES = ["buyer", "provider"] as const;
-type SignUpRole = (typeof SIGNUP_ROLES)[number];
-
-function isSignUpRole(value: string): value is SignUpRole {
-  return (SIGNUP_ROLES as readonly string[]).includes(value);
-}
+/**
+ * What a rejected sign-up or login sends back: the message, a counter the
+ * form remounts on, and what was typed — never the password — so the form
+ * comes back filled in rather than empty.
+ */
+export type FormState =
+  | {
+      error?: string;
+      attempt?: number;
+      values?: { name?: string; email?: string; companyName?: string };
+    }
+  | undefined;
 
 export async function signUp(
-  _prev: FormState,
+  prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const name = String(formData.get("name") ?? "").trim();
@@ -38,40 +44,37 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
   const companyName = String(formData.get("companyName") ?? "").trim();
   const roleInput = String(formData.get("role") ?? "");
+  const reject = (error: string): FormState => ({
+    error,
+    attempt: (prev?.attempt ?? 0) + 1,
+    values: { name, email, companyName },
+  });
 
-  if (!name) return { error: "Enter your name." };
-  if (!email.includes("@")) return { error: "Enter a valid email address." };
+  if (!name) return reject("Enter your name.");
+  if (!email.includes("@")) return reject("Enter a valid email address.");
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Use at least ${MIN_PASSWORD_LENGTH} characters.` };
+    return reject(`Use at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   /*
-    The account-type choice is INTENT, not the role granted.
+    /sign-up makes BUYERS, and only buyers.
 
-    Every sign-up creates a buyer. Choosing "Provider" only changes where the
-    new account lands: on the provider application rather than the dashboard.
-    It used to create a provider on the spot, with a `providers` row and no
-    review — which would make the application flow decorative, since anyone
-    could skip it by picking the other radio button. A provider is now what an
-    approved application makes you, and nothing else.
-
-    "admin" is not selectable either way; admins are promoted directly in the
-    database until there is an admin UI to do it properly.
+    Its "Provider" choice no longer submits here at all: it leads to the
+    listing form at /list-your-product, which creates the account and the
+    application together (`submitListing`, lib/listing-actions.ts). A post
+    with "provider" can only come from outside the page, and is refused with
+    the same pointer. A provider is what an approved application makes you,
+    and nothing else; "admin" is not selectable either — admins are promoted
+    directly in the database until there is an admin UI to do it properly.
   */
-  if (!isSignUpRole(roleInput)) return { error: "Choose an account type." };
-  const wantsToList = roleInput === "provider";
+  if (roleInput !== "buyer") return reject(siteCopy.signUp.providerRoute.body);
   const role: UserRole = "buyer";
-
-  /* Kept so the application's business-name field starts filled in. */
-  if (wantsToList && !companyName) {
-    return { error: "Providers need a company name." };
-  }
 
   const [taken] = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
-  if (taken) return { error: "That email already has an account." };
+  if (taken) return reject(siteCopy.account.emailTaken);
 
   const passwordHash = await hashPassword(password);
 
@@ -83,11 +86,8 @@ export async function signUp(
     companyName: companyName || null,
   });
 
-  /*
-    No `providers` row here any more. One is written by the application,
-    when there are answers to review — an empty row created at sign-up would
-    sit in the review queue as a "pending application" with nothing in it.
-  */
+  /* No `providers` row: a buyer has no application. The listing form writes
+     one, with answers to review. */
 
   await signIn("credentials", {
     email,
@@ -95,11 +95,11 @@ export async function signUp(
     redirect: false,
   });
 
-  redirect(wantsToList ? "/dashboard/apply" : "/dashboard");
+  redirect("/dashboard");
 }
 
 export async function logIn(
-  _prev: FormState,
+  prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const email = String(formData.get("email") ?? "")
@@ -107,7 +107,13 @@ export async function logIn(
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) return { error: "Enter your email and password." };
+  const reject = (error: string): FormState => ({
+    error,
+    attempt: (prev?.attempt ?? 0) + 1,
+    values: { email },
+  });
+
+  if (!email || !password) return reject("Enter your email and password.");
 
   try {
     await signIn("credentials", { email, password, redirect: false });
@@ -116,7 +122,7 @@ export async function logIn(
       One message for "no such user" and "wrong password" alike — telling them
       apart would confirm which emails have accounts.
     */
-    if (error instanceof AuthError) return { error: "Email or password is incorrect." };
+    if (error instanceof AuthError) return reject("Email or password is incorrect.");
     throw error;
   }
 
@@ -124,24 +130,28 @@ export async function logIn(
 }
 
 /**
- * Starts a Google sign-in, from /login or /sign-up. Auth.js takes it from
- * here: off to Google, back to /api/auth/callback/google, then to the path
- * below — or to /login with a message if the sign-in is refused.
+ * Starts a Google sign-in, from /login, /sign-up or step 1 of the listing
+ * form. Auth.js takes it from here: off to Google, back to
+ * /api/auth/callback/google, then to the path below — or to /login with a
+ * message if the sign-in is refused.
  *
- * Same rule as `signUp`: the sign-up page's "Provider" choice is intent, not
- * a role. It only decides where a Google sign-up lands — the provider
- * application instead of the dashboard. The account is a buyer either way
- * (`createUser` in auth.ts). Only these two fixed paths can come out of here,
- * so the posted value cannot send anyone anywhere else.
+ * The account is a buyer either way (`createUser` in auth.ts). The listing
+ * form posts `intent=provider` and its "I am registering as" choice, and
+ * lands back on the form — at step 2, since the person is now signed in —
+ * with that choice still made. Only fixed paths come out of here, and the
+ * type is checked against its two values, so the posted fields cannot send
+ * anyone anywhere else.
  *
- * /login posts no intent, so it always lands on the dashboard.
+ * /login and /sign-up post no intent, so they land on the dashboard.
  */
 export async function signInWithGoogle(formData: FormData) {
   if (!googleSignInEnabled) redirect("/login");
 
   const wantsToList = formData.get("intent") === "provider";
+  const type = String(formData.get("providerType") ?? "");
+  const listing = isProviderType(type) ? `/list-your-product?type=${type}` : "/list-your-product";
   await signIn("google", {
-    redirectTo: wantsToList ? "/dashboard/apply" : "/dashboard",
+    redirectTo: wantsToList ? listing : "/dashboard",
   });
 }
 

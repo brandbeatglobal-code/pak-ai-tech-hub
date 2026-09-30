@@ -6,8 +6,8 @@ import { siteCopy } from "@/content/site-copy";
 import { logIn, signInWithGoogle } from "@/lib/auth-actions";
 
 export const metadata: Metadata = {
-  title: "Log in — PAKAI TechHub",
-  description: "Log in to your PAKAI TechHub account.",
+  title: `Log in — ${siteCopy.brand.name}`,
+  description: `Log in to your ${siteCopy.brand.name} account.`,
 };
 
 /**

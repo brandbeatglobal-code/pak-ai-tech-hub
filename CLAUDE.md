@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# PAKAI TechHub — project conventions
+# PAK AI TechHub — project conventions
 
 Written for a Claude Code session starting cold. Every fact below was read out
 of this repository, the live Neon database, the Vercel project record or the
@@ -15,19 +15,27 @@ dropping the import silently loses the Next.js version warning it carries.
 ## 1. What this is
 
 A **two-sided AI product marketplace**. Buyers browse, try and buy AI products;
-providers list products for sale; PAKAI TechHub takes a commission on sales.
+providers list products for sale; PAK AI TechHub takes a commission on sales.
 
 The positioning language, verbatim from `content/site-copy.ts` — use these
 strings rather than paraphrases:
 
 | Field | Value |
 |---|---|
-| `brand.name` | PAKAI TechHub |
+| `brand.name` | PAK AI TechHub |
 | `brand.tagline` | AI for every business, everywhere. |
-| `hero.headline` (the `<h1>` on `/`) | Find AI. Try it free. Put it to work. |
+| `hero.headline` (the `<h1>` on `/`) | Find AI. Try before you buy. Put it to work. |
 | `hero.subhead` | One marketplace, every product reviewed before it lists — browse, test, and buy with confidence. |
-| `hero.reassurance` | 7-day free trial, no card required. |
-| `meta.description` | Browse AI products from providers worldwide, try them free, and put them to work — all in one place. |
+| `hero.reassurance` | A trial is available where the provider offers one. (`trialTerms`) |
+| `meta.description` | Browse AI products from providers worldwide, try before you buy, and put them to work — all in one place. |
+
+**The display name is "PAK AI TechHub"** (renamed 2026-09-30). It is written
+once, as `brandName` in `content/site-copy.ts`. Identifiers keep the old
+spelling and must not be "fixed": the domain `pakaitechub.com`, every email
+address, the `@pakaitechub` handle, the repo, package, Vercel and Neon names,
+the logo artwork (`public/brand/logo.png`, which still reads "PAKAI"), and the
+house provider's stored `company_name` "PAKAI TechHub", which `db/seed.ts`
+looks up by that exact string.
 
 `meta.description` **deliberately differs** from `hero.subhead`. They are
 separate fields read by different files (`app/layout.tsx` and `app/page.tsx`);
@@ -41,9 +49,10 @@ place, the `commissionTerms` constant:
 
 > We take a 20% commission only when you make a sale — nothing upfront.
 
-Provider keeps 80%. The provider column of "How it works" titles its last step
-"Get paid, keep 80%", and `providerCta.body` is `` `Free to list. ${commissionTerms}` ``.
-Both read the constant. Do not retype the sentence, and do not add payout
+Provider keeps 80%. The homepage's For AI Providers view shows
+`home.providers.payout` ("Get paid, keep 80%") and `home.providers.intro`, which
+is `` `Free to list. ${commissionTerms}` ``.
+The intro reads the constant. Do not retype the sentence, and do not add payout
 timings, fee tiers or minimums — none of those are settled.
 
 ---
@@ -153,6 +162,19 @@ rediscovering them:
   stored or logged in plaintext. `equalizeTiming()` pays the bcrypt cost on a
   missing user so response time does not reveal whether an email has an account.
 - **Resend 6.27.0**, TypeScript 5, ESLint 9 + `eslint-config-next`.
+- **Fonts: Geist and Geist Mono via `next/font/google`, `display: "optional"`**
+  (`app/layout.tsx`). Do not switch back to the default `swap`: a late font
+  swap re-wrapped lines on every page, CLS up to 0.58 with the fonts held back
+  800ms (measured 2026-09-30); with `optional` it is 0. `--font-sans` in
+  `app/globals.css` ends on `sans-serif` — without it, a machine with no Arial
+  rendered the fallback in the default serif face. (next/font's own `fallback`
+  option is not used: under Turbopack it drops the size-adjusted fallback.)
+- **First paint waits for the whole page's HTML**: `<link rel="expect"
+  href="#page-end" blocking="render">` in the root layout's `<head>`, and
+  `<div id="page-end" hidden>` last in `<body>`. Keep the marker last. Without
+  it a slow phone painted half a page and it moved as the rest arrived (6x CPU
+  throttle: 17/150 cold loads over CLS 0.001, up to 0.26; with it 0/150). Cost:
+  first paint 8–48ms later at normal speed, 72–212ms at 6x (medians).
 
 Module augmentation for `session.user.role` targets **`@auth/core/jwt`**, not
 `next-auth/jwt` — the latter is a re-export barrel and TypeScript cannot augment
@@ -191,8 +213,13 @@ through one. See `types/next-auth.d.ts`.
 `content/site-copy.ts` is the single source of truth for all user-facing copy.
 Any string appearing on more than one surface gets hoisted to a module-scope
 constant with a comment saying it is the only place to write it. Existing ones:
-`founder`, `commissionTerms`, `browseProductsCta`, `startListingCta`,
-`contactEmail`. Follow the pattern rather than retyping a literal.
+`brandName`, `leadership`, `commissionTerms`, `browseProductsCta`,
+`startListingCta`, `listProductCta`, `tellUsCta`, `tryBeforeYouBuy` /
+`trialTerms` / `tryBeforeYouBuyCta`, `contactEmail`. Follow the
+pattern rather than retyping a literal.
+
+The eight product categories are written once, in
+`marketplace.products.categories`; every category surface derives from it.
 
 Comments in this file are load-bearing guard-rails. When you change something,
 update the comments that describe it — several have gone stale mid-refactor and
@@ -210,9 +237,16 @@ one was left materially false.
    every number available today would be placeholder data.
 3. **When given a competitor site or reference design, take structural and UX
    patterns only.** Never copy real content, names or claims from it.
-4. Example listings must carry a visible "Example" badge and a disabled "Coming
-   soon" action. No star ratings, no review counts, no cart or notification
-   badges, no language or currency selectors.
+4. **The marketplace lists third-party providers only.** `lib/listings.ts`
+   leaves out, in its one query, every product whose provider has no linked
+   user (`providers.user_id` null — the house provider and its eight seeded
+   rows), so no surface can show them; the rows stay in the database. Every
+   listing carries a disabled "Coming soon" action — there is no checkout.
+   With nothing to list, surfaces show the shared empty state
+   (`components/listings-empty.tsx`), never stand-in products. No star
+   ratings, no review counts, no cart or notification badges, no language or
+   currency selectors. If house listings are ever shown again, they must carry
+   a visible "Example" badge.
 5. **Never use "vendor"** anywhere in copy or code. The term is "provider".
    `git grep -i vendor -- . ':!CLAUDE.md'` must return nothing. (This file is
    excluded because the rule itself spells the word; nothing else may.)
@@ -225,15 +259,35 @@ one was left materially false.
 
 - `user_role`: `buyer` | `provider` | `admin` — default `buyer`
 - `product_status`: `pending` | `approved` | `rejected` — default `pending`
-- Tables: `users`, `providers`, `products` (+ Drizzle relations)
-- `providers.user_id` is **nullable on purpose**: PAKAI TechHub is itself a
-  provider with no person to sign in as. Null means first-party.
+- `provider_status`: `pending` | `approved` | `rejected` — default `pending`
+- `provider_type`: `organisation` | `individual` — default `organisation`
+  (migration 0004, with `providers.contact_phone` / `contact_title`)
+- Tables: `users`, `accounts`, `providers`, `products` (+ Drizzle relations)
+- `providers.user_id` is **nullable on purpose**: PAK AI TechHub is itself a
+  provider with no person to sign in as. Null means first-party, and
+  first-party products are not listed (§5.4).
 
 ### Built
 
 - All marketing pages: `/`, `/marketplace`, `/about`, `/academy`, `/contact`
-- Nav with working search and category typeahead; homepage browse experience
-- Auth end to end: `/sign-up`, `/login`, logout, role-gated `/dashboard`
+- Nav with working search and category typeahead. Row 2 opens with the
+  homepage's three views — For Businesses (`/`), For AI Providers
+  (`/?tab=providers`), Categories (`/?tab=categories`) — as links with
+  `aria-current`, then AI Solutions (`/marketplace`), Academy and About
+- Homepage: one view at a time, each one screen from 1024×700 up (measured
+  document height; the homepage uses a one-line footer for this). Cut content
+  rather than shrinking type if a view grows
+- Auth end to end: `/sign-up` (buyers), `/login`, logout, role-gated `/dashboard`,
+  Google sign-in
+- **Provider listing form** at `/list-your-product` (also rendered at
+  `/dashboard/apply`): Account, Personal, Company/Business in ONE form, steps
+  hidden but mounted. `submitListing` (lib/listing-actions.ts) checks
+  everything, then in one transaction creates the buyer (if signed out) and the
+  pending application. The role stays `buyer` until an admin approves.
+  `/start-listing` routes every "List your product" / "Start listing" button;
+  `/sign-up`'s Provider choice only links here
+- Admin review queue at `/dashboard/admin` (approve / decline, emails);
+  provider product submission at `/dashboard/products/new`
 - Contact form delivering real email through Resend
 - `/pricing` **removed**; a 308 redirect to `/marketplace` lives in
   `next.config.ts`. Do not re-add the page without removing the redirect first —
@@ -241,19 +295,20 @@ one was left materially false.
 
 ### Stubbed — not built
 
-`app/dashboard/page.tsx` is a **role-gated stub** that exists to prove the role
-system works end to end. Each role gets a "coming soon" panel. Do not grow the
-real features inside it; each is a separate pass:
+`app/dashboard/page.tsx` is a role-gated landing page with a panel per role
+linking out to the real features. Do not grow features inside it.
 
-- **Admin product review queue** — not built
-- **Provider product-submission form** — not built
-- **Buyer purchase / subscription flow** — not built
+- **Buyer purchase / subscription flow** — not built (no checkout; every card's
+  "Coming soon" button is disabled)
+- **Provider agreement signing** — not in the app; the admin queue says
+  "Approve only after the provider agreement is signed"
 
-### The marketing site does not read the database
+### What reads the database
 
-`/marketplace` and every other page render from `content/site-copy.ts`. The only
-code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
-`db/seed.ts`. Changing a product on the site means editing `site-copy.ts`.
+Listings come from ONE cached read, `getListings()` in `lib/listings.ts`
+(approved products of providers with a user account only — §5.4): /marketplace,
+the homepage Categories view counts, the nav and the contact form use it. Copy
+still lives in `content/site-copy.ts`; products do not.
 
 ### Hosted database — stale, verified 2026-09-16
 
@@ -263,17 +318,22 @@ code that touches the database is `auth.ts`, `lib/auth-actions.ts` and
 > its primary and foreign keys, `users.password_hash` nullable, and
 > `users.email_verified` / `users.image` present.
 >
+> **Migration 0004 (`0004_provider_listing_form.sql`) is NOT applied to Neon**
+> as of 2026-09-30 — generated and applied to local databases only. The
+> listing form, `/dashboard/apply` and the admin queue read its columns, so
+> apply it to Neon **before** this work merges.
+>
 > The order that made it safe is the rule for the next one: apply a migration
 > to Neon **before** merging code that reads its columns. Drizzle names every
 > column in its queries, so new code against an unmigrated database fails;
 > old code against a migrated one kept working (checked for 0003, against a
 > migrated local database).
 
-Queried live via Neon MCP:
-
-- `users`: **0 rows** (no admin account exists anywhere)
-- `providers`: 1 row — the first-party provider, `user_id` NULL
-- `products`: 8 rows, all `approved`, prices correct
+Queried live via Neon MCP (read-only, 2026-09-30): 4 rows in
+`drizzle.__drizzle_migrations` (0004's columns absent), `users`: 3 rows, one
+third-party provider row, and **no approved third-party product** — so the
+live marketplace shows the launch empty state. Earlier (2026-09-16): the
+first-party provider (`user_id` NULL) and its 8 `approved` products.
 
 **The product names are stale.** The hosted rows still carry the old
 `TechHub …` names that were replaced site-wide during the marketplace redesign:
@@ -309,12 +369,14 @@ file, not a wish-list.
    `components/site-footer.tsx` and `app/contact/page.tsx` both repeat the
    warning; the contact page reuses `footer.connect`, so fixing it once fixes
    both. **Do not guess a URL from the handle.**
-2. **`README.md` is stale.** It still lists a `pricing/` route (removed) and
-   describes `marketplace/`, `academy/`, `about/` and `contact/` as "Placeholder
-   route", which they have not been for many merges.
-3. **One stale comment survives the pricing removal.** `content/site-copy.ts`,
-   on `hero.reassurance`: *"Same trial terms the pricing page states"* — that
-   page no longer exists.
+2. ~~`README.md` is stale.~~ **Resolved 2026-09-30:** its route list and
+   database note were brought up to date.
+3. ~~One stale comment survives the pricing removal.~~ **Resolved 2026-09-30:**
+   the owner settled the trial wording. "Try free" / "7-day free trial, no card
+   required" became "Try before you buy" / "A trial is available where the
+   provider offers one." everywhere (`tryBeforeYouBuy`, `trialTerms`). Do not
+   bring back a trial length, "free" or "no card required" unless the owner
+   settles those terms.
 4. **`products` has no billing-period column.** The site quotes "$55/mo" but the
    schema stores only an amount and a currency; `db/seed.ts` drops the "/mo".
    Add a period column before anything bills off this table. Noted on
@@ -336,3 +398,10 @@ file, not a wish-list.
    verified, and `www.pakaitechub.com` and `pak-ai-tech-hub.vercel.app` both
    301 to it. It is therefore the one production origin to register with
    Google: `https://pakaitechub.com/api/auth/callback/google`.
+8. **The production sender name still says "PAKAI".** Read on 2026-09-30
+   (plain variable, no decryption): `CONTACT_FROM_EMAIL` is
+   `PAKAI TechHub <noreply@pakaitechub.com>` for Production and Preview, so
+   every contact-form and review email shows that sender name. The display
+   name is not a code string; changing it to `PAK AI TechHub <…>` (same
+   address) is a Vercel setting for the owner. `.env.example` already shows
+   the new form.

@@ -2,7 +2,7 @@
  * Shared vocabulary for the admin review queue.
  *
  * Not a `"use server"` module, for the same reason as
- * lib/product-submission.ts and lib/provider-application.ts: both the server
+ * lib/product-submission.ts and lib/provider-listing.ts: both the server
  * actions (`lib/review-actions.ts`) and the browser-side controls
  * (`components/admin/review-controls.tsx`) need these, and a file with that
  * directive may only export async functions. Nothing here touches the database

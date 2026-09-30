@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { ListingsEmpty } from "@/components/listings-empty";
+import { SearchGlyph } from "@/components/nav-icons";
 import { siteCopy, type Listing } from "@/content/site-copy";
 import {
   ALL_CATEGORIES,
@@ -18,38 +21,20 @@ const { search } = nav;
 /** How many matches the dropdown shows before it stops listing them. */
 const MAX_RESULTS = 6;
 
-function SearchGlyph() {
-  return (
-    <svg
-      aria-hidden
-      focusable="false"
-      viewBox="0 0 20 20"
-      className="h-4 w-4 shrink-0 text-brand-navy/45"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-    >
-      <circle cx="9" cy="9" r="5.5" />
-      <path d="m13.2 13.2 3.3 3.3" />
-    </svg>
-  );
-}
-
 /**
  * The marketplace search in the nav bar.
  *
  * A real filter over the marketplace's approved listings, not a decorative
  * field. `listings` is the same read the grid on /marketplace renders
- * (lib/listings.ts), passed down by the root layout; the matching is shared
- * with the hero's search (see lib/product-search.ts) so the two controls
- * always agree.
+ * (lib/listings.ts), passed down by the root layout; the matching lives in
+ * lib/product-search.ts.
  *
- * There is no search results page, so a result points at the marketplace
- * filtered to that listing's category — the nearest destination that actually
- * exists. The field is deliberately not wrapped in a submitting `<form>`:
- * there is nowhere for a submit to go, and a field that looks like it submits
- * but discards the query is worse than one that plainly filters as you type.
+ * A result points at AI Solutions filtered to that listing's category —
+ * product pages do not exist yet. Enter with no result highlighted opens AI
+ * Solutions with the query (and the chosen category) already applied —
+ * /marketplace?q=… is the full search. The field is not wrapped in a
+ * `<form>`: Enter is handled here so that, with a result highlighted, it
+ * follows that result instead.
  *
  * The listbox follows the ARIA combobox pattern: the input owns
  * `aria-expanded`/`aria-controls`/`aria-activedescendant`, the results are
@@ -58,8 +43,8 @@ function SearchGlyph() {
  * can be clicked, middle-clicked and opened in a new tab as usual.
  *
  * Filtering needs JavaScript. The listings themselves are server-rendered on
- * the homepage and the marketplace, so nothing is hidden behind this — without
- * scripting the field simply does not narrow anything.
+ * /marketplace, so nothing is hidden behind this — without scripting the
+ * field simply does not narrow anything.
  */
 export function NavSearch({
   listings,
@@ -81,17 +66,25 @@ export function NavSearch({
   const optionId = (index: number) => `${uid}-result-${index}`;
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const results = searchProducts(listings ?? [], { query, categoryId }).slice(
     0,
     MAX_RESULTS,
   );
-  /* "Could not check" is not "nothing matches": say which one it is. */
+  /*
+    Three different empties, said differently: "could not check" (the read
+    failed), "nothing is listed yet" (launch — the shared empty state) and
+    "nothing matches what you typed".
+  */
   const emptyMessage =
     listings === null
       ? marketplace.products.unavailableMessage
-      : search.noResults.replace("{query}", query);
+      : listings.length === 0
+        ? marketplace.products.emptyState.heading
+        : search.noResults.replace("{query}", query);
   const showPanel = open && query.trim().length > 0;
+  const hasResults = listings !== null && results.length > 0;
 
   /* A click outside the control dismisses the results, like any other popup. */
   useEffect(() => {
@@ -107,6 +100,18 @@ export function NavSearch({
     if (event.key === "Escape") {
       setOpen(false);
       setActiveIndex(-1);
+      return;
+    }
+
+    /* Enter with nothing highlighted: the full search on AI Solutions. */
+    if (event.key === "Enter" && !(showPanel && activeIndex >= 0) && query.trim()) {
+      event.preventDefault();
+      const params = new URLSearchParams({ q: query.trim() });
+      if (categoryId !== ALL_CATEGORIES) params.set("category", categoryId);
+      setOpen(false);
+      setActiveIndex(-1);
+      setQuery("");
+      router.push(`/marketplace?${params.toString()}`);
       return;
     }
 
@@ -143,7 +148,7 @@ export function NavSearch({
           Category first, matching the order of the sentence the control reads
           as: "in <category>, find <query>". Hidden on the narrowest screens,
           where the field itself needs the whole width — the homepage's
-          category bar is the full-width way to narrow by category there.
+          Categories view is the full-width way to narrow by category there.
         */}
         <label htmlFor={`${uid}-category`} className="sr-only">
           {search.categoryLabel}
@@ -174,8 +179,13 @@ export function NavSearch({
           type="search"
           role="combobox"
           autoComplete="off"
-          aria-expanded={showPanel}
-          aria-controls={listboxId}
+          /*
+            Expanded only while the listbox exists. An empty state or an
+            error message is not a listbox, and `aria-controls` naming an id
+            that is not in the page is an ARIA error.
+          */
+          aria-expanded={showPanel && hasResults}
+          aria-controls={showPanel && hasResults ? listboxId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={
             showPanel && activeIndex >= 0 ? optionId(activeIndex) : undefined
@@ -200,8 +210,12 @@ export function NavSearch({
             {results.length === 0 ? emptyMessage : countMessage}
           </p>
 
-          {results.length === 0 ? (
+          {listings === null ? (
             <p className="px-4 py-3.5 text-sm text-brand-navy/65">{emptyMessage}</p>
+          ) : listings.length === 0 ? (
+            <ListingsEmpty variant="launch" compact />
+          ) : results.length === 0 ? (
+            <ListingsEmpty variant="search" query={query.trim()} compact />
           ) : (
             <ul id={listboxId} role="listbox" aria-label={search.resultsLabel}>
               {results.map((product, index) => (
@@ -220,20 +234,8 @@ export function NavSearch({
                       index === activeIndex ? "bg-brand-navy/[0.06]" : ""
                     }`}
                   >
-                    {/*
-                      The "Example" badge sits with the name, as it does on
-                      the grid cards, and only on example listings (decided
-                      once in lib/listings.ts). Beside the name rather than the
-                      category so that, in the narrow panel on a phone, it
-                      wraps under the name instead of squeezing it.
-                    */}
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-semibold text-brand-navy">{product.name}</span>
-                      {product.example ? (
-                        <span className="rounded-full border border-dashed border-brand-navy/30 px-2 py-0.5 text-xs font-semibold text-brand-navy/65">
-                          {marketplace.products.exampleBadge}
-                        </span>
-                      ) : null}
+                    <span className="min-w-0 font-semibold text-brand-navy">
+                      {product.name}
                     </span>
                     <span className="shrink-0 text-xs text-brand-navy/60">
                       {categoryLabelFor(product)}
@@ -247,11 +249,15 @@ export function NavSearch({
           {/*
             The listings are real but not purchasable — there is no checkout —
             so the panel says so rather than letting a tidy result list imply
-            a working catalogue. Same sentence as the listings intro.
+            a working catalogue. Same sentence as the listings intro. Only
+            under results: under an empty state it would be a note about
+            nothing.
           */}
-          <p className="border-t border-black/5 bg-brand-navy/[0.02] px-4 py-2.5 text-xs text-brand-navy/60">
-            {marketplace.products.searchFootnote}
-          </p>
+          {results.length > 0 ? (
+            <p className="border-t border-black/5 bg-brand-navy/[0.02] px-4 py-2.5 text-xs text-brand-navy/60">
+              {marketplace.products.searchFootnote}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -84,7 +84,8 @@ function toAdapterUser(row: AdapterUser | null | undefined): AdapterUser | null 
 }
 
 /**
- * Emails are stored lowercased (see `signUp` in lib/auth-actions.ts), so they
+ * Emails are stored lowercased (see `signUp` in lib/auth-actions.ts and
+ * `submitListing` in lib/listing-actions.ts), so they
  * are looked up and written lowercased too. Without this a Google address in
  * a different case would miss an existing account and create a second one.
  */

@@ -17,7 +17,7 @@ import type { AdapterAccountType } from "next-auth/adapters";
  * User accounts (plus `accounts`, their Google sign-ins), provider records and
  * product listings, each of the last two with a review state. Two things write
  * a pending row: the product-submission form (`lib/product-actions.ts`) and
- * the provider application (`lib/application-actions.ts`). One thing moves a
+ * the provider listing form (`lib/listing-actions.ts`). One thing moves a
  * row out of "pending": the admin review queue at /dashboard/admin
  * (`lib/review-actions.ts`).
  *
@@ -46,6 +46,12 @@ export const providerStatus = pgEnum("provider_status", [
   "approved",
   "rejected",
 ]);
+
+/**
+ * Who is applying to list: a company or team, or one person on their own.
+ * Chosen on the first step of the listing form ("I am registering as").
+ */
+export const providerType = pgEnum("provider_type", ["organisation", "individual"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -129,15 +135,15 @@ export const providers = pgTable("providers", {
   /**
    * Nullable on purpose.
    *
-   * PAKAI TechHub is itself a provider — it lists its own eight products — but
-   * it has no person to sign in as. A null `user_id` means a first-party
-   * provider rather than a signed-up one, which is cleaner than inventing a
-   * placeholder user row that could then be logged into.
+   * PAK AI TechHub is itself a provider — its eight seeded products belong to
+   * it — but it has no person to sign in as. A null `user_id` means a
+   * first-party provider rather than a signed-up one, which is cleaner than
+   * inventing a placeholder user row that could then be logged into.
    *
-   * It also decides the "Example" badge: a null here makes every product of
-   * this provider an example listing on the site (`Listing.example`, set in
-   * lib/listings.ts). Linking a user to the house provider would silently
-   * turn its eight placeholder-priced products into real-looking listings.
+   * It also decides what the site lists: lib/listings.ts shows only products
+   * whose provider has a user, so a null here keeps every product of this
+   * provider off every surface. Linking a user to the house provider would
+   * silently put its eight placeholder-priced products on the marketplace.
    */
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })
@@ -176,8 +182,9 @@ export const providers = pgTable("providers", {
 
     Nullable in the database, required by the application form. Rows that
     predate the application flow have no answers to give, and inventing some
-    for them would be placeholder data. `lib/application-actions.ts` is the
-    one place that decides these are mandatory.
+    for them would be placeholder data. The listing form's rules
+    (lib/provider-listing.ts, run by lib/listing-actions.ts) are the one
+    place that decides these are mandatory.
 
     `category` follows `products.category` exactly: plain text, with the
     allowed values enforced in code against `CATEGORY_LABELS` rather than by a
@@ -188,6 +195,21 @@ export const providers = pgTable("providers", {
   category: text("category"),
   reasonForListing: text("reason_for_listing"),
   /**
+   * Organisation or individual, from the listing form. Defaults to
+   * "organisation", which is also what the migration that added it gave
+   * every existing row — the house provider and every earlier application
+   * was a business.
+   */
+  providerType: providerType("provider_type").notNull().default("organisation"),
+  /*
+    The applicant's contact details from the listing form's second step, for
+    the reviewer who arranges the provider agreement. Nullable: rows from
+    before the listing form have none, and nothing is invented for them.
+    Required by the form — for an individual, the job title is optional.
+  */
+  contactPhone: text("contact_phone"),
+  contactTitle: text("contact_title"),
+  /**
    * When the row was created. Fixed for life — a resubmission updates the same
    * row, so this is the FIRST application, not the current one. Sort the
    * review queue by `submittedAt`, never by this.
@@ -197,7 +219,7 @@ export const providers = pgTable("providers", {
     .defaultNow(),
   /**
    * When the current application was sent: set on the first application and
-   * again on every resubmission (`submitApplication`). This is what the queue
+   * again on every resubmission (`submitListing`). This is what the queue
    * sorts by, so a declined applicant who resubmits joins the back of the
    * queue rather than keeping the place of their first attempt.
    *
@@ -319,3 +341,4 @@ export type Provider = typeof providers.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type UserRole = (typeof userRole.enumValues)[number];
 export type ProviderStatus = (typeof providerStatus.enumValues)[number];
+export type ProviderType = (typeof providerType.enumValues)[number];

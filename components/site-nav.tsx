@@ -3,17 +3,20 @@
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
 import { NavSearch } from "@/components/nav-search";
 import { FlagshipArt } from "@/components/visuals/flagship-art";
 import { logOut } from "@/lib/auth-actions";
+import { resolveHomeTab } from "@/lib/home-tabs";
 import {
   siteCopy,
   type NavMenuSource,
   type CategoryFilter,
+  type HomeTabId,
   type Listing,
   type ProductCategory,
 } from "@/content/site-copy";
@@ -68,9 +71,13 @@ function isCategory(
  *
  * The marketplace panel's numbers are counted from `listings` — the same read
  * (lib/listings.ts) that fills the grid on /marketplace — so "4 products"
- * here is the four cards a visitor finds there. `listings` is null when the
- * database could not be read; the panel then shows no numbers at all rather
- * than zeros, which would say the marketplace is empty.
+ * here is the four cards a visitor finds there.
+ *
+ * NO ZEROS. A category with nothing listed shows its name and no number, and
+ * with nothing listed at all the featured headline drops its count too:
+ * "0 products" reads as a dead marketplace rather than a new one. The same
+ * goes when `listings` is null (the database could not be read) — no numbers
+ * at all rather than wrong ones.
  */
 function marketplacePanel(listings: Listing[] | null): Panel {
   const { menus } = nav;
@@ -85,28 +92,100 @@ function marketplacePanel(listings: Listing[] | null): Panel {
     featured: {
       eyebrow: menus.marketplace.featured.eyebrow,
       /* Counted from the listings, so the headline cannot overstate them. */
-      headline: listings
-        ? menus.marketplace.featured.headline.replace("{count}", String(listings.length))
-        : menus.marketplace.featured.headlineNoCount,
+      headline: !listings?.length
+        ? menus.marketplace.featured.headlineNoCount
+        : listings.length === 1
+          ? menus.marketplace.featured.headlineOne
+          : menus.marketplace.featured.headline.replace("{count}", String(listings.length)),
       body: menus.marketplace.featured.body,
       href: "/marketplace",
       art: <FlagshipArt className="h-full w-auto" />,
     },
-    rows: marketplace.products.categories.filter(isCategory).map((category) => ({
-      key: category.id,
-      href: `/marketplace?category=${category.id}`,
-      label: category.label,
+    rows: marketplace.products.categories.filter(isCategory).map((category) => {
       /* Both sides are filter IDs: lib/listings.ts converted the table's
          label before these ever reached the client. */
-      detail: listings
-        ? countLabel(listings.filter((product) => product.category === category.id).length)
-        : undefined,
-      icon: <CategoryIcon category={category.id} />,
-    })),
+      const count =
+        listings?.filter((product) => product.category === category.id).length ?? 0;
+      return {
+        key: category.id,
+        href: `/marketplace?category=${category.id}`,
+        label: category.label,
+        detail: count > 0 ? countLabel(count) : undefined,
+        icon: <CategoryIcon category={category.id} />,
+      };
+    }),
   };
 }
 
 /** The tier the Academy panel features. First in the ladder, and the free one. */
+/*
+  HOVER TIMING for the two dropdowns, mouse only (touch and pen use taps).
+
+  CLOSE: leaving an item closes its panel after this long, not at once. A
+  cursor on its way to the panel can graze the few pixels between items, or
+  overshoot an edge, and come straight back — that must not shut it.
+
+  SWITCH: while one panel is open, another trigger takes over only if the
+  cursor rests on it this long. A diagonal path from Marketplace to the far
+  side of its panel passes over the Academy trigger on the way; without this
+  it switched panels under the cursor.
+
+  Sized from measured cursor paths (trigger to panel, straight down and
+  diagonally, at 768–1440px), not picked. The hard case is a shallow
+  diagonal from Marketplace to the far top corner of its panel: it runs
+  along the menu row and over the Academy trigger before it drops in. At
+  200ms / 150ms that path switched to Academy at ordinary speeds (~530–660
+  px/s, once at ~1200). At 300ms / 250ms every path at those speeds held.
+  What still closed or switched was the same shallow path at a crawl (~200–
+  280 px/s), which spends over half a second in the row — no delay short
+  enough to feel responsive covers that. It got worse when the homepage
+  tabs took the front of the row: the panel still starts at the row's left
+  edge, so its featured card now sits far to the left of the triggers, and
+  every path to it is a long shallow one.
+
+  INTENT, for those. Where the pointer leaves the open item is remembered,
+  and while a close or a switch is pending, every move that stays inside
+  the triangle from that point to the panel's top corners postpones it
+  again (`inIntentTriangle`). Heading for any part of the panel keeps it
+  open, however slowly; stopping, or heading anywhere else, lets the delay
+  run out as before. Moving sideways along the row to the other trigger
+  stays above the triangle's upper edge, so switching still works.
+
+  The gaps themselves are closed in the layout (see the menu row below);
+  these only cover what a real mouse path does between them.
+*/
+const HOVER_CLOSE_DELAY_MS = 300;
+const HOVER_SWITCH_DELAY_MS = 250;
+
+type Point = { x: number; y: number };
+
+/** Is `p` inside the triangle a–b–c (edges included)? */
+function inTriangle(p: Point, a: Point, b: Point, c: Point): boolean {
+  const side = (p1: Point, p2: Point, p3: Point) =>
+    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  const d1 = side(p, a, b);
+  const d2 = side(p, b, c);
+  const d3 = side(p, c, a);
+  const negative = d1 < 0 || d2 < 0 || d3 < 0;
+  const positive = d1 > 0 || d2 > 0 || d3 > 0;
+  return !(negative && positive);
+}
+
+/**
+ * Is the pointer still heading for the open panel? True inside the triangle
+ * from where it left the item to the panel card's top corners (widened a
+ * little either side, so aiming at the very edge still counts).
+ */
+function inIntentTriangle(pointer: Point, from: Point, card: DOMRect): boolean {
+  const slack = 12;
+  return inTriangle(
+    pointer,
+    from,
+    { x: card.left - slack, y: card.top },
+    { x: card.right + slack, y: card.top },
+  );
+}
+
 const entryTier = academy.tiers.items[0];
 
 /* Static: nothing in it comes from the database. */
@@ -161,8 +240,18 @@ function Chevron({ open }: { open: boolean }) {
  * nothing notifies, so either one would be an affordance with nothing behind
  * it. Do not add them before the feature they imply exists.
  *
- * Marketplace and Academy open a dropdown; Pricing and About are plain links
- * because no sub-content exists for them. The dropdowns follow the disclosure
+ * Row 2 opens with the homepage's three views — For Businesses, For AI
+ * Providers, Categories — on every page. They are LINKS, not ARIA tabs: each
+ * view is its own URL (`/`, `/?tab=providers`, `/?tab=categories`), choosing
+ * one is a navigation, Back and Forward move between them, and the one on
+ * show carries `aria-current="page"` — announced as "current page". The
+ * ARIA tab pattern is for switching panels in place without a URL change,
+ * and would make them arrow-key widgets inside a nav of Tab-key links. On
+ * any other page none of them is current, and each simply goes home to that
+ * view.
+ *
+ * AI Solutions and Academy open a dropdown; About is a plain link because no
+ * sub-content exists for it. The dropdowns follow the disclosure
  * pattern rather than `role="menu"`: the trigger is a real button carrying
  * `aria-expanded`/`aria-controls` and the panel is an ordinary list of links,
  * so Tab, Shift+Tab and screen-reader link navigation keep working as they
@@ -189,6 +278,11 @@ export function SiteNav({
   account: Account;
 }) {
   const [openMenu, setOpenMenu] = useState<NavMenuSource | null>(null);
+  /* Which homepage view is on show — only on the homepage itself. */
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab: HomeTabId | null =
+    pathname === "/" ? resolveHomeTab(searchParams.get("tab")) : null;
   const panels = useMemo<Record<NavMenuSource, Panel>>(
     () => ({ marketplace: marketplacePanel(listings), academy: ACADEMY_PANEL }),
     [listings],
@@ -204,6 +298,53 @@ export function SiteNav({
   const triggerRefs = useRef<Partial<Record<NavMenuSource, HTMLButtonElement | null>>>({});
   const panelRefs = useRef<Partial<Record<NavMenuSource, HTMLDivElement | null>>>({});
 
+  /* The one pending hover change (a delayed close or switch), if any. A
+     deliberate action — click, key, blur, outside click — cancels it, so a
+     timer started by the mouse can never undo what the person just did. */
+  const hoverTimer = useRef<{ id?: number }>({});
+  /*
+    Which panel the mouse opened by resting on its trigger, if any. A mouse
+    user who hovers a trigger usually clicks it too; without this, that click
+    toggled the panel the hover had just opened straight back shut. A click
+    on a hover-opened panel keeps it open instead — the next click closes it,
+    as before. Touch never hovers, so taps still toggle.
+  */
+  const hoverOpened = useRef<NavMenuSource | null>(null);
+  /* The pending hover change, so a move towards the panel can postpone it,
+     and where the pointer left the open item — see INTENT above. */
+  const pendingHover = useRef<{ next: NavMenuSource | null; delay: number } | null>(null);
+  const intentFrom = useRef<Point | null>(null);
+  /* Stable across renders (refs and a state setter only), so the effects
+     below can depend on them. */
+  const cancelHover = useCallback(() => {
+    window.clearTimeout(hoverTimer.current.id);
+    hoverTimer.current.id = undefined;
+    pendingHover.current = null;
+  }, []);
+  const hoverTo = useCallback((next: NavMenuSource | null, delay: number) => {
+    cancelHover();
+    const apply = () => {
+      hoverOpened.current = next;
+      intentFrom.current = null;
+      setOpenMenu(next);
+    };
+    if (delay === 0) {
+      apply();
+      return;
+    }
+    pendingHover.current = { next, delay };
+    hoverTimer.current.id = window.setTimeout(() => {
+      hoverTimer.current.id = undefined;
+      pendingHover.current = null;
+      apply();
+    }, delay);
+  }, [cancelHover]);
+  /* Nothing may fire after the nav unmounts. */
+  useEffect(() => {
+    const timer = hoverTimer.current;
+    return () => window.clearTimeout(timer.id);
+  }, []);
+
   function panelLinks(source: NavMenuSource) {
     const panel = panelRefs.current[source];
     return panel ? Array.from(panel.querySelectorAll<HTMLAnchorElement>("a[href]")) : [];
@@ -211,19 +352,44 @@ export function SiteNav({
 
   /** Escape's contract: dismiss the panel and put focus back on its trigger. */
   function closeAndRefocus() {
+    cancelHover();
     if (openMenu) triggerRefs.current[openMenu]?.focus();
     setOpenMenu(null);
   }
+
+  /*
+    While a panel is open, a mouse moving towards it postpones any pending
+    close or switch (INTENT, above). Re-arming the same change restarts its
+    delay; nothing is postponed once the pointer stops or turns away.
+  */
+  useEffect(() => {
+    if (!openMenu) return;
+    function onPointerMove(event: PointerEvent) {
+      if (event.pointerType !== "mouse") return;
+      const pending = pendingHover.current;
+      const from = intentFrom.current;
+      const card = panelRefs.current[openMenu!]?.firstElementChild?.getBoundingClientRect();
+      if (!pending || !from || !card) return;
+      if (inIntentTriangle({ x: event.clientX, y: event.clientY }, from, card)) {
+        hoverTo(pending.next, pending.delay);
+      }
+    }
+    document.addEventListener("pointermove", onPointerMove);
+    return () => document.removeEventListener("pointermove", onPointerMove);
+  }, [openMenu, hoverTo]);
 
   /* A click anywhere outside the header dismisses an open panel. */
   useEffect(() => {
     if (!openMenu) return;
     function onPointerDown(event: PointerEvent) {
-      if (!headerRef.current?.contains(event.target as Node)) setOpenMenu(null);
+      if (!headerRef.current?.contains(event.target as Node)) {
+        cancelHover();
+        setOpenMenu(null);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [openMenu]);
+  }, [openMenu, cancelHover]);
 
   /* ArrowDown on a closed trigger opens the panel and lands on its first row;
      the panel has to be mounted before it can be focused, hence the effect. */
@@ -249,6 +415,7 @@ export function SiteNav({
          usual meaning of "nothing above this". */
       if (event.key !== "ArrowDown") return;
       event.preventDefault();
+      cancelHover();
       focusFirstRow.current = true;
       setOpenMenu(source);
       return;
@@ -383,24 +550,48 @@ export function SiteNav({
       {/*
         Row 2 — the section links, and the only nav landmark.
 
-        `relative` here rather than on each <li>: the dropdown panels are wide
-        enough that they need to be centred in the nav container, not under
-        their own trigger.
+        THE HOVER PATH HAS NO GAPS — keep it that way. A dropdown stays open
+        while the pointer is inside its <li>, and the panel is a DOM child of
+        that <li>, so the pointer can go from trigger to panel only if the two
+        touch. Two things make them touch:
+
+          - The row's vertical padding sits on each <li> (`py-1`), not on
+            this <ul>. On the <ul> it left a 4px strip under every trigger
+            that belonged to nothing, and a slow move down stopped in it and
+            closed the panel.
+          - The panel hangs from this <ul>'s left edge (`relative` is here),
+            so it always starts under both triggers. It used to be centred in
+            the nav; from 1024px up that left the Marketplace trigger outside
+            the panel's span, and reaching the panel meant crossing open page
+            — or the Academy trigger, which switched panels.
+
+        The hover delays (HOVER_CLOSE_DELAY_MS, HOVER_SWITCH_DELAY_MS) cover
+        the rest of a real mouse path: the few pixels between items, and
+        passing over the other trigger. Checked by driving a real cursor from
+        each trigger to its panel — straight down and diagonally, fast and
+        slow — at 768, 1024, 1280 and 1440px.
       */}
       <nav
         aria-label="Main"
-        className="relative mx-auto w-full max-w-6xl border-t border-black/5 px-4 sm:px-6 lg:px-8"
+        className="mx-auto w-full max-w-6xl border-t border-black/5 px-4 sm:px-6 lg:px-8"
       >
         <ul
           data-nav-menus
-          className="hidden items-center gap-1 py-1 md:flex lg:gap-2"
+          className="relative hidden items-center gap-1 md:flex lg:gap-2"
         >
+          {nav.homeTabs.map((tab) => (
+            <li key={tab.id} className="py-1">
+              <HomeTabLink tab={tab} current={currentTab === tab.id} />
+            </li>
+          ))}
+          {/* Divides the homepage's views from the site's sections. */}
+          <li aria-hidden className="mx-1 h-5 w-px bg-black/10 lg:mx-2" />
           {nav.items.map((item) => {
             const source = item.menu;
 
             if (!source) {
               return (
-                <li key={item.href}>
+                <li key={item.href} className="py-1">
                   <Link
                     href={item.href}
                     className="rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy lg:px-3"
@@ -417,17 +608,35 @@ export function SiteNav({
             return (
               <li
                 key={item.href}
+                className="py-1"
                 onKeyDown={(event) => onItemKeyDown(event, source)}
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    cancelHover();
                     setOpenMenu(null);
                   }
                 }}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === "mouse") setOpenMenu(source);
+                  if (event.pointerType !== "mouse") return;
+                  /* Back on the open item (its trigger or its panel): stay.
+                     Nothing open: open now. Another one open: switch only if
+                     the pointer settles here. */
+                  if (openMenu === source) {
+                    cancelHover();
+                    intentFrom.current = null;
+                  } else hoverTo(source, openMenu === null ? 0 : HOVER_SWITCH_DELAY_MS);
                 }}
                 onPointerLeave={(event) => {
-                  if (event.pointerType === "mouse") setOpenMenu(null);
+                  if (event.pointerType !== "mouse") return;
+                  /* Leaving the open item from above its panel's card —
+                     from the trigger row — is where a path into the panel
+                     starts. Anywhere else (off the panel itself) is not. */
+                  if (openMenu === source) {
+                    const card = panelRefs.current[source]?.firstElementChild?.getBoundingClientRect();
+                    intentFrom.current =
+                      card && event.clientY < card.top ? { x: event.clientX, y: event.clientY } : null;
+                  }
+                  hoverTo(null, HOVER_CLOSE_DELAY_MS);
                 }}
               >
                 <button
@@ -437,7 +646,16 @@ export function SiteNav({
                   }}
                   aria-expanded={open}
                   aria-controls={`nav-panel-${source}`}
-                  onClick={() => setOpenMenu(open ? null : source)}
+                  onClick={() => {
+                    cancelHover();
+                    /* The hover already opened it: the click keeps it open. */
+                    if (open && hoverOpened.current === source) {
+                      hoverOpened.current = null;
+                      return;
+                    }
+                    hoverOpened.current = null;
+                    setOpenMenu(open ? null : source);
+                  }}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3 ${
                     open ? "text-brand-navy" : "text-brand-navy/70 hover:text-brand-navy"
                   }`}
@@ -448,12 +666,14 @@ export function SiteNav({
 
                 {open ? (
                   /*
-                    Positioned against the <nav>, not this <li> — the li is no
-                    longer `relative`. The panel stays a DOM child of the li,
-                    which is what keeps pointer-leave and focus-out working,
-                    but it is laid out and centred inside the nav container, so
-                    a panel this wide cannot hang off the edge of a narrow
-                    window the way a trigger-anchored one would.
+                    Positioned against the menu row (<ul>), not this <li>, and
+                    from its left edge — under both triggers, never off the
+                    right edge of a narrow window: it starts at the nav's
+                    padding and is at most 100vw − 3rem wide. It stays a DOM
+                    child of the li, which is what keeps pointer-leave and
+                    focus-out working. The `pt-3` above the card is part of
+                    this element, so the space between the row and the card
+                    still counts as inside the item. See Row 2's note.
                   */
                   <motion.div
                     id={`nav-panel-${source}`}
@@ -463,7 +683,7 @@ export function SiteNav({
                     initial={prefersReducedMotion ? false : { opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: prefersReducedMotion ? 0 : 0.16, ease: "easeOut" }}
-                    className="absolute top-full left-1/2 w-[min(44rem,calc(100vw_-_3rem))] -translate-x-1/2 pt-3"
+                    className="absolute top-full left-0 w-[min(44rem,calc(100vw_-_3rem))] pt-3"
                   >
                     <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-xl shadow-brand-navy/10">
                       <div className="grid grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
@@ -553,58 +773,136 @@ export function SiteNav({
               </li>
             );
           })}
-        </ul>
-
-        {/* Compact link row for narrow screens. Plain links, no panels — the
-            dropdowns above are desktop-only and this row is untouched by their
-            state. A `<noscript>` rule in the root layout also shows this row at
-            every width, so the nav still works with JavaScript disabled. */}
-        <ul
-          data-nav-plain
-          className="flex items-center gap-5 overflow-x-auto py-2 md:hidden"
-        >
-          {nav.items.map((item) => (
-            <li key={item.href}>
+          {/* Signed in, 768–1023px: row 1 has room for "Log out" but not for
+              "Signed in as {name}", so the way to the dashboard sits here. */}
+          {account ? (
+            <li className="py-1 lg:hidden">
               <Link
-                href={item.href}
-                className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                href={nav.account.href}
+                className="rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy"
               >
-                {item.label}
+                {nav.account.dashboard}
               </Link>
             </li>
-          ))}
-          {/* Appended rather than added to `nav.items`, which would also put
-              the auth links in the desktop menu row, where they do not belong
-              — row 1 carries them at those widths. Signed in: log out only.
-              Sign in and Sign up only just fit this row at 390px; a name
-              beside log out, even a short one, pushed log out off its edge.
-              The name is row 1's, from `lg`. */}
-          {account ? (
-            <li>
-              <form action={logOut}>
-                <button
-                  type="submit"
-                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-                >
-                  {nav.account.logOut}
-                </button>
-              </form>
-            </li>
-          ) : (
-            [nav.signIn, nav.signUp].map((link) => (
-              <li key={link.href}>
+          ) : null}
+        </ul>
+
+        {/* Compact rows for narrow screens. Plain links, no panels — the
+            dropdowns above are desktop-only and these rows are untouched by
+            their state. A `<noscript>` rule in the root layout also shows
+            them at every width, so the nav still works with JavaScript
+            disabled.
+
+            Two lines: the homepage's three views on their own line first,
+            then the sections and the auth links as before. One line of eight
+            links would scroll sideways at 390px and hide the auth links off
+            its edge. */}
+        <div data-nav-plain className="flex flex-col md:hidden">
+          <ul className="flex items-center justify-between gap-3 border-b border-black/5 py-1 sm:justify-start sm:gap-6">
+            {nav.homeTabs.map((tab) => (
+              <li key={tab.id}>
+                <HomeTabLink tab={tab} current={currentTab === tab.id} compact />
+              </li>
+            ))}
+          </ul>
+          {/* gap-3, not wider: signed in, "AI Solutions Academy About
+              Dashboard Log out" needs 300px of text in the 358px a 390px
+              screen leaves; at gap-5 Log out ran off the edge (measured). */}
+          <ul className="flex items-center gap-3 overflow-x-auto py-2">
+            {nav.items.map((item) => (
+              <li key={item.href}>
                 <Link
-                  href={link.href}
+                  href={item.href}
                   className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
                 >
-                  {link.label}
+                  {item.label}
                 </Link>
               </li>
-            ))
-          )}
-        </ul>
+            ))}
+            {/* Appended rather than added to `nav.items`, which would also put
+                the auth links in the desktop menu row, where they do not belong
+                — row 1 carries them at those widths. Signed in: "Dashboard"
+                and log out. A name here, even a short one, pushed log out off
+                the row's edge at 390px; the name is row 1's, from `lg`. */}
+            {account ? (
+              <li>
+                <Link
+                  href={nav.account.href}
+                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                >
+                  {nav.account.dashboard}
+                </Link>
+              </li>
+            ) : null}
+            {account ? (
+              <li>
+                <form action={logOut}>
+                  <button
+                    type="submit"
+                    className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                  >
+                    {nav.account.logOut}
+                  </button>
+                </form>
+              </li>
+            ) : (
+              [nav.signIn, nav.signUp].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
       </nav>
     </header>
+  );
+}
+
+/**
+ * One of the homepage's three views, as a link in the menu row.
+ *
+ * `aria-current="page"` on the view on show, and a gradient bar under it as
+ * the visible equivalent — colour is not the only signal, the label also
+ * turns bold.
+ */
+function HomeTabLink({
+  tab,
+  current,
+  compact = false,
+}: {
+  tab: { id: HomeTabId; label: string; href: string };
+  current: boolean;
+  /** The phone row: no side padding, the bar sits on that row's border. */
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={tab.href}
+      aria-current={current ? "page" : undefined}
+      className={`relative inline-flex rounded-lg py-2 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy ${
+        compact ? "" : "px-2 lg:px-3"
+      } ${
+        current
+          ? "font-semibold text-brand-navy"
+          : "font-medium text-brand-navy/70 hover:text-brand-navy"
+      }`}
+    >
+      {tab.label}
+      {current ? (
+        <span
+          aria-hidden
+          className={`absolute -bottom-1 h-0.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-green ${
+            compact ? "inset-x-0" : "inset-x-2 lg:inset-x-3"
+          }`}
+        />
+      ) : null}
+    </Link>
   );
 }
 

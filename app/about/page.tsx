@@ -26,6 +26,7 @@ export default function AboutPage() {
     different,
     facts,
     values,
+    leadership,
     team,
     closingCta,
   } = about;
@@ -115,11 +116,17 @@ export default function AboutPage() {
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className={sectionHeading}>{values.heading}</h2>
-          <ul className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            Two a row from sm, three from lg — and whatever is left over in the
+            last row grows to fill it (flex-grow), so no count leaves a hole or
+            a lone card at the edge. Five values today: 2+2+1 wide at sm, 3+2
+            at lg.
+          */}
+          <ul className="mt-10 flex flex-wrap gap-3">
             {values.items.map((value) => (
               <li
                 key={value.label}
-                className="flex items-baseline gap-3 rounded-xl border border-black/5 bg-white px-5 py-4"
+                className="flex grow basis-full items-baseline gap-3 rounded-xl border border-black/5 bg-white px-5 py-4 sm:basis-[calc(50%-0.375rem)] lg:basis-[calc(33.33%-0.5rem)]"
               >
                 <span
                   aria-hidden
@@ -154,45 +161,47 @@ export default function AboutPage() {
         from memory.
       */}
 
-      {/* 6. Our team */}
+      {/* 6. Leadership — name and role only, exactly as supplied. */}
+      <section className="border-b border-black/5">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+          <Reveal>
+            <h2 className={sectionHeading}>{leadership.heading}</h2>
+            {/*
+              Nothing beyond the two lines the owners gave: no bio, photo or
+              initials mark, and the role is shown as written rather than
+              upper-cased. See `leadership` in content/site-copy.ts.
+            */}
+            <ul className="mt-10 grid gap-5 sm:grid-cols-2">
+              {leadership.people.map((person) => (
+                <li
+                  key={person.name}
+                  className="rounded-2xl border border-black/5 bg-white p-8 shadow-md"
+                >
+                  <h3 className="text-2xl font-extrabold tracking-tight text-brand-navy">
+                    {person.name}
+                  </h3>
+                  <p className="mt-1 text-base font-semibold text-brand-navy/65">
+                    {person.role}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 7. Our team — the open roles and plans */}
       <section className="relative isolate border-b border-black/5">
         <SectionGlow placement="right" />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
           <Reveal>
             <h2 className={sectionHeading}>{team.heading}</h2>
 
-            {/* Founder carries more visual weight than the open roles: wider
-                card, gradient initials mark, larger type. */}
-            <article className="mt-10 rounded-2xl border border-black/5 bg-white p-8 shadow-md sm:p-10">
-              {/* Mark sits beside the name rather than above it. The founder's
-                  name is itself initials, so stacking the two would read as
-                  the same word twice instead of as an avatar. */}
-              <div className="flex items-center gap-4 sm:gap-5">
-                <span
-                  aria-hidden
-                  className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue to-brand-green text-lg font-extrabold tracking-tight text-brand-navy sm:h-16 sm:w-16 sm:text-xl"
-                >
-                  {team.founder.name}
-                </span>
-                <div>
-                  <h3 className="text-2xl font-extrabold tracking-tight text-brand-navy">
-                    {team.founder.name}
-                  </h3>
-                  <p className="mt-1 text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-                    {team.founder.title}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-                {team.founder.bio}
-              </p>
-            </article>
-
             {/*
               Open roles. No names — a role stays name-less until the hire is
               confirmed, the same rule the marketplace partner slots follow.
             */}
-            <ul className="mt-6 grid gap-5 md:grid-cols-3">
+            <ul className="mt-10 grid gap-5 md:grid-cols-3">
               {team.roles.map((member) => (
                 <HoverLift
                   key={member.role}
@@ -247,7 +256,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 7. Closing CTA */}
+      {/* 8. Closing CTA */}
       <section className="bg-gradient-to-r from-brand-blue to-brand-green">
         <Reveal>
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 lg:px-8">

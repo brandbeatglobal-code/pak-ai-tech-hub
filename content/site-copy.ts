@@ -22,8 +22,8 @@ export type NavLink = {
  * own list puts it in the nav with no second edit and no chance of the two
  * drifting apart.
  *
- * Items with no `menu` are plain links. Pricing and About have no sub-content
- * to show, so they stay that way — do not invent panel rows for them.
+ * Items with no `menu` are plain links. About has no sub-content to show, so
+ * it stays that way — do not invent panel rows for it.
  */
 export type NavMenuSource = "marketplace" | "academy";
 
@@ -35,7 +35,7 @@ export type Step = {
   number: string;
   title: string;
   /**
-   * One line of supporting detail, revealed when the step is expanded.
+   * One line of supporting detail, shown under the step's title.
    *
    * Required, so a step cannot be added without saying what it means. Every
    * one of these restates something the site already establishes elsewhere —
@@ -46,29 +46,12 @@ export type Step = {
   detail: string;
 };
 
-/** One column of "How it works" — the buyer's journey or the provider's. */
-export type HowItWorksSide = {
-  id: "buyers" | "providers";
-  title: string;
-  steps: Step[];
-  /**
-   * The action the column ends on, shown as a button under its last step.
-   *
-   * Each side's CTA is the shared object for that action, not a label typed
-   * again here — see `browseProductsCta` and `startListingCta`.
-   */
-  cta: NavLink;
-};
+/**
+ * The homepage's three views. Each is its own URL — see `nav.homeTabs`.
+ */
+export type HomeTabId = "businesses" | "providers" | "categories";
 
-export type OfferingTab = {
-  /** Stable key used for tab/panel ids and as the React key. */
-  id: string;
-  /** Short label shown on the tab itself. */
-  label: string;
-  headline: string;
-  body: string;
-  link: NavLink;
-};
+export type HomeTab = NavLink & { id: HomeTabId };
 
 export type ValueCard = {
   headline: string;
@@ -85,11 +68,8 @@ export type ValueBadge = {
 };
 
 /**
- * Every industry in the taxonomy.
- *
- * A union rather than `string` so that adding one is a compile error until a
- * glyph is chosen for it in components/nav-icons.tsx — which is what stops a
- * new category rendering as a blank mark in the browse grid.
+ * Every industry in the taxonomy — what the contact form asks a visitor
+ * about their own business. Not a product category (see `ProductCategory`).
  */
 export type IndustryId =
   | "healthcare"
@@ -103,9 +83,9 @@ export type IndustryId =
 
 export type Industry = {
   /**
-   * Stable slug. Used as the browse-category id on the homepage and, for the
-   * four industries that have products, it matches the `ProductCategory` of
-   * those products — which is what lets a category chip filter the grid.
+   * Stable slug. The contact form's Industry select posts it. It is the
+   * visitor's industry, not a product category — the browse categories are
+   * `marketplace.products.categories`, and four ids happen to be shared.
    */
   id: IndustryId;
   name: string;
@@ -124,6 +104,12 @@ export type WorksWithItem = {
   confirmed: boolean;
 };
 
+/** One person in the About page's Leadership section. */
+export type LeadershipMember = {
+  name: string;
+  role: string;
+};
+
 export type TeamMember = {
   /**
    * Only set where a real person has been confirmed. Roles that are still
@@ -136,18 +122,28 @@ export type TeamMember = {
 };
 
 /**
- * Category ids used by the marketplace filter.
+ * The eight product categories, as ids.
  *
- * Only industries that actually have a product appear here. Banking & Finance,
- * Manufacturing, Logistics and Real Estate are deliberately absent — adding a
- * filter for them would show an empty grid. Add one when a product ships.
+ * A union rather than `string` so that adding one is a compile error until a
+ * glyph is chosen for it in components/nav-icons.tsx. The list itself — ids,
+ * labels and order — is `marketplace.products.categories`; everything else
+ * (filters, forms, the homepage Categories view, the header menu, the search
+ * select)
+ * derives from that one list.
+ *
+ * Categories are plain text in the database (`products.category`,
+ * `providers.category`) and checked in code, so adding one needs no schema
+ * change.
  */
 export type ProductCategory =
-  | "cross-industry"
   | "healthcare"
   | "agriculture"
   | "education"
-  | "retail";
+  | "retail"
+  | "cross-industry"
+  | "chatbots"
+  | "ai-agents"
+  | "ai-voice-agents";
 
 export type CategoryFilter = {
   /** "all" is the reset option; every other id must match a ProductCategory. */
@@ -168,22 +164,20 @@ export type Product = {
   category: ProductCategory;
   description: string;
   /**
-   * The bare amount, e.g. "$55/mo" — no "from" prefix baked in.
-   *
-   * The cards that show it prepend `marketplace.products.pricePrefix`, so the
-   * prefix is presentation and the number is data. Every surface that shows a
-   * price reads this same field, which is what stops them quoting different
-   * prices.
+   * The amount as shown, e.g. "$55/mo" — no "from" prefix (owner confirmed,
+   * 2026-09-30: one amount is stored, so there are no tiers to be "from").
+   * Every surface that shows a price reads this same field, which is what
+   * stops them quoting different prices.
    *
    * For a listing it is built by lib/listings.ts from `price_amount` and
    * `price_currency`, plus `marketplace.products.pricePeriod`. The "/mo" is
    * the marketplace's convention, NOT stored data — the table has no
    * billing-period column (see `products.priceAmount` in db/schema.ts).
    *
-   * The eight first-party rows still carry the INTERIM figures they were
-   * seeded with (converted from PKR at roughly 277 PKR/USD and rounded).
-   * Provider submissions carry the provider's own price, in USD only. Do not
-   * add a currency switcher on top of either.
+   * Provider submissions carry the provider's own price, in USD only. (The
+   * eight first-party rows carry interim figures converted from PKR, but they
+   * are no longer listed — see lib/listings.ts.) Do not add a currency
+   * switcher.
    */
   price: string;
   /** Individual product pages do not exist yet. */
@@ -193,24 +187,25 @@ export type Product = {
 /**
  * A product as the marketplace lists it: an approved row from the `products`
  * table, in the `Product` shape the cards and the search already use, plus
- * the name of the provider that lists it. Built only by lib/listings.ts.
+ * the name of the provider that lists it. Built only by lib/listings.ts,
+ * which lists third-party providers only — so there is no "example" flag any
+ * more: every listing is a real provider's reviewed product.
  */
 export type Listing = Product & {
   provider: string;
   /**
-   * An EXAMPLE listing: shown, but not a real listing yet — its price is a
-   * placeholder. Every surface that renders a listing shows
-   * `marketplace.products.exampleBadge` when this is true, and only then.
-   *
-   * Structural, set in one place (lib/listings.ts): true exactly when the
-   * listing's provider has no linked user account (`providers.user_id` is
-   * null). Today that is the first-party house provider and its eight seeded
-   * products; it would also be any in-house demo listing added later. A
-   * provider with a real account — someone who applied and was approved — is
-   * never an example, whoever they are. Do not re-derive this per surface,
-   * and do not replace it with a list of names or ids.
+   * The stored amount as a number, for the AI Solutions page's price sort.
+   * Sorting assumes one currency — true today, since everything written
+   * through the app is USD (see `Product.price`). If another currency is
+   * ever stored, sort within a currency or convert first.
    */
-  example: boolean;
+  priceValue: number;
+};
+
+/** One way to order the AI Solutions grid — see `marketplace.products.sort`. */
+export type SortOption = {
+  id: "newest" | "price-asc" | "price-desc" | "name";
+  label: string;
 };
 
 export type TrainingTier = {
@@ -244,19 +239,13 @@ export type Curriculum = {
 };
 
 /**
- * One of the nine categories a visitor can browse by.
- *
- * `productCategory` is set only where products actually exist under that
- * category, which is what lets a chip filter the listings grid. The five
- * without it are real parts of the taxonomy that have nothing listed yet —
- * selecting one shows the empty-state message rather than a broken grid.
+ * One of the eight categories a visitor can browse by — the product
+ * categories, and nothing else. (It used to be nine, mixing in industries
+ * that no product could be filed under; see `browseCategories`.)
  */
-export type BrowseCategoryId = "cross-industry" | IndustryId;
-
 export type BrowseCategory = {
-  id: BrowseCategoryId;
+  id: ProductCategory;
   label: string;
-  productCategory?: ProductCategory;
 };
 
 /** Placeholder card for a resource that does not exist yet. */
@@ -278,33 +267,46 @@ export type FooterColumn = {
 };
 
 /**
- * Founder details, supplied by the team.
+ * The brand's display name.
  *
- * THIS IS THE ONLY PLACE FOUNDER CONTENT SHOULD BE WRITTEN.
+ * THE ONLY PLACE TO WRITE IT. "PAK AI TechHub", with a space between PAK and
+ * AI. Every page title, heading, email subject and alt text below reads it,
+ * so a rename is this one line.
  *
- * Both pages that show the founder read from this object — the homepage (`/`)
- * as a compact summary card, the About page (`/about`) as the fuller team
- * card with an initials mark. The two differ in presentation only. To change
- * the name, title or bio, change it here; do not restate any of it in
- * `siteCopy.founder`, `siteCopy.about.team.founder`, or a component, or the
- * pages will drift apart the way they previously did.
+ * Display name only. The domain (pakaitechub.com), email addresses, env var
+ * names, the package and repo names and every database identifier keep the
+ * old run-together spelling on purpose — changing any of those breaks
+ * delivery or lookups. db/seed.ts in particular finds the house provider by
+ * its STORED name, which is still "PAK AI TechHub"; see the note there.
  */
-const founder = {
-  name: "NK",
-  title: "Founder & CEO",
-  bio: "Visionary leader driving AI adoption worldwide. Customer care operations expert.",
-};
+const brandName = "PAK AI TechHub";
+
+/**
+ * The leadership team, exactly as the owners supplied it.
+ *
+ * THIS IS THE ONLY PLACE LEADERSHIP CONTENT SHOULD BE WRITTEN. Shown on
+ * /about under "Leadership". Name and role only — no bios, photos, initials
+ * marks or other detail. Add a person or a line here when the owners confirm
+ * it; do not fill gaps.
+ *
+ * It replaces the earlier `founder` block ("NK — Founder & CEO", with a bio,
+ * shown on the homepage and /about), which these roles contradict.
+ */
+const leadership = [
+  { name: "Abdul Rehman", role: "CEO" },
+  { name: "NK", role: "Co-founder" },
+] satisfies LeadershipMember[];
 
 /**
  * The commission model, in one sentence.
  *
  * THIS IS THE ONLY PLACE THE COMMISSION SPLIT SHOULD BE WRITTEN.
  *
- * Two surfaces state it: the last step of the provider column in `howItWorks`,
- * and the body of the `providerCta` band. They previously carried the same
- * sentence typed out twice, which is exactly how the founder content drifted
- * before it was consolidated. Both now read from here, so changing the split
- * is a one-line edit and the two cannot disagree.
+ * The homepage's For AI Providers view states it (`home.providers.intro`).
+ * It used to be typed out twice, in the old "How it works" provider column
+ * and in the provider band, which is exactly how the founder content drifted
+ * before it was consolidated. Everything reads from here, so changing the
+ * split is a one-line edit and no two surfaces can disagree.
  *
  * It is a real term of the marketplace, not a projection. Do not add payout
  * timings, fee tiers or minimums — none of those are settled.
@@ -313,26 +315,50 @@ const commissionTerms =
   "We take a 20% commission only when you make a sale — nothing upfront.";
 
 /**
+ * "Free to list." plus the commission sentence.
+ *
+ * THE ONLY PLACE TO WRITE IT. The homepage's For AI Providers view and the
+ * listing form both open with it.
+ */
+const listingTerms = `Free to list. ${commissionTerms}`;
+
+/**
+ * What an email that already has an account is told.
+ *
+ * THE ONLY PLACE TO WRITE IT. /sign-up (`signUp` in lib/auth-actions.ts) and
+ * the listing form say exactly the same thing, so neither tells an attacker
+ * anything the other does not.
+ */
+const emailTakenMessage = "That email already has an account.";
+
+/**
+ * Read by screen readers after a link that opens a new tab.
+ *
+ * THE ONLY PLACE TO WRITE IT. The review queue's website links and the
+ * partner link on /marketplace both use it.
+ */
+const opensInNewTab = "(opens in a new tab)";
+
+/**
  * The two calls to action that appear in more than one place.
  *
  * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
  *
- * "Browse AI products" was typed out five times — the flagship banner and the
- * pricing, about and contact pages — and "Start listing — it's free" twice,
- * once in the provider band and once in the provider column of `howItWorks`.
- * Same label, same href, same action each time, which is a copy change waiting
- * to half-land. Every one of them now reads from here.
+ * The browse action was once typed out five times, and "Start listing — it's
+ * free" twice. Same label, same href, same action each time, which is a copy
+ * change waiting to half-land. Every one of them now reads from here.
  *
  * Reusing one action's wording everywhere is the point: a visitor should not
- * meet "Browse AI products", "Browse the marketplace" and "See all products"
- * for the same click. If the wording changes, change it here.
+ * meet "Browse AI Solutions", "Browse the marketplace" and "See all products"
+ * for the same click. If the wording changes, change it here. (It became
+ * "Browse AI Solutions" when the menu's "Marketplace" became "AI Solutions".)
  *
  * Not every marketplace link belongs to these — `contact.reachUs` says "Browse
  * the marketplace" in a sentence-like card, which is deliberately its own
  * phrasing rather than a button label.
  */
 const browseProductsCta = {
-  label: "Browse AI products",
+  label: "Browse AI Solutions",
   href: "/marketplace",
 } satisfies NavLink;
 
@@ -340,9 +366,9 @@ const browseProductsCta = {
  * `/start-listing` is not a page. It is a route handler that looks at who is
  * asking and sends them on (app/start-listing/route.ts):
  *
- *   signed out   -> /sign-up?role=provider, which creates a buyer account and
- *                   lands on the provider application
- *   buyer        -> /dashboard/apply, the application form (or its
+ *   signed out   -> /list-your-product, the listing form from step 1, which
+ *                   creates the account and the application together
+ *   buyer        -> /list-your-product, the same form from step 2 (or its
  *                   "under review" state, if they have already applied)
  *   provider     -> /dashboard/products/new
  *
@@ -356,6 +382,47 @@ const startListingCta = {
   label: "Start listing — it's free",
   href: "/start-listing",
 } satisfies NavLink;
+
+/**
+ * "List your product" — the nav button and the listings empty state.
+ *
+ * THE ONLY PLACE TO WRITE THE LABEL. Same destination as `startListingCta`
+ * (the state-aware /start-listing), different words: this one is the short
+ * button label, that one the longer invitation used in the provider bands.
+ */
+const listProductCta = {
+  label: "List your product",
+  href: startListingCta.href,
+} satisfies NavLink;
+
+/**
+ * "Tell us what you need" — for a buyer who cannot find what they are after.
+ *
+ * THE ONLY PLACE TO WRITE IT. The listings empty state and the "Have an AI
+ * challenge?" card both read it; it goes to the contact form.
+ */
+const tellUsCta = {
+  label: "Tell us what you need",
+  href: "/contact",
+} satisfies NavLink;
+
+/**
+ * The trial promise, in the owner's words (confirmed 2026-09-30).
+ *
+ * THIS IS THE ONLY PLACE THE TRIAL WORDING SHOULD BE WRITTEN.
+ *
+ * It replaced "Try free" / "7-day free trial, no card required" everywhere:
+ * no trial mechanism exists yet, and a trial is the provider's to offer, not
+ * the marketplace's to promise. Do not reintroduce a length ("7-day"), "free"
+ * or "no card required" unless the owner settles those terms.
+ *
+ * `tryBeforeYouBuy` is the step title on the For Businesses view and the
+ * label of the calls to action that used to say "Start free trial";
+ * `trialTerms` is the one sentence that says what it means.
+ */
+const tryBeforeYouBuy = "Try before you buy";
+const trialTerms = "A trial is available where the provider offers one.";
+const tryBeforeYouBuyCta = { label: tryBeforeYouBuy, href: "/marketplace" } satisfies NavLink;
 
 /*
  * The way into product submission, for someone who is already a provider.
@@ -390,9 +457,8 @@ const contactEmail = "hello@pakaitechub.com";
 /**
  * The one sentence that says nothing on the marketplace can be bought.
  *
- * THIS IS THE ONLY PLACE TO WRITE IT. Three surfaces read it: the listings
- * intro on the homepage, the same intro on /marketplace, and the footnote
- * under the nav search's results. The listings are real approved products
+ * THIS IS THE ONLY PLACE TO WRITE IT. Two surfaces read it: the listings
+ * intro on /marketplace and the footnote under the nav search's results. The listings are real approved products
  * now, but there is still no checkout — every card's buy button stays
  * disabled, and this sentence is what explains why. Remove it only when
  * checkout exists, and remove it here, once.
@@ -419,6 +485,20 @@ export const siteCopy = {
   account: {
     signedInAs,
     logOut: logOutLabel,
+    /* /sign-up's answer for an email in use — see `emailTakenMessage`. */
+    emailTaken: emailTakenMessage,
+  },
+
+  /*
+   * /sign-up is for buyers. Its Buyer/Provider choice stays, but choosing
+   * Provider only leads to the listing form — it no longer creates anything
+   * (components/auth-form.tsx, and `signUp` refuses "provider").
+   */
+  signUp: {
+    providerRoute: {
+      body: "Providers sign up through the listing form: your account, your details and your company, in three short steps.",
+      cta: { label: "Continue to the listing form", href: "/list-your-product" },
+    },
   },
 
   /**
@@ -449,10 +529,10 @@ export const siteCopy = {
   },
 
   brand: {
-    name: "PAKAI TechHub",
+    name: brandName,
     tagline: "AI for every business, everywhere.",
-    logoAlt: "PAKAI TechHub — AI for every business, everywhere.",
-    brandmarkAlt: "PAKAI TechHub",
+    logoAlt: `${brandName} — AI for every business, everywhere.`,
+    brandmarkAlt: brandName,
   },
 
   /*
@@ -466,14 +546,32 @@ export const siteCopy = {
    * and are now meant to differ.
    */
   meta: {
-    title: "PAKAI TechHub — AI for every business, everywhere.",
+    title: `${brandName} — AI for every business, everywhere.`,
     description:
-      "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
+      "Browse AI products from providers worldwide, try before you buy, and put them to work — all in one place.",
   },
 
   nav: {
+    /*
+     * The homepage's three views, first in the menu row on every page.
+     *
+     * Each is its own URL — `/` (the default view), `/?tab=providers`,
+     * `/?tab=categories` — so a view can be linked to, reloaded, and reached
+     * with Back and Forward. They are links, not ARIA tabs: choosing one
+     * changes the address, which is navigation, and the one on show carries
+     * `aria-current="page"`. See components/site-nav.tsx.
+     */
+    homeTabs: [
+      { id: "businesses", label: "For Businesses", href: "/" },
+      { id: "providers", label: "For AI Providers", href: "/?tab=providers" },
+      { id: "categories", label: "Categories", href: "/?tab=categories" },
+    ] satisfies HomeTab[],
+    /*
+     * "AI Solutions" is the marketplace. The URL stays /marketplace — it is
+     * linked from emails, the redirect in next.config.ts and outside the site.
+     */
     items: [
-      { label: "Marketplace", href: "/marketplace", menu: "marketplace" },
+      { label: "AI Solutions", href: "/marketplace", menu: "marketplace" },
       { label: "Academy", href: "/academy", menu: "academy" },
       { label: "About", href: "/about" },
     ] satisfies NavItem[],
@@ -485,10 +583,11 @@ export const siteCopy = {
     menus: {
       marketplace: {
         heading: "Browse by category",
-        viewAll: "All products",
+        viewAll: "All AI Solutions",
         /**
          * {count} is substituted with the number of listed products in that
          * category — counted from the same listings /marketplace renders.
+         * Never shown as zero: an empty category shows its name only.
          */
         countOne: "1 product",
         countOther: "{count} products",
@@ -500,14 +599,17 @@ export const siteCopy = {
          * headline cannot claim a count the marketplace does not have. Do not
          * hard-code a number here.
          *
-         * `headlineNoCount` is used when the listings could not be read. The
-         * panel then shows no counts at all rather than a wrong one.
+         * `headlineNoCount` is used when nothing is listed yet, or when the
+         * listings could not be read — the panel then shows no counts at all,
+         * rather than "0" or a wrong one.
          */
         featured: {
           eyebrow: "Featured",
           headline: "Browse all {count} AI products",
+          /* Exactly one listed: "all 1 AI products" would read as a slip. */
+          headlineOne: "Browse 1 AI product",
           headlineNoCount: "Browse AI products",
-          body: "Built in-house or vetted from trusted partners, managed in one place.",
+          body: "AI products from independent providers, each reviewed before it lists.",
         },
       },
       academy: {
@@ -545,29 +647,30 @@ export const siteCopy = {
     account: {
       signedInAs,
       href: "/dashboard",
+      /* Below 1024px, where "Signed in as {name}" does not fit. */
+      dashboard: "Dashboard",
       logOut: logOutLabel,
     },
     /*
      * The nav CTA speaks to providers, not buyers.
      *
-     * Buyers already have the search field, the category bar and the whole
-     * listings grid as their entry point; the supply side of the marketplace
-     * has none, so the one button in the bar is theirs.
+     * Buyers already have the search field and AI Solutions as their entry
+     * point; the supply side of the marketplace has none, so the one button
+     * in the bar is theirs.
      *
      * Its own label, but `startListingCta`'s destination — the state-aware
-     * `/start-listing` redirect. It used to point straight at
-     * `/sign-up?role=provider`, which sent a signed-in buyer to a sign-up form.
+     * `/start-listing` redirect, which sends a would-be provider to the
+     * listing form.
      */
-    cta: { label: "List your product", href: startListingCta.href },
+    cta: listProductCta,
     /*
-     * Copy for the search field in the nav, and for the larger one in the
-     * hero, which is the same control at a different size.
+     * Copy for the search field in the nav, and for the homepage's larger
+     * one, which submits to AI Solutions (/marketplace?q=…).
      *
      * The search is real: it filters the approved listings the page was
      * rendered with (lib/listings.ts) by name, description and category.
-     * It filters in the browser — it does not query as you type — and there
-     * is no search results page behind it, so do not write copy here that
-     * promises either.
+     * It filters in the browser — it does not query as you type — so do
+     * not write copy here that promises that.
      */
     search: {
       label: "Search AI products",
@@ -601,7 +704,7 @@ export const siteCopy = {
    * be, further down this file.
    */
   hero: {
-    headline: "Find AI. Try it free. Put it to work.",
+    headline: `Find AI. ${tryBeforeYouBuy}. Put it to work.`,
     /*
      * Deliberately NOT the same string as `meta.description`.
      *
@@ -617,163 +720,148 @@ export const siteCopy = {
      * than typing the same sentence twice.
      *
      * "every product reviewed before it lists" is not a new claim — it is the
-     * review gate already stated in `whyPakai`, `flagship.body` and
-     * `about.different`.
+     * review gate already stated in `whyPakai` and `about.different`.
      */
     subhead:
       "One marketplace, every product reviewed before it lists — browse, test, and buy with confidence.",
-    /** Same trial terms the pricing page states — not a new claim. */
-    reassurance: "7-day free trial, no card required.",
-  },
-
-  trustStrip: {
-    items: [
-      "Every product reviewed",
-      "Free trials included",
-      "Providers worldwide",
-      "New products added regularly",
-    ],
+    /**
+     * The trial terms under the search. Owner confirmed (2026-09-30): it was
+     * "7-day free trial, no card required.", a promise nothing on the site
+     * backed. Now `trialTerms`, the same sentence as the "Try before you buy"
+     * step in `home.businesses`.
+     */
+    reassurance: trialTerms,
   },
 
   /*
-   * REMOVED: the `audience` block ("Who PAKAI TechHub is built for").
+   * The homepage: three views, one per tab in the menu row (`nav.homeTabs`).
+   * The hero copy the first view opens with is `hero`, above.
    *
-   * It held two tiles, "For businesses" and "For AI providers", saying what
-   * each side of the marketplace gets. `howItWorks` below now says the same
-   * thing in more detail and in the same two-column shape, so the tiles were
-   * repeating the section directly beneath them.
+   * ONE SCREEN EACH. From 1024×700 up, a view fits between the header and
+   * the slim homepage footer with no page scroll — measured, not assumed.
+   * If copy here grows, cut something rather than shrinking the type; that
+   * is the rule the layout was built to.
    *
-   * Do not reinstate it. If a point is missing, it belongs in the matching
-   * side of `howItWorks`, not in a second block that has to be kept in step
-   * with it.
-   *
-   * Its caption for the illustration ("AI for modern business") moved to
-   * `providerCta.figureCaption`, which is where that artwork now sits, and
-   * carries the same constraint with it.
+   * None of the step details is a new claim: each restates the trial terms,
+   * the review gate, the provider agreement or the commission split.
    */
-
-  /**
-   * Full-width banner introducing the platform as a whole.
-   *
-   * Every claim in `body` is one the site already makes elsewhere — own
-   * products plus vetted partner tools (`offering`), review before listing
-   * and a free trial on every listing (`about.different`), training with
-   * every subscription (`pricing.included`). Do not add a new claim here;
-   * add it to the section that owns it first.
-   *
-   * The headline must NOT repeat the hero's. The hero owns "Find AI. Try it
-   * free. Put it to work."; this banner sits on the same page. (It previously
-   * owned "One place to find, try, and run AI" — if you are grepping for that
-   * string after a copy change, this comment is why it used to appear twice.)
-   */
-  flagship: {
-    eyebrow: "The PAKAI TechHub platform",
-    headline: "A marketplace built on trust",
-    body: "Our own products and vetted partner tools in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
-    primaryCta: browseProductsCta,
-    secondaryCta: { label: "See how it works", href: "#how-it-works" },
-    /**
-     * The three-up row under the banner is rendered from `offering.tabs` —
-     * same labels, same one-liners, linking down to that section. Do not
-     * retype them here.
-     */
-    linksLabel: "What's on the platform",
+  home: {
+    businesses: {
+      /** The search submits to /marketplace?q=… — the AI Solutions search. */
+      searchSubmit: "Search",
+      stepsHeading: "How it works",
+      /*
+       * The buyer's three steps. "Subscribe to a monthly plan" and "We
+       * handle support and updates" were dropped from an earlier version on
+       * purpose — there is no billing to describe and no support rota behind
+       * a 24/7 claim. Do not reinstate either here.
+       */
+      steps: [
+        {
+          number: "1",
+          title: "Browse",
+          detail: "Search or filter by category to find AI tools for your business.",
+        },
+        {
+          number: "2",
+          /* Owner confirmed (2026-09-30); was "Try free" / "Every listing
+             includes a 7-day free trial, no card required." */
+          title: tryBeforeYouBuy,
+          detail: trialTerms,
+        },
+        {
+          number: "3",
+          title: "Use it",
+          detail: "Put it to work — no long procurement process.",
+        },
+      ] satisfies Step[],
+      cta: browseProductsCta,
+    },
+    providers: {
+      metaTitle: `For AI Providers — ${brandName}`,
+      heading: `List your AI product on ${brandName}`,
+      /* "Free to list." plus the one commission sentence — see `listingTerms`. */
+      intro: listingTerms,
+      stepsHeading: "How listing works",
+      /*
+       * The provider's four steps, in the order the listing form and the
+       * review queue actually run. Step 2 is the agreement the listing form's
+       * consent box names; nothing is listed before it is signed. Do not
+       * promise a review turnaround — no SLA is agreed.
+       */
+      steps: [
+        {
+          number: "1",
+          title: "Fill in the listing form",
+          detail: "Your account, your details and your company, in one short form.",
+        },
+        {
+          number: "2",
+          title: "Sign the provider agreement with us",
+          detail: "We contact you to sign it before any product is listed.",
+        },
+        {
+          number: "3",
+          title: "We review and list your product",
+          detail: "Our team reviews every product before it goes live.",
+        },
+        {
+          number: "4",
+          title: "Reach buyers",
+          detail: "Get discovered by businesses searching the marketplace.",
+        },
+      ] satisfies Step[],
+      /*
+       * Owner confirmed (2026-09-30): keep exactly as written. The 80% is
+       * `commissionTerms`, the one settled economic term; when and how
+       * providers are paid is still not settled, so add nothing to it. It
+       * used to title the last step of the old "How it works" provider column.
+       */
+      payout: "Get paid, keep 80%",
+      cta: startListingCta,
+    },
+    categories: {
+      metaTitle: `Browse by category — ${brandName}`,
+      heading: "Browse by category",
+      intro: "Every AI solution on the marketplace sits in one of these eight categories.",
+      viewAll: { label: "See all AI Solutions", href: "/marketplace" },
+    },
   },
 
   /*
-   * How it works, split by which side of the marketplace you are on.
+   * REMOVED from the homepage when it became three tabbed views, and from
+   * this file with it. Where each piece went:
    *
-   * This used to be one five-step row written entirely from the buyer's point
-   * of view, which left the provider journey unstated anywhere on the page.
-   *
-   * The buyer steps are the same commitments the old row made, minus two that
-   * were platform admin rather than steps a buyer takes ("Subscribe to a
-   * monthly plan", "We handle support and updates"). Those used to be stated
-   * on /pricing; that page is gone, so neither is stated anywhere on the site
-   * now. That is deliberate rather than an oversight — there is no billing to
-   * describe yet and no support rota behind a 24/7 claim. Do not reinstate
-   * either here; put it on the page that owns it when one exists.
+   *   - `trustStrip` ("Every product reviewed", "Free trials included",
+   *     "Providers worldwide", "New products added regularly"). The first
+   *     three are said elsewhere: the review gate on /about and in the
+   *     steps, the trial in "Try before you buy", "Worldwide marketplace" in the
+   *     /about facts. "New products added regularly" was dropped: at launch
+   *     nothing is listed, so it was not true.
+   *   - `flagship` (the dark "A marketplace built on trust" banner). Every
+   *     claim in it was already made elsewhere — /about says "a marketplace
+   *     built on trust" in so many words. Its artwork still leads the nav's
+   *     AI Solutions panel.
+   *   - `howItWorks`. The buyer steps are `home.businesses.steps`, word for
+   *     word. The provider steps were replaced by the four in
+   *     `home.providers.steps`; the old last step's title is
+   *     `home.providers.payout`.
+   *   - `providerCta` (the provider band). Its heading and body are
+   *     `home.providers.heading` and `.intro`; the skyline illustration and
+   *     its caption "AI for modern business" were dropped.
+   *   - `categoryBrowse`. The grid is the Categories view,
+   *     `home.categories`; the category bar under the hero went with the
+   *     homepage listings grid, which /marketplace already shows.
+   *   - `offering` ("What you get": Marketplace and Industry Solutions tabs).
+   *     The Marketplace tab restated the flagship banner. The Industry
+   *     Solutions tab described healthcare, agriculture, education and
+   *     retail solutions that nothing on the marketplace currently offers.
+   *   - `finalCta` ("Ready to bring AI into your business?" / Get started).
+   *     The For Businesses view ends on the same action.
+   *   - `whyPakai` and `academyTeaser` moved to /marketplace, under the
+   *     grid; `resources` moved to /academy; `worksWith` was already on
+   *     /marketplace and stays there.
    */
-  howItWorks: {
-    heading: "How it works",
-    /**
-     * Each step carries a `detail` line, revealed when the step is expanded.
-     *
-     * None of them is a new claim — every one restates something the site
-     * already establishes, noted per step below. Step 1 of each column is the
-     * one open by default, so the section says something before anyone
-     * interacts with it.
-     */
-    sides: [
-      {
-        id: "buyers",
-        title: "For buyers",
-        steps: [
-          {
-            number: "1",
-            title: "Browse",
-            /* The search field and category bar directly above this section. */
-            detail:
-              "Search or filter by category to find AI tools for your business.",
-          },
-          {
-            number: "2",
-            title: "Try free",
-            /* Same trial terms as `hero.reassurance`. */
-            detail:
-              "Every listing includes a 7-day free trial, no card required.",
-          },
-          {
-            number: "3",
-            title: "Use it",
-            /* The no-procurement point the audience tiles used to carry. */
-            detail: "Put it to work — no long procurement process.",
-          },
-        ],
-        /* Where the buyer journey lands: the marketplace itself. */
-        cta: browseProductsCta,
-      },
-      {
-        id: "providers",
-        title: "For providers",
-        steps: [
-          {
-            number: "1",
-            title: "Sign up and apply",
-            /*
-              Providers are approved, not self-declared: signing up creates an
-              account, and the application at /dashboard/apply is what gets
-              reviewed. This step used to promise "a provider account in a
-              couple of minutes", which stopped being true when that review
-              gate was added. Do not promise a review turnaround here — no SLA
-              has been agreed.
-            */
-            detail: "Create a free account and tell us about your business.",
-          },
-          {
-            number: "2",
-            title: "List your product",
-            /* The review gate stated in `whyPakai` and `about.different`. */
-            detail: "Submit it for review by our team before it goes live.",
-          },
-          {
-            number: "3",
-            title: "Reach buyers worldwide",
-            /* The marketplace search this page now leads with. */
-            detail: "Get discovered by businesses searching the marketplace.",
-          },
-          {
-            number: "4",
-            title: "Get paid, keep 80%",
-            /* Read from the shared constant — see `commissionTerms`. */
-            detail: commissionTerms,
-          },
-        ],
-        /* The same action, and the same button, as the provider band below. */
-        cta: startListingCta,
-      },
-    ] satisfies HowItWorksSide[],
-  },
 
   /*
    * REMOVED: the `stats` block and the dark stat bar it fed.
@@ -786,43 +874,11 @@ export const siteCopy = {
    * Do not replace it with other figures. There is no honest number to put
    * above the fold on this page today: every count available is a count of
    * placeholder data. The one true economic fact the marketplace has is the
-   * commission split, and that is stated in words in `howItWorks` and
-   * `providerCta` rather than dressed up as a metric.
+   * commission split, and that is stated in words in `home.providers`
+   * rather than dressed up as a metric.
    */
 
-  /*
-   * The provider recruitment band.
-   *
-   * `body` is "Free to list." plus the shared `commissionTerms` sentence —
-   * the same words the last step of the provider column in `howItWorks`
-   * shows, read from one constant rather than typed out in both places. See
-   * the note on `commissionTerms` for what must not be added to it.
-   */
-  providerCta: {
-    heading: "List your AI product on PAKAI TechHub",
-    body: `Free to list. ${commissionTerms}`,
-    cta: startListingCta,
-    /* See the note on the removed `audience` block: keep this generic. */
-    figureCaption: "AI for modern business",
-  },
-
-  /*
-   * The nine browse categories, rendered as the category bar under the hero
-   * and as the grid further down.
-   *
-   * Name only, by design. A product count would read "0" for five of the nine
-   * and "1" for three of the rest, which says the marketplace is empty rather
-   * than that it is new. Add counts when the counts are worth showing.
-   *
-   * The list itself is derived in `browseCategories` below, from the industry
-   * taxonomy — there is no second list of categories to keep in step.
-   */
-  categoryBrowse: {
-    heading: "Browse by category",
-    /** Accessible name for the horizontally scrolling bar under the hero. */
-    barLabel: "Browse by category",
-  },
-
+  /** On /academy — learning material is the Academy's to promise. */
   resources: {
     heading: "Resources",
     intro: "Guides and updates on putting AI to work — coming soon.",
@@ -839,58 +895,9 @@ export const siteCopy = {
     ] satisfies ResourceSlot[],
   },
 
-  offering: {
-    heading: "What you get with PAKAI TechHub",
-    /**
-     * Tab 2 deliberately avoids naming any marketplace partner. Do not add
-     * CustomGPT, BotPenguin, TruBot or any other provider here until that
-     * partnership is confirmed the same way KladAI's was — see `worksWith`.
-     */
-    tabs: [
-      {
-        id: "own-products",
-        label: "Own AI Products",
-        headline: "Ready to deploy, built in-house",
-        /*
-         * Describes the in-house products without naming them. They used to be
-         * listed here by name, which meant renaming one left this sentence
-         * quoting a product that no longer existed. The names live in the
-         * `products` table (read through lib/listings.ts); if this line needs
-         * them, read them from there rather than typing them here.
-         *
-         * NOT A CONTRADICTION with the "Example" badge — confirmed on
-         * 2026-09-24. The products this tab describes (support, analytics,
-         * content, CRM) are built and deployable, so "built in-house" and
-         * "ready to deploy" are accurate as written. What is not final is
-         * their MARKETPLACE LISTINGS: the house provider's listings carry the
-         * "Example" badge because the listing is not live yet and its price is
-         * a placeholder (`marketplace.products.exampleNote`), not because the
-         * product does not exist. Keep the two meanings apart: if either one
-         * changes — the products, or the state of their listings — revisit
-         * this tab and `exampleNote` together.
-         */
-        body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
-        link: { label: "Learn more", href: "#" },
-      },
-      {
-        id: "marketplace",
-        label: "Marketplace",
-        headline: "Browse trusted AI tools from our partners",
-        body: "Access vetted third-party AI products alongside our own — one marketplace, one bill, one place to manage them all.",
-        link: { label: "Learn more", href: "#" },
-      },
-      {
-        id: "industry-solutions",
-        label: "Industry Solutions",
-        headline: "Built for how your industry actually works",
-        body: "Healthcare, agriculture, education, and retail solutions shaped around the way those industries actually run — not generic tools bent to fit.",
-        link: { label: "Learn more", href: "#" },
-      },
-    ] satisfies OfferingTab[],
-  },
-
+  /** Buyer-facing reasons, on /marketplace under the grid. */
   whyPakai: {
-    heading: "Why PAKAI TechHub",
+    heading: `Why ${brandName}`,
     cards: [
       {
         headline: "Affordable by design",
@@ -906,7 +913,7 @@ export const siteCopy = {
       },
       {
         headline: "Training comes standard",
-        body: "Every subscription includes AI Academy access, so your team learns to use it, not just switch it on.",
+        body: `Every subscription includes ${brandName} Academy access, so your team learns to use it, not just switch it on.`,
       },
       {
         headline: "Transparent pricing, always",
@@ -916,15 +923,18 @@ export const siteCopy = {
   },
 
   /**
-   * The industry taxonomy, and the source of record for the browse categories
-   * below. Nothing else may define an industry list.
+   * The industry taxonomy. Nothing else may define an industry list.
    *
-   * The homepage no longer renders this as its own section — the category
-   * browse grid and the category bar took that over, and both show name only.
+   * Read by the contact form's Industry select (and its server-side check):
+   * the visitor's own industry. It is NOT the browse categories — those are
+   * `marketplace.products.categories`, since a visitor browses by what can
+   * actually be listed. Banking & Finance, Manufacturing, Logistics and Real
+   * Estate used to appear as browse categories no product could be filed
+   * under; they remain here, as industries a business can be in.
+   *
    * The descriptions are kept because they are the only written account of
    * what each industry covers, and the next surface that needs one (an
-   * industry page, a category landing page) should read them from here rather
-   * than write new ones.
+   * industry page) should read them from here rather than write new ones.
    */
   industries: {
     heading: "Industries we cover",
@@ -963,6 +973,7 @@ export const siteCopy = {
 
   worksWith: {
     heading: "Works with",
+    newTab: opensInNewTab,
     /**
      * Only confirmed partners get a name and a link. Unconfirmed slots stay as
      * descriptive labels — do not invent a brand name for them.
@@ -970,8 +981,15 @@ export const siteCopy = {
     items: [
       {
         name: "KladAI",
+        /*
+         * "— available now through the PAK AI TechHub marketplace" was cut:
+         * the marketplace lists only third-party providers' reviewed
+         * products and, at launch, none — the grid on the same page says so.
+         * Owner confirmed (2026-09-30): KladAI stays in "Works with" only, not
+         * as a listing, and the clause stays cut.
+         */
         description:
-          "An autonomous AI agent that handles documents, data, research, and presentations — available now through the PAKAI TechHub marketplace.",
+          "An autonomous AI agent that handles documents, data, research, and presentations.",
         href: "https://kladai.com",
         confirmed: true,
       },
@@ -989,22 +1007,24 @@ export const siteCopy = {
 
   marketplace: {
     meta: {
-      title: "Marketplace — PAKAI TechHub",
+      title: `AI Solutions — ${brandName}`,
       description:
-        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+        "AI products from vetted independent providers — browse, compare, and try before you buy.",
     },
+    /*
+     * The page's title block. "Browse AI Solutions", to match the menu item
+     * it is reached from.
+     *
+     * REMOVED with the restyle: the headline "Every AI product your business
+     * needs, in one place" and the two hero buttons — "Start free trial"
+     * (-> /sign-up) and "How it works" (-> /). The page now opens on the
+     * search and the filters; the buyer steps are the homepage's default
+     * view, and a trial is the provider's to offer (see `trialTerms`).
+     */
     hero: {
-      headline: "Every AI product your business needs, in one place",
+      headline: "Browse AI Solutions",
       subhead:
-        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
-      /*
-       * NOT /marketplace. This button sits on /marketplace, so pointing it
-       * there would make the page's own primary call to action reload the page
-       * you are already looking at. A trial starts with an account, so it goes
-       * to /sign-up — the nearest destination that actually does something.
-       */
-      primaryCta: { label: "Start free trial", href: "/sign-up" },
-      secondaryCta: { label: "How it works", href: "/#how-it-works" },
+        "AI products from vetted independent providers — browse, compare, and try before you buy.",
     },
     products: {
       /*
@@ -1013,67 +1033,87 @@ export const siteCopy = {
        * changing what the marketplace shows means changing the table, through
        * the review queue.
        *
-       * "Listed products", not "Our products", "Featured" or "Popular":
-       * providers other than PAKAI TechHub list here, and nothing measures
-       * popularity or picks features. It used to read "Example listings" when
-       * the grid was eight illustrative entries in this file; the heading and
-       * the intro changed when the grid started reading the table.
+       * "All AI Solutions", not "Our products", "Featured" or "Popular":
+       * independent providers list here, and nothing measures popularity or
+       * picks features. (Earlier headings were "Example listings", then
+       * "Listed products".)
        *
        * Still not buyable. There is no checkout, so every card's buy button is
        * disabled (`buyLabel`) and the intro says why (`notBuyableYet`).
        *
-       * Some listings are EXAMPLES (`Listing.example`): the first-party
-       * products, which are not real listings yet — their prices are
-       * placeholders. Those, and only those, carry `exampleBadge`, and
-       * `exampleNote` says what the badge means wherever one is on show. A
-       * real provider's approved product never carries it.
+       * Third-party only: lib/listings.ts leaves out the house provider's
+       * seeded products, so every listing here is an independent provider's
+       * reviewed product. There is no "Example" badge any more because there
+       * is nothing left to badge.
        */
-      heading: "Listed products",
-      intro: `Products listed by providers on PAKAI TechHub. ${notBuyableYet}`,
-      /**
-       * Badge on every EXAMPLE listing card, and on its row in the nav
-       * search results. Dashed outline, like the other "not yet" markers, so
-       * it reads as a status rather than a product attribute.
-       */
-      exampleBadge: "Example",
+      /** "All AI Solutions – 3 found". With a category chosen, its label replaces `allLabel`. */
+      allLabel: "All AI Solutions",
+      /** Never shown as "0 found": with nothing to show, the count is left off. */
+      foundCount: "{count} found",
+      intro: `Products listed by providers on ${brandName}. ${notBuyableYet}`,
+      searchLabel: "Search AI Solutions",
+      searchPlaceholder: "Search by name, description or category",
+      sortLabel: "Sort by",
       /*
-       * Shown under the intro, only when at least one listing is an example.
-       *
-       * Deliberately narrow: it says the LISTING is not live and the PRICE is
-       * a placeholder — nothing about the product itself. The in-house
-       * products are built and deployable (confirmed 2026-09-24), which is
-       * what the "Own AI Products" tab in `offering` says; this line must not
-       * be widened into suggesting otherwise. If that tab changes, revisit
-       * this line.
+       * The four orders, as the owner named them. "Newest first" is the
+       * order lib/listings.ts returns: most recently approved first.
        */
-      exampleNote: "Listings marked Example are not live yet — their prices are placeholders.",
+      sort: [
+        { id: "newest", label: "Newest first" },
+        { id: "price-asc", label: "Price low to high" },
+        { id: "price-desc", label: "Price high to low" },
+        { id: "name", label: "Name A-Z" },
+      ] satisfies SortOption[],
+      /*
+       * The static card after the results. Its action is `tellUsCta`, the
+       * same "Tell us what you need" the empty state offers. It promises
+       * nothing about what happens next — no matching service exists.
+       */
+      challenge: {
+        heading: "Have an AI challenge?",
+        body: "Describe the problem you want AI to solve. It tells us which providers to bring to the marketplace.",
+        cta: tellUsCta,
+      },
       /*
        * The buy button on each card, permanently disabled. There is no
        * checkout, so a working-looking button would be a lie; a disabled one
-       * that says why is not. Do not wire this to a cart. It stays disabled
-       * whether a listing is first-party or a provider's — that is about
-       * checkout, not about whether the data is real.
+       * that says why is not. Do not wire this to a cart. It is about
+       * checkout, not about whether the listing is real — every listing is.
        */
       buyLabel: "Coming soon",
       /** Under the nav search's results. Same sentence as the intro. */
       searchFootnote: notBuyableYet,
       /** {provider} is the listing provider's business name. */
       byProvider: "by {provider}",
-      filterLegend: "Filter products by category",
-      /**
-       * Announced to screen readers when the filter changes the grid. Kept as
-       * strings with a {count} placeholder rather than a function so the whole
-       * block stays serializable across the server/client boundary — and so a
-       * translator can reorder the sentence.
-       */
-      resultCountOne: "1 product shown",
-      resultCountOther: "{count} products shown",
+      filterLegend: "Filter by category",
       /*
-       * Shown when a category has no approved listing — which is true of
-       * several right now, and is the honest answer: the category is real,
-       * nothing is listed in it yet.
+       * THE EMPTY LAUNCH STATE — components/listings-empty.tsx, on every
+       * surface that lists products (the /marketplace grid and the nav
+       * search).
+       *
+       * At launch nothing is listed: the house provider's products are left
+       * out, and no provider has been approved yet. That is said plainly, as
+       * news rather than as an error, with the two things a visitor can do
+       * about it. It makes no claim about how many providers are in review —
+       * nothing counts that publicly.
+       *
+       * `categoryHeading` / `categoryBody` are for a filter narrowed to one
+       * category with nothing in it while other categories have listings.
+       * {category} is the category's label.
+       *
+       * `searchHeading` is for a search that matched nothing while listings
+       * exist. {query} is what was typed.
        */
-      emptyMessage: "No products in this category yet.",
+      emptyState: {
+        heading: "Providers are joining",
+        body: "Every AI product is reviewed before it lists, so the first listings appear here as providers pass review. Have a product to list, or a problem you want AI to solve?",
+        categoryHeading: "Nothing in {category} yet",
+        categoryBody: "Providers are joining and this category is open. List your product here, or tell us what you need.",
+        searchHeading: "No products match {query}",
+        searchBody: "Try another word or category, or tell us what you need.",
+        listProduct: listProductCta,
+        tellUs: tellUsCta,
+      },
       /*
        * Shown instead of the grid when the listings could not be read (the
        * database is unreachable or not configured). Not the empty message:
@@ -1081,9 +1121,17 @@ export const siteCopy = {
        */
       unavailableMessage:
         "The listings could not be loaded just now. Please try again in a few minutes.",
-      trainingBadge: "Training included",
-      /** Prepended to `Product.price` on the marketplace cards only. */
-      pricePrefix: "from",
+      /*
+       * REMOVED with the restyle: the "Training included" line on every
+       * card. The cards now carry what the owner listed — provider, category,
+       * description, price — and the Academy teaser under the grid says that
+       * every product comes with training.
+       */
+      /*
+       * REMOVED: `pricePrefix` ("from"). Owner confirmed (2026-09-30): a price
+       * reads "$X/mo". Only one amount is stored per product, so "from"
+       * suggested tiers that do not exist.
+       */
       /*
        * Appended to every price lib/listings.ts formats. A MARKETPLACE-WIDE
        * CONVENTION, not stored data: `products` has an amount and a currency
@@ -1092,11 +1140,22 @@ export const siteCopy = {
        */
       pricePeriod: "/mo",
       /*
-       * The filter list, and the one map between the two category
-       * vocabularies: `id` is what `Product.category` and every filter hold,
-       * `label` is what the `products.category` column holds. lib/listings.ts
-       * converts label to id through this list; lib/product-submission.ts
-       * takes its allowed labels from it.
+       * THE CATEGORY LIST — the only place categories are written.
+       *
+       * Every category surface derives from it: the /marketplace filter, the
+       * homepage category grid, the nav's category menu and search select
+       * (via `browseCategories`), the product-submission and provider
+       * listing forms (lib/product-submission.ts), and lib/listings.ts's
+       * label-to-id map. Add a category here and to the `ProductCategory`
+       * union, then give it a glyph in components/nav-icons.tsx — the build
+       * fails until you do.
+       *
+       * It is also the one map between the two category vocabularies: `id`
+       * is what `Product.category` and every filter hold, `label` is what the
+       * `products.category` and `providers.category` columns hold. Both are
+       * plain text columns, so a new category needs no migration. Never
+       * rename a label once rows use it: lib/listings.ts matches stored
+       * labels against this list, and a renamed one would drop those rows.
        */
       categories: [
         { id: "all", label: "All" },
@@ -1105,18 +1164,21 @@ export const siteCopy = {
         { id: "education", label: "Education" },
         { id: "retail", label: "Retail" },
         { id: "cross-industry", label: "Cross-Industry" },
+        { id: "chatbots", label: "Chatbots" },
+        { id: "ai-agents", label: "AI Agents" },
+        { id: "ai-voice-agents", label: "AI Voice Agents" },
       ] satisfies CategoryFilter[],
     },
     partners: {
       heading: "Marketplace partners",
       /*
-       * The partner list itself is shared with the homepage `worksWith`
-       * section, so both stay in step. The same constraint applies here: only
+       * The partner list itself is `worksWith` (it used to be shown on the
+       * homepage too). The same constraint applies here: only
        * confirmed partners get a name and a link. Do not add a named partner
        * until that partnership is confirmed the way KladAI's was.
        */
       intro:
-        "Third-party AI products available alongside our own, billed and managed in one place.",
+        "AI products from independent providers, managed in one place.",
     },
   },
 
@@ -1136,23 +1198,15 @@ export const siteCopy = {
    * restating them — that was the point of the earlier refactor.
    */
 
-  /** Homepage founder section. Values come from the shared `founder` source. */
-  founder: {
-    heading: "Who is behind PAKAI TechHub",
-    ...founder,
-  },
-
-  /** Homepage teaser that points at the Academy page. */
+  /** Teaser that points at the Academy page, under the AI Solutions grid. */
   academyTeaser: {
     heading: "Every product comes with training.",
     body:
-      "Get certified through TechHub Academy — workshops, courses, and certifications included with your subscription.",
+      /* Owner confirmed (2026-09-30): the name is "PAK AI TechHub Academy"
+         ("TechHub Academy" before the rename). `whyPakai` uses it too; the
+         Academy's own page and the menu say "Academy" for short. */
+      `Get certified through the ${brandName} Academy — workshops, courses, and certifications included with your subscription.`,
     cta: { label: "Explore the academy", href: "/academy" },
-  },
-
-  finalCta: {
-    heading: "Ready to bring AI into your business?",
-    cta: { label: "Get started", href: "/marketplace" },
   },
 
   footer: {
@@ -1167,13 +1221,13 @@ export const siteCopy = {
       {
         heading: "Product",
         links: [
-          { label: "Marketplace", href: "/marketplace" },
+          { label: "AI Solutions", href: "/marketplace" },
           { label: "Academy", href: "/academy" },
         ],
       },
       {
         heading: "Get started",
-        links: [{ label: "Start free trial", href: "/marketplace" }],
+        links: [tryBeforeYouBuyCta],
       },
     ] satisfies FooterColumn[],
     connect: {
@@ -1192,12 +1246,14 @@ export const siteCopy = {
         { label: "Instagram", icon: "instagram", href: "#" },
       ] satisfies SocialLink[],
     },
-    copyright: `© ${new Date().getFullYear()} PAKAI TechHub. All rights reserved.`,
+    copyright: `© ${new Date().getFullYear()} ${brandName}. All rights reserved.`,
+    /** Accessible name of the homepage's one-line footer links. */
+    slimLabel: "Site links",
   },
 
   about: {
     meta: {
-      title: "About — PAKAI TechHub",
+      title: `About — ${brandName}`,
       description:
         "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
     },
@@ -1210,11 +1266,11 @@ export const siteCopy = {
     },
     story: {
       heading: "Our story",
-      body: "PAKAI TechHub was born from a simple observation: businesses everywhere want to use AI, but finding the right tool, trusting it actually works, and getting it running is still too hard. We built PAKAI TechHub to fix that — a single marketplace where any business can discover AI products, try them before committing, and any AI provider can reach customers worldwide.",
+      body: `${brandName} was born from a simple observation: businesses everywhere want to use AI, but finding the right tool, trusting it actually works, and getting it running is still too hard. We built ${brandName} to fix that — a single marketplace where any business can discover AI products, try them before committing, and any AI provider can reach customers worldwide.`,
     },
     different: {
       heading: "What makes us different",
-      body: "We're not just another software directory. PAKAI TechHub is a marketplace built on trust — every product is evaluated by our team before it goes live, every listing includes a free trial, and providers only pay when they make a sale.",
+      body: `We're not just another software directory. ${brandName} is a marketplace built on trust — every product is evaluated by our team before it goes live, you can try before you buy where the provider offers a trial, and providers only pay when they make a sale.`,
     },
     facts: {
       label: "Company facts",
@@ -1230,8 +1286,9 @@ export const siteCopy = {
     values: {
       heading: "Our values",
       /**
-       * Deliberately terser than the homepage `whyPakai` cards — this is a
-       * quick-glance badge row, not a second telling of the same argument.
+       * Deliberately terser than the `whyPakai` cards (now on /marketplace) —
+       * this is a quick-glance badge row, not a second telling of the same
+       * argument.
        */
       items: [
         { label: "Accessibility", body: "AI for every budget" },
@@ -1239,7 +1296,8 @@ export const siteCopy = {
         { label: "Trust & Safety", body: "Every product reviewed before listing" },
         { label: "Training First", body: "Every product + training" },
         { label: "Transparency", body: "Clear pricing, no tricks" },
-        { label: "Innovation", body: "First to market, always" },
+        /* REMOVED: "Innovation — First to market, always", on the owner's
+           instruction (2026-09-30). */
       ] satisfies ValueBadge[],
     },
     /*
@@ -1256,13 +1314,13 @@ export const siteCopy = {
      * data is sourced later, add it back with a citation — do not restore this
      * section from memory or estimate it.
      */
+    /* Read from the shared `leadership` source at the top of this file. */
+    leadership: {
+      heading: "Leadership",
+      people: leadership,
+    },
     team: {
       heading: "Our team",
-      /**
-       * The same object the homepage renders — see the shared `founder` source
-       * at the top of this file. Do not re-declare the values here.
-       */
-      founder,
       /**
        * Open roles. These are intentionally name-less until a hire is
        * confirmed — do not invent a name, the way partner names are not
@@ -1283,7 +1341,7 @@ export const siteCopy = {
         {
           role: "Head of Academy",
           roleDetail: "Training & Education",
-          bio: "AI educator building the PAKAI TechHub training curriculum.",
+          bio: `AI educator building the ${brandName} training curriculum.`,
         },
       ] satisfies TeamMember[],
       keyHires: {
@@ -1306,14 +1364,14 @@ export const siteCopy = {
       },
     },
     closingCta: {
-      heading: "Questions about PAKAI TechHub?",
+      heading: `Questions about ${brandName}?`,
       cta: { label: "Contact us", href: "/contact" },
     },
   },
 
   academy: {
     meta: {
-      title: "Academy — PAKAI TechHub",
+      title: `Academy — ${brandName}`,
       description:
         "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
     },
@@ -1321,7 +1379,7 @@ export const siteCopy = {
       headline: "AI training for every level of your team",
       subhead:
         "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
-      primaryCta: { label: "Start free trial", href: "/marketplace" },
+      primaryCta: tryBeforeYouBuyCta,
       secondaryCta: { label: "Talk to us", href: "/contact" },
     },
     tiers: {
@@ -1422,20 +1480,20 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to build AI skills on your team?",
-      cta: { label: "Start free trial", href: "/marketplace" },
+      cta: tryBeforeYouBuyCta,
     },
   },
 
   contact: {
     meta: {
-      title: "Contact — PAKAI TechHub",
+      title: `Contact — ${brandName}`,
       description:
-        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+        `Questions about pricing, a product, or partnering with ${brandName} — reach out directly.`,
     },
     hero: {
       headline: "Let's talk",
       subhead:
-        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+        `Questions about pricing, a product, or partnering with ${brandName} — reach out directly.`,
       reach: "We work with businesses and AI providers worldwide.",
       /* Opens the visitor's mail client. See the note on `details` below. */
       primaryCta: { label: "Email us", href: `mailto:${contactEmail}` },
@@ -1559,7 +1617,7 @@ export const siteCopy = {
    * The category options are NOT listed here. They are derived from
    * `marketplace.products.categories` by the form component, so the dropdown
    * cannot offer a category the marketplace has no filter for. The commission
-   * line reads `commissionTerms`, the same constant the homepage bands use —
+   * line reads `commissionTerms`, the same constant the homepage uses —
    * do not retype the split.
    *
    * Nothing here may promise a review turnaround. No SLA has been agreed, and
@@ -1567,7 +1625,7 @@ export const siteCopy = {
    */
   providerSubmit: {
     meta: {
-      title: "Submit a product — PAKAI TechHub",
+      title: `Submit a product — ${brandName}`,
     },
     heading: "Submit a product for review",
     /** Label on the link into this page from the provider dashboard panel. */
@@ -1624,65 +1682,102 @@ export const siteCopy = {
     },
   },
   /*
-   * The provider application, at /dashboard/apply, and the application panel
-   * on a buyer's /dashboard.
+   * The provider listing form, at /list-your-product (and at /dashboard/apply,
+   * which shows the same form), plus the states shown instead of it and the
+   * application panel on a buyer's /dashboard.
    *
-   * A buyer applies; an admin reviews it in the queue at /dashboard/admin;
-   * approval makes them a provider, and either decision emails them (see
-   * `reviewEmails`). Nothing here may promise a turnaround — no SLA has been
-   * agreed.
+   * ONE FORM, THREE STEPS: Account, Personal, Company (called Business for an
+   * individual). It replaced a separate provider sign-up followed by an
+   * application. Submitting it creates a buyer account if the visitor has
+   * none, and the pending application, in one transaction
+   * (lib/listing-actions.ts). Nobody becomes a provider here: an admin
+   * approves in the queue at /dashboard/admin — after the provider agreement
+   * is signed — and either decision emails them (see `reviewEmails`).
    *
-   * The category options are not listed here. The form reuses
-   * `CATEGORY_LABELS` from lib/product-submission.ts, the same five the
-   * product form offers, so a provider and their products are filed under one
-   * vocabulary. The commission line reads `commissionTerms`.
-   *
-   * The decline reason is stored (`providers.rejection_reason`) and sent in
-   * the decline email, but deliberately NOT shown anywhere in this block: the
-   * review-queue pass left the applicant-facing resubmit flow exactly as it
-   * was. Showing it on /dashboard/apply is a small, separate change.
+   * Nothing here may promise a review turnaround — no SLA has been agreed.
+   * The category options are not listed here: the form uses
+   * `CATEGORY_LABELS` (from `marketplace.products.categories`), the same list
+   * as the product form. The commission line is `listingTerms`.
    */
-  providerApplication: {
+  providerListing: {
     meta: {
-      title: "Apply to become a provider — PAKAI TechHub",
+      title: `List your product — ${brandName}`,
     },
-    heading: "Apply to become a provider",
+    heading: "List your AI product",
     intro:
-      "Tell us about your business. Every provider is reviewed before they can list products in the marketplace.",
-    commission: commissionTerms,
-    /* Shown above the form when a rejected applicant comes back to it. */
+      "Three short steps. Every provider is reviewed, and signs a provider agreement with us, before anything is listed.",
+    terms: listingTerms,
+    /* Shown above the form when a declined applicant comes back to it. */
     resubmitNote:
       "Your previous application was not approved. Your answers are below — update them and submit again.",
+    /* Step 1 is skipped for someone already signed in; this says why. */
+    signedInNote: "You are signed in, so your application will be linked to this account.",
+    stepper: {
+      label: "Progress",
+      /* {n} of 3 — read before each step's name. */
+      stepOf: "Step {n} of 3",
+      account: "Account",
+      personal: "Personal",
+      company: "Company",
+      /* Step 3's name for an individual. */
+      business: "Business",
+    },
+    registeringAs: {
+      legend: "I am registering as",
+      organisation: {
+        title: "Organisation",
+        detail: "A company or team listing its product",
+      },
+      individual: {
+        title: "Individual",
+        detail: "An independent developer or creator",
+      },
+    },
     fields: {
+      email: "Work email",
+      password: "Password",
+      confirmPassword: "Confirm password",
+      fullName: "Full name",
+      phone: "Phone number",
+      jobTitle: "Job title",
+      companyName: "Company name",
       businessName: "Business name",
-      description: "What does your business do?",
-      category: "Category",
       website: "Website",
-      reason: "Why do you want to list on PAKAI TechHub?",
+      category: "Category",
+      description: "Short description",
+      reason: `Why do you want to list on ${brandName}?`,
+      /* Required. Worded by the owner; do not soften it. */
+      consent: `I understand ${brandName} will contact me to sign a provider agreement before any product is listed.`,
     },
     selectPlaceholder: "Select a category",
     optionalLabel: "optional",
     notes: {
-      description: "40 to 600 characters.",
-      website: "For example, example.com.",
+      password: "At least 8 characters.",
+      phone: "Include your country code, for example +92 300 1234567.",
+      description: "What the product does, in 40 to 600 characters.",
       reason: "20 to 600 characters.",
+      website: "For example, example.com.",
     },
+    continue: "Continue",
+    back: "Back",
     submit: "Submit application",
     submitting: "Submitting…",
-    /* Shown only after the row is actually written, never optimistically. */
-    successHeading: "Application submitted",
-    successBody:
-      "Your application is pending review. Your dashboard will show when that changes.",
-    backToDashboard: "Back to dashboard",
+    haveAccount: "Already have an account?",
+    logIn: { label: "Log in", href: "/login" },
     /*
-     * What the page shows instead of the form. `pending` and `approved` are
-     * reached by a buyer; `alreadyProvider` by a provider who follows an old
-     * link here.
+     * The page shown after a successful submit, and the states shown instead
+     * of the form. `pending` and `approved` are reached by a buyer;
+     * `alreadyProvider` by a provider who follows an old link here.
      */
+    submitted: {
+      heading: "Application submitted",
+      body: "Your application is pending review. We will contact you to sign the provider agreement; your dashboard shows where it stands.",
+      cta: { label: "Go to your dashboard", href: "/dashboard" },
+    },
     states: {
       pending: {
         heading: "Your application is under review",
-        body: "We have your application and will review it before you can list products. You do not need to do anything else.",
+        body: "We have your application. We will contact you to sign the provider agreement before anything is listed. You do not need to do anything else.",
       },
       /*
        * Approved, but the account is still a buyer. Only reachable if a review
@@ -1701,15 +1796,30 @@ export const siteCopy = {
         cta: submitProductCta,
       },
     },
+    /* Checked in the browser before Continue, and again on the server. */
     validation: {
+      providerType: "Choose Organisation or Individual.",
+      email: "Enter a valid email address.",
+      password: "Use at least 8 characters.",
+      confirmPassword: "The passwords do not match.",
+      fullName: "Use between 2 and 100 characters.",
+      phone: "Enter a phone number with 7 to 15 digits, for example +92 300 1234567.",
+      jobTitle: "Enter your job title, up to 100 characters.",
       businessNameLength: "Use between 2 and 100 characters.",
       descriptionLength: "Use between 40 and 600 characters.",
       category: "Choose a category.",
       website: "Enter a web address, for example example.com.",
       reasonLength: "Use between 20 and 600 characters.",
+      consent: "Tick this box to continue.",
     },
     errors: {
-      notBuyer: "Only signed-in buyer accounts can apply to become a provider.",
+      /* Word for word what /sign-up says — see `emailTakenMessage`. */
+      emailTaken: emailTakenMessage,
+      notBuyer: "This account cannot apply to list products.",
+      /* The form was opened signed in, and the session ended before submit. */
+      signedOut: "You are no longer signed in. Log in again, then submit your application.",
+      /* The form was opened signed out, and someone signed in meanwhile. */
+      signedInMeanwhile: "You signed in while filling this in. Reload the page to continue with that account.",
       alreadyPending: "You already have an application under review.",
       alreadyApproved: "Your application has already been approved.",
       write: "We could not save that. Please try again.",
@@ -1720,13 +1830,13 @@ export const siteCopy = {
      * panel, which already links to product submission.
      */
     dashboard: {
-      heading: "Sell on PAKAI TechHub",
+      heading: `Sell on ${brandName}`,
       none: {
-        body: "Apply to become a provider and list your AI products in the marketplace.",
-        cta: "Apply to become a provider",
+        body: "List your AI product: one short form, then a review and a provider agreement.",
+        cta: "Start your listing",
       },
       pending: {
-        body: "Your provider application is under review.",
+        body: "Your provider application is under review. We will contact you to sign the provider agreement.",
       },
       rejected: {
         body: "Your provider application was not approved. You can update your answers and apply again.",
@@ -1755,7 +1865,7 @@ export const siteCopy = {
    */
   adminReview: {
     meta: {
-      title: "Review queue — PAKAI TechHub admin",
+      title: `Review queue — ${brandName} admin`,
     },
     /* The admin panel on /dashboard, which is where an admin lands after
        logging in, and its way into the queue. */
@@ -1810,6 +1920,11 @@ export const siteCopy = {
     truncated: "Showing the {shown} oldest of {total}. Decide these to see the rest.",
     fields: {
       applicant: "Applicant",
+      /* From the listing form's first two steps. */
+      providerType: "Registering as",
+      phone: "Phone",
+      jobTitle: "Job title",
+      notGiven: "Not given",
       website: "Website",
       noWebsite: "No website given",
       description: "What they do",
@@ -1824,13 +1939,24 @@ export const siteCopy = {
       declineReason: "Reason given",
       /* A resubmitted application keeps the last decline's reason. */
       previouslyDeclined: "Declined last time",
-      newTab: "(opens in a new tab)",
+      newTab: opensInNewTab,
     },
     status: {
       pending: "Pending",
       approved: "Approved",
       rejected: "Declined",
     },
+    providerTypes: {
+      organisation: "Organisation",
+      individual: "Individual",
+    },
+    /*
+     * Over the Approve button of every pending application. There is no
+     * e-signature in the app: the agreement is signed outside it, and this
+     * line is the only thing holding the order. Approving is what makes
+     * someone a provider.
+     */
+    agreementNote: "Approve only after the provider agreement is signed.",
     actions: {
       approve: "Approve",
       decline: "Decline",
@@ -1894,24 +2020,24 @@ export const siteCopy = {
    * person rather than the no-reply sender.
    */
   reviewEmails: {
-    signOff: "PAKAI TechHub",
+    signOff: brandName,
     providerApproved: {
-      subject: "Your PAKAI TechHub provider application was approved",
+      subject: `Your ${brandName} provider application was approved`,
       body: [
         "Hi {name},",
         "",
-        "Your application to list {business} on PAKAI TechHub has been approved. You can now submit products for review:",
+        `Your application to list {business} on ${brandName} has been approved. You can now submit products for review:`,
         "{link}",
         "",
         commissionTerms,
       ],
     },
     providerDeclined: {
-      subject: "Your PAKAI TechHub provider application was not approved",
+      subject: `Your ${brandName} provider application was not approved`,
       body: [
         "Hi {name},",
         "",
-        "We have reviewed your application to list {business} on PAKAI TechHub and have not approved it.",
+        `We have reviewed your application to list {business} on ${brandName} and have not approved it.`,
         "",
         "Reason: {reason}",
         "",
@@ -1922,11 +2048,11 @@ export const siteCopy = {
       ],
     },
     productApproved: {
-      subject: "{product} passed review on PAKAI TechHub",
+      subject: `{product} passed review on ${brandName}`,
       body: [
         "Hi {name},",
         "",
-        "{product} has been reviewed and approved, and is now listed on the PAKAI TechHub marketplace. It usually shows there straight away; some pages can take up to about an hour to catch up.",
+        `{product} has been reviewed and approved, and is now listed on the ${brandName} marketplace. It usually shows there straight away; some pages can take up to about an hour to catch up.`,
         "",
         "It cannot be bought yet: checkout is still being built.",
         "",
@@ -1935,7 +2061,7 @@ export const siteCopy = {
       ],
     },
     productDeclined: {
-      subject: "{product} was not approved on PAKAI TechHub",
+      subject: `{product} was not approved on ${brandName}`,
       body: [
         "Hi {name},",
         "",
@@ -1953,41 +2079,19 @@ export const siteCopy = {
 };
 
 /**
- * The nine browse categories, in the order they are shown.
+ * The eight browse categories, in the order they are shown.
  *
- * Derived, not written. "Cross-Industry" comes off the marketplace filter list
- * — it is a product category that spans every industry rather than an industry
- * in its own right, so it leads — and the other eight are the industry
- * taxonomy in `industries.items`, in its order.
- *
- * Deriving it is the point: there is exactly one place to add an industry, and
- * a category cannot appear in the bar, the grid or the nav's category select
- * without existing in the taxonomy first. Do not hand-write a parallel list,
- * and do not add a category here that no part of the site recognises — the
- * previous version of this page invented categories that matched nothing.
- *
- * `productCategory` is set where the id is also a real `ProductCategory`, and
- * that is what a chip filters on. The five without it — Banking & Finance,
- * Manufacturing, Logistics, Real Estate, and any industry added later — are
- * honest empty categories: selecting one says nothing is listed yet.
+ * Derived, not written: `marketplace.products.categories` without its "All"
+ * reset. The homepage Categories view, the nav's category menu and its search
+ * select all
+ * read this, so a category cannot appear on one surface and not another. Do
+ * not hand-write a parallel list — an earlier version mixed in four
+ * industries no product could be filed under, and they showed as permanently
+ * empty categories.
  */
-const PRODUCT_CATEGORY_IDS = new Set<string>(
-  siteCopy.marketplace.products.categories
-    .filter((category) => category.id !== "all")
-    .map((category) => category.id),
-);
-
-function asProductCategory(id: string): ProductCategory | undefined {
-  return PRODUCT_CATEGORY_IDS.has(id) ? (id as ProductCategory) : undefined;
-}
-
-export const browseCategories: BrowseCategory[] = [
-  { id: "cross-industry", label: "Cross-Industry", productCategory: "cross-industry" },
-  ...siteCopy.industries.items.map((industry) => ({
-    id: industry.id,
-    label: industry.name,
-    productCategory: asProductCategory(industry.id),
-  })),
-];
+export const browseCategories: BrowseCategory[] =
+  siteCopy.marketplace.products.categories.flatMap((category) =>
+    category.id === "all" ? [] : [{ id: category.id, label: category.label }],
+  );
 
 export default siteCopy;

@@ -28,7 +28,17 @@ import { products, providers } from "./schema";
  * lib/listings.ts, or at the next deploy.
  */
 
-const FIRST_PARTY_COMPANY = siteCopy.brand.name;
+/*
+  The house provider's STORED name — a lookup key, not display copy.
+
+  It used to read `siteCopy.brand.name`, which was the same string until the
+  display name became "PAK AI TechHub". The row in every database is still
+  called "PAKAI TechHub", and `seed()` finds it by this name: following the
+  display name would make the next seed miss it and insert a second house
+  provider with eight more products. Database rows are not renamed with the
+  brand, so this stays pinned to what is stored.
+*/
+const FIRST_PARTY_COMPANY = "PAKAI TechHub";
 
 /**
  * The eight first-party products. Category is the filter ID and price the
@@ -148,7 +158,7 @@ async function seed() {
     .limit(1);
 
   /*
-    userId stays null: this provider is PAKAI TechHub itself, which has no
+    userId stays null: this provider is PAK AI TechHub itself, which has no
     person to sign in as. See the note on `providers.userId`.
 
     `status` is set explicitly. The column defaults to "pending", because a
@@ -182,7 +192,7 @@ async function seed() {
       priceAmount: parseAmount(item.price),
       priceCurrency: parseCurrency(item.price),
       /*
-        These eight are PAKAI TechHub's own listings, so they are approved by
+        These eight are PAK AI TechHub's own listings, so they are approved by
         definition — and approved is what puts them on /marketplace. Anything
         submitted through the provider form starts as "pending" and is listed
         only once an admin approves it.

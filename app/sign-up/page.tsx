@@ -1,52 +1,41 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { googleSignInEnabled } from "@/auth";
 import { AuthForm, AuthLink } from "@/components/auth-form";
+import { siteCopy } from "@/content/site-copy";
 import { signInWithGoogle, signUp } from "@/lib/auth-actions";
 
 export const metadata: Metadata = {
-  title: "Sign up — PAKAI TechHub",
-  description: "Create a PAKAI TechHub account as a buyer or an AI provider.",
+  title: `Sign up — ${siteCopy.brand.name}`,
+  description: `Create a ${siteCopy.brand.name} account as a buyer or an AI provider.`,
 };
 
 /**
- * `?role=provider` preselects the Provider option.
+ * /sign-up is for buyers.
  *
- * Every "list your product" link on the site points at `/start-listing`,
- * which sends a signed-out visitor here with this parameter. Choosing
- * Provider does not make anyone a provider: it creates a buyer account and
- * lands it on the provider application instead of the dashboard (see
- * `signUp`). Without the parameter a would-be provider would land on the
- * dashboard and have to find the application themselves, so do not drop it
- * from the redirect in app/start-listing/route.ts.
- *
- * Anything other than "provider" falls back to the buyer default rather than
- * erroring, since the value comes off a URL anyone can edit.
- *
- * The same choice rides along with "Continue with Google": a Google sign-up
- * with Provider chosen also creates a buyer and lands on the application
- * (`signInWithGoogle`).
+ * Providers sign up through the listing form at /list-your-product, which
+ * creates the account and the application together. The Buyer/Provider
+ * choice stays on this page, but Provider only leads there
+ * (components/auth-form.tsx). `?role=provider` — what /start-listing used to
+ * send signed-out visitors here with, and what old links may still carry —
+ * goes straight to the listing form.
  */
-function resolveRole(value: string | string[] | undefined) {
-  const requested = Array.isArray(value) ? value[0] : value;
-  return requested === "provider" ? "provider" : "buyer";
-}
-
 export default async function SignUpPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const initialRole = resolveRole((await searchParams).role);
+  const role = (await searchParams).role;
+  if ((Array.isArray(role) ? role[0] : role) === "provider") redirect("/list-your-product");
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <AuthForm
         action={signUp}
         showRoleChoice
-        initialRole={initialRole}
         heading="Create an account"
-        intro="Buyers find and try AI products. Providers list them. Pick the side you're on — you can talk to us if you need both."
+        intro="Buyers find and try AI products. Providers list them, through the listing form. Pick the side you're on."
         submitLabel="Create account"
         pendingLabel="Creating account…"
         googleAction={googleSignInEnabled ? signInWithGoogle : undefined}

@@ -36,13 +36,12 @@ export const PRICE_MAX = 1_000_000;
  * `db/seed.ts` writes for the eight first-party rows; storing ids here would
  * give one column two vocabularies.
  *
- * This is deliberately narrower than the nine browse categories. Only these
- * five have a marketplace filter, so a product filed under any other one could
- * never be found once the marketplace reads this table. Widening the list means
- * adding a `ProductCategory` and a filter for it first.
+ * These are exactly the eight marketplace categories, so a product can only be
+ * filed where the marketplace filter will find it. Adding one means adding it
+ * to that list (and the `ProductCategory` union) — this follows.
  *
  * TWO forms read this list: the product form, for `products.category`, and
- * the provider application (lib/provider-application.ts), for
+ * the provider listing form (lib/provider-listing.ts), for
  * `providers.category`. A provider and their products are filed under one
  * vocabulary; changing it here changes both.
  */
