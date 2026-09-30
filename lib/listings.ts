@@ -166,6 +166,8 @@ function toListing(row: Row): Listing | null {
     /* Individual product pages do not exist yet; every card links nowhere. */
     href: "#",
     provider: row.provider,
+    /* Already checked finite by formatPrice above. */
+    priceValue: Number(row.priceAmount),
   };
 }
 

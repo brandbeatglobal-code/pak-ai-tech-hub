@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { ListingsEmpty } from "@/components/listings-empty";
@@ -28,11 +29,12 @@ const MAX_RESULTS = 6;
  * (lib/listings.ts), passed down by the root layout; the matching lives in
  * lib/product-search.ts.
  *
- * There is no search results page, so a result points at the marketplace
- * filtered to that listing's category — the nearest destination that actually
- * exists. The field is deliberately not wrapped in a submitting `<form>`:
- * there is nowhere for a submit to go, and a field that looks like it submits
- * but discards the query is worse than one that plainly filters as you type.
+ * A result points at AI Solutions filtered to that listing's category —
+ * product pages do not exist yet. Enter with no result highlighted opens AI
+ * Solutions with the query (and the chosen category) already applied —
+ * /marketplace?q=… is the full search. The field is not wrapped in a
+ * `<form>`: Enter is handled here so that, with a result highlighted, it
+ * follows that result instead.
  *
  * The listbox follows the ARIA combobox pattern: the input owns
  * `aria-expanded`/`aria-controls`/`aria-activedescendant`, the results are
@@ -64,6 +66,7 @@ export function NavSearch({
   const optionId = (index: number) => `${uid}-result-${index}`;
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const results = searchProducts(listings ?? [], { query, categoryId }).slice(
     0,
@@ -97,6 +100,18 @@ export function NavSearch({
     if (event.key === "Escape") {
       setOpen(false);
       setActiveIndex(-1);
+      return;
+    }
+
+    /* Enter with nothing highlighted: the full search on AI Solutions. */
+    if (event.key === "Enter" && !(showPanel && activeIndex >= 0) && query.trim()) {
+      event.preventDefault();
+      const params = new URLSearchParams({ q: query.trim() });
+      if (categoryId !== ALL_CATEGORIES) params.set("category", categoryId);
+      setOpen(false);
+      setActiveIndex(-1);
+      setQuery("");
+      router.push(`/marketplace?${params.toString()}`);
       return;
     }
 

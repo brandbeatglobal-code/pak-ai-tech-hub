@@ -195,6 +195,19 @@ export type Product = {
  */
 export type Listing = Product & {
   provider: string;
+  /**
+   * The stored amount as a number, for the AI Solutions page's price sort.
+   * Sorting assumes one currency — true today, since everything written
+   * through the app is USD (see `Product.price`). If another currency is
+   * ever stored, sort within a currency or convert first.
+   */
+  priceValue: number;
+};
+
+/** One way to order the AI Solutions grid — see `marketplace.products.sort`. */
+export type SortOption = {
+  id: "newest" | "price-asc" | "price-desc" | "name";
+  label: string;
 };
 
 export type TrainingTier = {
@@ -929,23 +942,24 @@ export const siteCopy = {
 
   marketplace: {
     meta: {
-      title: `Marketplace — ${brandName}`,
+      title: `AI Solutions — ${brandName}`,
       description:
         "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
     },
+    /*
+     * The page's title block. "Browse AI Solutions", to match the menu item
+     * it is reached from.
+     *
+     * REMOVED with the restyle: the headline "Every AI product your business
+     * needs, in one place" and the two hero buttons — "Start free trial"
+     * (-> /sign-up) and "How it works" (-> /). The page now opens on the
+     * search and the filters; the buyer steps are the homepage's default
+     * view, and there is still no trial to start (see `hero.reassurance`).
+     */
     hero: {
-      headline: "Every AI product your business needs, in one place",
+      headline: "Browse AI Solutions",
       subhead:
         "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
-      /*
-       * NOT /marketplace. This button sits on /marketplace, so pointing it
-       * there would make the page's own primary call to action reload the page
-       * you are already looking at. A trial starts with an account, so it goes
-       * to /sign-up — the nearest destination that actually does something.
-       */
-      primaryCta: { label: "Start free trial", href: "/sign-up" },
-      /* The buyer steps are the homepage's default view now. */
-      secondaryCta: { label: "How it works", href: "/" },
     },
     products: {
       /*
@@ -954,11 +968,10 @@ export const siteCopy = {
        * changing what the marketplace shows means changing the table, through
        * the review queue.
        *
-       * "Listed products", not "Our products", "Featured" or "Popular":
-       * providers other than PAK AI TechHub list here, and nothing measures
-       * popularity or picks features. It used to read "Example listings" when
-       * the grid was eight illustrative entries in this file; the heading and
-       * the intro changed when the grid started reading the table.
+       * "All AI Solutions", not "Our products", "Featured" or "Popular":
+       * independent providers list here, and nothing measures popularity or
+       * picks features. (Earlier headings were "Example listings", then
+       * "Listed products".)
        *
        * Still not buyable. There is no checkout, so every card's buy button is
        * disabled (`buyLabel`) and the intro says why (`notBuyableYet`).
@@ -968,8 +981,34 @@ export const siteCopy = {
        * reviewed product. There is no "Example" badge any more because there
        * is nothing left to badge.
        */
-      heading: "Listed products",
+      /** "All AI Solutions – 3 found". With a category chosen, its label replaces `allLabel`. */
+      allLabel: "All AI Solutions",
+      /** Never shown as "0 found": with nothing to show, the count is left off. */
+      foundCount: "{count} found",
       intro: `Products listed by providers on ${brandName}. ${notBuyableYet}`,
+      searchLabel: "Search AI Solutions",
+      searchPlaceholder: "Search by name, description or category",
+      sortLabel: "Sort by",
+      /*
+       * The four orders, as the owner named them. "Newest first" is the
+       * order lib/listings.ts returns: most recently approved first.
+       */
+      sort: [
+        { id: "newest", label: "Newest first" },
+        { id: "price-asc", label: "Price low to high" },
+        { id: "price-desc", label: "Price high to low" },
+        { id: "name", label: "Name A-Z" },
+      ] satisfies SortOption[],
+      /*
+       * The static card after the results. Its action is `tellUsCta`, the
+       * same "Tell us what you need" the empty state offers. It promises
+       * nothing about what happens next — no matching service exists.
+       */
+      challenge: {
+        heading: "Have an AI challenge?",
+        body: "Describe the problem you want AI to solve. It tells us which providers to bring to the marketplace.",
+        cta: tellUsCta,
+      },
       /*
        * The buy button on each card, permanently disabled. There is no
        * checkout, so a working-looking button would be a lie; a disabled one
@@ -981,15 +1020,7 @@ export const siteCopy = {
       searchFootnote: notBuyableYet,
       /** {provider} is the listing provider's business name. */
       byProvider: "by {provider}",
-      filterLegend: "Filter products by category",
-      /**
-       * Announced to screen readers when the filter changes the grid. Kept as
-       * strings with a {count} placeholder rather than a function so the whole
-       * block stays serializable across the server/client boundary — and so a
-       * translator can reorder the sentence.
-       */
-      resultCountOne: "1 product shown",
-      resultCountOther: "{count} products shown",
+      filterLegend: "Filter by category",
       /*
        * THE EMPTY LAUNCH STATE — components/listings-empty.tsx, on every
        * surface that lists products (the /marketplace grid and the nav
@@ -1025,7 +1056,12 @@ export const siteCopy = {
        */
       unavailableMessage:
         "The listings could not be loaded just now. Please try again in a few minutes.",
-      trainingBadge: "Training included",
+      /*
+       * REMOVED with the restyle: the "Training included" line on every
+       * card. The cards now carry what the owner listed — provider, category,
+       * description, price — and the Academy teaser under the grid says that
+       * every product comes with training.
+       */
       /** Prepended to `Product.price` on the marketplace cards only. */
       pricePrefix: "from",
       /*

@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { MarketplaceProducts } from "@/components/marketplace-products";
+import { MarketplaceBrowser } from "@/components/marketplace-browser";
 import { HeroBackdrop } from "@/components/motion/hero-backdrop";
 import { HoverLift } from "@/components/motion/hover-lift";
-import { HoverScale } from "@/components/motion/hover-scale";
 import { Reveal } from "@/components/motion/reveal";
 import { SectionGlow } from "@/components/motion/section-glow";
-import { siteCopy } from "@/content/site-copy";
+import { siteCopy, type SortOption } from "@/content/site-copy";
 import { getListings } from "@/lib/listings";
 
 const { marketplace, worksWith, whyPakai, academyTeaser } = siteCopy;
@@ -21,26 +20,46 @@ export const metadata: Metadata = {
 const sectionHeading =
   "text-3xl font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display";
 
+type Param = string | string[] | undefined;
+const first = (value: Param) => (Array.isArray(value) ? value[0] : value);
+
 /**
- * `?category=<id>` preselects a filter, which is what the nav dropdown's
- * category rows link to. Anything unrecognised falls back to "all" rather than
- * rendering an empty grid.
+ * `?category=<id>` preselects a chip — the nav's category rows and the
+ * homepage's Categories view link here that way. Anything unrecognised falls
+ * back to "all" rather than rendering an empty grid.
  */
-function resolveCategory(value: string | string[] | undefined) {
-  const requested = Array.isArray(value) ? value[0] : value;
+function resolveCategory(value: Param) {
+  const requested = first(value);
   const known = marketplace.products.categories.some(
     (category) => category.id === requested,
   );
   return known && requested ? requested : "all";
 }
 
+/** `?q=` — the homepage search and the nav's Enter land here. Capped, trimmed. */
+function resolveQuery(value: Param) {
+  return (first(value) ?? "").trim().slice(0, 100);
+}
+
+/** `?sort=` — one of the four orders, or the default. */
+function resolveSort(value: Param): SortOption["id"] {
+  const requested = first(value);
+  return marketplace.products.sort.find((option) => option.id === requested)?.id ?? "newest";
+}
+
+/**
+ * AI Solutions (/marketplace): title, search, category chips, the result
+ * count and sort, the cards, and a "Have an AI challenge?" card — then the
+ * partners, the reasons to buy here and the Academy teaser.
+ */
 export default async function MarketplacePage({
   searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+}: PageProps<"/marketplace">) {
   const { hero, products, partners } = marketplace;
-  const initialCategory = resolveCategory((await searchParams).category);
+  const params = await searchParams;
+  const initialCategory = resolveCategory(params.category);
+  const initialQuery = resolveQuery(params.q);
+  const initialSort = resolveSort(params.sort);
   /*
     The approved products, from the database (lib/listings.ts). Null when the
     database could not be read — the grid then says so rather than claiming
@@ -50,75 +69,39 @@ export default async function MarketplacePage({
 
   return (
     <>
-      {/* 1. Hero — same backdrop treatment as the homepage. */}
+      {/* 1. Title, search, filters and results — one block. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-          <Reveal className="max-w-3xl">
-            <h1 className="text-[2.75rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg lg:text-display-xl">
-              {hero.headline}
-            </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-brand-navy/70 sm:text-xl">
-              {hero.subhead}
-            </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <HoverScale>
-                <Link
-                  href={hero.primaryCta.href}
-                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-brand-blue to-brand-green px-6 py-3 text-base font-semibold text-brand-navy shadow-lg shadow-brand-blue/20 transition-opacity hover:opacity-90"
-                >
-                  {hero.primaryCta.label}
-                </Link>
-              </HoverScale>
-              <HoverScale>
-                <Link
-                  href={hero.secondaryCta.href}
-                  className="inline-flex items-center justify-center rounded-full border border-brand-navy/15 bg-white/70 px-6 py-3 text-base font-semibold text-brand-navy backdrop-blur transition-colors hover:border-brand-navy/40"
-                >
-                  {hero.secondaryCta.label}
-                </Link>
-              </HoverScale>
-            </div>
-          </Reveal>
+        <div className="relative mx-auto w-full max-w-6xl px-4 pt-14 pb-20 sm:px-6 sm:pt-16 lg:px-8">
+          <h1 className="text-[2.5rem] leading-[1.05] font-extrabold tracking-[-0.03em] text-brand-navy sm:text-display-lg">
+            {hero.headline}
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
+            {hero.subhead}
+          </p>
+          {/* Says, above the grid, that nothing here can be bought yet —
+              the listings are real, the checkout is not. */}
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-navy/65">
+            {products.intro}
+          </p>
+          {/*
+            Keyed on what the address asked for, so arriving from the nav
+            (a category row, or the search's Enter) while already on this
+            page starts from the new values. Changes made on the page are
+            written back to the address by the browser itself and do not
+            remount it.
+          */}
+          <MarketplaceBrowser
+            key={`${initialCategory}|${initialQuery}|${initialSort}`}
+            listings={listings}
+            initialQuery={initialQuery}
+            initialCategory={initialCategory}
+            initialSort={initialSort}
+          />
         </div>
       </section>
 
-      {/* 2. Our products — filter sidebar and card grid. */}
-      <section className="border-t border-black/5">
-        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-          <Reveal>
-            <h2 className={sectionHeading}>{products.heading}</h2>
-            {/* Says, above the grid, that nothing here can be bought yet —
-                the listings are real, the checkout is not. */}
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand-navy/70">
-              {products.intro}
-            </p>
-            {/*
-              Keyed on the resolved category so arriving from the nav dropdown
-              while already on this page resets the filter. Without it the
-              route would not remount and the grid would ignore the new param.
-            */}
-            <MarketplaceProducts
-              key={initialCategory}
-              listings={listings}
-              categories={products.categories}
-              initialCategory={initialCategory}
-              labels={{
-                filterLegend: products.filterLegend,
-                trainingBadge: products.trainingBadge,
-                unavailableMessage: products.unavailableMessage,
-                resultCountOne: products.resultCountOne,
-                resultCountOther: products.resultCountOther,
-                pricePrefix: products.pricePrefix,
-                byProvider: products.byProvider,
-                buyLabel: products.buyLabel,
-              }}
-            />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 3. Marketplace partners — only confirmed partners get a name. */}
+      {/* 2. Marketplace partners — only confirmed partners get a name. */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="right" />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
@@ -175,7 +158,7 @@ export default async function MarketplacePage({
         </div>
       </section>
 
-      {/* 4. Why PAK AI TechHub — moved here from the old long homepage. */}
+      {/* 3. Why PAK AI TechHub — moved here from the old long homepage. */}
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className={sectionHeading}>{whyPakai.heading}</h2>
@@ -196,7 +179,7 @@ export default async function MarketplacePage({
         </Reveal>
       </section>
 
-      {/* 5. Academy teaser — moved here from the old long homepage. */}
+      {/* 4. Academy teaser — moved here from the old long homepage. */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
         <Reveal>
           <div className="flex flex-col gap-6 rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-12 lg:flex-row lg:items-center lg:justify-between">
