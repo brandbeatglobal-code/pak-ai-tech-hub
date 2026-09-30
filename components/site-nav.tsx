@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
 import { CategoryIcon, TierIcon } from "@/components/nav-icons";
@@ -136,18 +136,55 @@ function marketplacePanel(listings: Listing[] | null): Panel {
   along the menu row and over the Academy trigger before it drops in. At
   200ms / 150ms that path switched to Academy at ordinary speeds (~530–660
   px/s, once at ~1200). At 300ms / 250ms every path at those speeds held.
-  What still closes or switches is the same shallow path at a crawl (~200–
+  What still closed or switched was the same shallow path at a crawl (~200–
   280 px/s), which spends over half a second in the row — no delay short
-  enough to feel responsive covers that. A pointer-direction "safe
-  triangle" does not either: the panel is so wide and so close under the
-  row that heading for its far corner is almost the same line as moving
-  sideways to the next trigger.
+  enough to feel responsive covers that. It got worse when the homepage
+  tabs took the front of the row: the panel still starts at the row's left
+  edge, so its featured card now sits far to the left of the triggers, and
+  every path to it is a long shallow one.
+
+  INTENT, for those. Where the pointer leaves the open item is remembered,
+  and while a close or a switch is pending, every move that stays inside
+  the triangle from that point to the panel's top corners postpones it
+  again (`inIntentTriangle`). Heading for any part of the panel keeps it
+  open, however slowly; stopping, or heading anywhere else, lets the delay
+  run out as before. Moving sideways along the row to the other trigger
+  stays above the triangle's upper edge, so switching still works.
 
   The gaps themselves are closed in the layout (see the menu row below);
   these only cover what a real mouse path does between them.
 */
 const HOVER_CLOSE_DELAY_MS = 300;
 const HOVER_SWITCH_DELAY_MS = 250;
+
+type Point = { x: number; y: number };
+
+/** Is `p` inside the triangle a–b–c (edges included)? */
+function inTriangle(p: Point, a: Point, b: Point, c: Point): boolean {
+  const side = (p1: Point, p2: Point, p3: Point) =>
+    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  const d1 = side(p, a, b);
+  const d2 = side(p, b, c);
+  const d3 = side(p, c, a);
+  const negative = d1 < 0 || d2 < 0 || d3 < 0;
+  const positive = d1 > 0 || d2 > 0 || d3 > 0;
+  return !(negative && positive);
+}
+
+/**
+ * Is the pointer still heading for the open panel? True inside the triangle
+ * from where it left the item to the panel card's top corners (widened a
+ * little either side, so aiming at the very edge still counts).
+ */
+function inIntentTriangle(pointer: Point, from: Point, card: DOMRect): boolean {
+  const slack = 12;
+  return inTriangle(
+    pointer,
+    from,
+    { x: card.left - slack, y: card.top },
+    { x: card.right + slack, y: card.top },
+  );
+}
 
 const entryTier = academy.tiers.items[0];
 
@@ -273,25 +310,35 @@ export function SiteNav({
     as before. Touch never hovers, so taps still toggle.
   */
   const hoverOpened = useRef<NavMenuSource | null>(null);
-  function cancelHover() {
+  /* The pending hover change, so a move towards the panel can postpone it,
+     and where the pointer left the open item — see INTENT above. */
+  const pendingHover = useRef<{ next: NavMenuSource | null; delay: number } | null>(null);
+  const intentFrom = useRef<Point | null>(null);
+  /* Stable across renders (refs and a state setter only), so the effects
+     below can depend on them. */
+  const cancelHover = useCallback(() => {
     window.clearTimeout(hoverTimer.current.id);
     hoverTimer.current.id = undefined;
-  }
-  function hoverTo(next: NavMenuSource | null, delay: number) {
+    pendingHover.current = null;
+  }, []);
+  const hoverTo = useCallback((next: NavMenuSource | null, delay: number) => {
     cancelHover();
     const apply = () => {
       hoverOpened.current = next;
+      intentFrom.current = null;
       setOpenMenu(next);
     };
     if (delay === 0) {
       apply();
       return;
     }
+    pendingHover.current = { next, delay };
     hoverTimer.current.id = window.setTimeout(() => {
       hoverTimer.current.id = undefined;
+      pendingHover.current = null;
       apply();
     }, delay);
-  }
+  }, [cancelHover]);
   /* Nothing may fire after the nav unmounts. */
   useEffect(() => {
     const timer = hoverTimer.current;
@@ -310,6 +357,27 @@ export function SiteNav({
     setOpenMenu(null);
   }
 
+  /*
+    While a panel is open, a mouse moving towards it postpones any pending
+    close or switch (INTENT, above). Re-arming the same change restarts its
+    delay; nothing is postponed once the pointer stops or turns away.
+  */
+  useEffect(() => {
+    if (!openMenu) return;
+    function onPointerMove(event: PointerEvent) {
+      if (event.pointerType !== "mouse") return;
+      const pending = pendingHover.current;
+      const from = intentFrom.current;
+      const card = panelRefs.current[openMenu!]?.firstElementChild?.getBoundingClientRect();
+      if (!pending || !from || !card) return;
+      if (inIntentTriangle({ x: event.clientX, y: event.clientY }, from, card)) {
+        hoverTo(pending.next, pending.delay);
+      }
+    }
+    document.addEventListener("pointermove", onPointerMove);
+    return () => document.removeEventListener("pointermove", onPointerMove);
+  }, [openMenu, hoverTo]);
+
   /* A click anywhere outside the header dismisses an open panel. */
   useEffect(() => {
     if (!openMenu) return;
@@ -321,7 +389,7 @@ export function SiteNav({
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [openMenu]);
+  }, [openMenu, cancelHover]);
 
   /* ArrowDown on a closed trigger opens the panel and lands on its first row;
      the panel has to be mounted before it can be focused, hence the effect. */
@@ -553,11 +621,22 @@ export function SiteNav({
                   /* Back on the open item (its trigger or its panel): stay.
                      Nothing open: open now. Another one open: switch only if
                      the pointer settles here. */
-                  if (openMenu === source) cancelHover();
-                  else hoverTo(source, openMenu === null ? 0 : HOVER_SWITCH_DELAY_MS);
+                  if (openMenu === source) {
+                    cancelHover();
+                    intentFrom.current = null;
+                  } else hoverTo(source, openMenu === null ? 0 : HOVER_SWITCH_DELAY_MS);
                 }}
                 onPointerLeave={(event) => {
-                  if (event.pointerType === "mouse") hoverTo(null, HOVER_CLOSE_DELAY_MS);
+                  if (event.pointerType !== "mouse") return;
+                  /* Leaving the open item from above its panel's card —
+                     from the trigger row — is where a path into the panel
+                     starts. Anywhere else (off the panel itself) is not. */
+                  if (openMenu === source) {
+                    const card = panelRefs.current[source]?.firstElementChild?.getBoundingClientRect();
+                    intentFrom.current =
+                      card && event.clientY < card.top ? { x: event.clientX, y: event.clientY } : null;
+                  }
+                  hoverTo(null, HOVER_CLOSE_DELAY_MS);
                 }}
               >
                 <button
@@ -694,6 +773,18 @@ export function SiteNav({
               </li>
             );
           })}
+          {/* Signed in, 768–1023px: row 1 has room for "Log out" but not for
+              "Signed in as {name}", so the way to the dashboard sits here. */}
+          {account ? (
+            <li className="py-1 lg:hidden">
+              <Link
+                href={nav.account.href}
+                className="rounded-lg px-2 py-2 text-sm font-medium text-brand-navy/70 transition-colors hover:text-brand-navy"
+              >
+                {nav.account.dashboard}
+              </Link>
+            </li>
+          ) : null}
         </ul>
 
         {/* Compact rows for narrow screens. Plain links, no panels — the
@@ -727,10 +818,19 @@ export function SiteNav({
             ))}
             {/* Appended rather than added to `nav.items`, which would also put
                 the auth links in the desktop menu row, where they do not belong
-                — row 1 carries them at those widths. Signed in: log out only.
-                Sign in and Sign up only just fit this row at 390px; a name
-                beside log out, even a short one, pushed log out off its edge.
-                The name is row 1's, from `lg`. */}
+                — row 1 carries them at those widths. Signed in: "Dashboard"
+                and log out. A name here, even a short one, pushed log out off
+                the row's edge at 390px; the name is row 1's, from `lg`. */}
+            {account ? (
+              <li>
+                <Link
+                  href={nav.account.href}
+                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                >
+                  {nav.account.dashboard}
+                </Link>
+              </li>
+            ) : null}
             {account ? (
               <li>
                 <form action={logOut}>

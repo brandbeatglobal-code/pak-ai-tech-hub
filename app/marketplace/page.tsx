@@ -80,10 +80,14 @@ export default async function MarketplacePage({
             {hero.subhead}
           </p>
           {/* Says, above the grid, that nothing here can be bought yet —
-              the listings are real, the checkout is not. */}
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-navy/65">
-            {products.intro}
-          </p>
+              the listings are real, the checkout is not. Only when there
+              is something listed: over the empty state, "none of these"
+              would refer to nothing. */}
+          {listings && listings.length > 0 ? (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-navy/65">
+              {products.intro}
+            </p>
+          ) : null}
           {/*
             Keyed on what the address asked for, so arriving from the nav
             (a category row, or the search's Enter) while already on this
@@ -129,6 +133,7 @@ export default async function MarketplacePage({
                             className="underline decoration-brand-green decoration-2 underline-offset-4 hover:decoration-brand-blue"
                           >
                             {item.name}
+                            <span className="sr-only"> {worksWith.newTab}</span>
                           </a>
                         ) : (
                           item.name

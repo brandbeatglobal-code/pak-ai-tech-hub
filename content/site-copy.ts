@@ -334,6 +334,14 @@ const listingTerms = `Free to list. ${commissionTerms}`;
 const emailTakenMessage = "That email already has an account.";
 
 /**
+ * Read by screen readers after a link that opens a new tab.
+ *
+ * THE ONLY PLACE TO WRITE IT. The review queue's website links and the
+ * partner link on /marketplace both use it.
+ */
+const opensInNewTab = "(opens in a new tab)";
+
+/**
  * The two calls to action that appear in more than one place.
  *
  * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
@@ -623,6 +631,8 @@ export const siteCopy = {
     account: {
       signedInAs,
       href: "/dashboard",
+      /* Below 1024px, where "Signed in as {name}" does not fit. */
+      dashboard: "Dashboard",
       logOut: logOutLabel,
     },
     /*
@@ -949,6 +959,7 @@ export const siteCopy = {
 
   worksWith: {
     heading: "Works with",
+    newTab: opensInNewTab,
     /**
      * Only confirmed partners get a name and a link. Unconfirmed slots stay as
      * descriptive labels — do not invent a brand name for them.
@@ -956,8 +967,14 @@ export const siteCopy = {
     items: [
       {
         name: "KladAI",
+        /*
+         * "— available now through the PAK AI TechHub marketplace" was cut:
+         * the marketplace lists only third-party providers' reviewed
+         * products and, at launch, none — the grid on the same page says so.
+         * NEEDS OWNER CONFIRMATION before it goes back in.
+         */
         description:
-          `An autonomous AI agent that handles documents, data, research, and presentations — available now through the ${brandName} marketplace.`,
+          "An autonomous AI agent that handles documents, data, research, and presentations.",
         href: "https://kladai.com",
         confirmed: true,
       },
@@ -1167,7 +1184,10 @@ export const siteCopy = {
   academyTeaser: {
     heading: "Every product comes with training.",
     body:
-      "Get certified through TechHub Academy — workshops, courses, and certifications included with your subscription.",
+      /* "TechHub Academy" before the rename. NEEDS OWNER CONFIRMATION: the
+         Academy is also called "AI Academy" (`whyPakai`) and just "Academy"
+         on its own page — which is its name? */
+      `Get certified through the ${brandName} Academy — workshops, courses, and certifications included with your subscription.`,
     cta: { label: "Explore the academy", href: "/academy" },
   },
 
@@ -1900,7 +1920,7 @@ export const siteCopy = {
       declineReason: "Reason given",
       /* A resubmitted application keeps the last decline's reason. */
       previouslyDeclined: "Declined last time",
-      newTab: "(opens in a new tab)",
+      newTab: opensInNewTab,
     },
     status: {
       pending: "Pending",

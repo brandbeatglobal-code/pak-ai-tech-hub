@@ -233,5 +233,17 @@ export async function submitListing(
     }
   }
 
-  redirect("/list-your-product?submitted=1");
+  /*
+    With JavaScript the form asked to go on by itself (`navigate=client`) and
+    does a full page load to the same address. A redirect from here would be
+    a client-side swap of the page — the form for a short panel, the header
+    for the signed-in one — landing more than half a second after the click,
+    which the browser counts as a layout shift (measured 0.31–0.49). A new
+    page load is not a shift. Without JavaScript this redirect is already a
+    full page load.
+  */
+  if (formData.get("navigate") === "client") return { status: "success" };
+  redirect(SUBMITTED_PATH);
 }
+
+const SUBMITTED_PATH = "/list-your-product?submitted=1";

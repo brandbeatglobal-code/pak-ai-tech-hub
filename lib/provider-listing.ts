@@ -102,6 +102,8 @@ export type ListingErrors = Partial<Record<ListingField, string>>;
 
 export type ListingState =
   | { status: "idle" }
+  /* Saved, with JavaScript: the form loads the "submitted" page itself. */
+  | { status: "success" }
   | { status: "invalid"; attempt: number; errors: ListingErrors; values: ListingDraft }
   | { status: "error"; attempt: number; message: string; values: ListingDraft };
 

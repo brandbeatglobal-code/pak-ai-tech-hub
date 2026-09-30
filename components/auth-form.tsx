@@ -226,10 +226,15 @@ export function AuthForm({
       <form
         action={formAction}
         /*
-          Back to hidden on every submit. A rejected login comes back with the
-          field emptied (React resets an uncontrolled form after an action), and
-          without this the next attempt would be typed in the clear because the
-          toggle was left on.
+          Back to hidden on every submit. A rejected attempt comes back with
+          the password emptied, and without this the next attempt would be
+          typed in the clear because the toggle was left on.
+
+          Name, company and email come back filled: the server echoes them
+          (never the password), and those inputs are keyed on the attempt so
+          they remount with the echoed value. Only the inputs, not the form,
+          so the error message below stays the same element and is announced
+          when its text changes.
         */
         onSubmit={() => setPasswordVisible(false)}
         className="mt-10 space-y-5"
@@ -298,11 +303,13 @@ export function AuthForm({
               Name
             </label>
             <input
+              key={`name-${state?.attempt ?? 0}`}
               id="name"
               name="name"
               type="text"
               autoComplete="name"
               required
+              defaultValue={state?.values?.name}
               className={`mt-2 ${field}`}
             />
           </div>
@@ -315,10 +322,12 @@ export function AuthForm({
               <span className="font-normal text-brand-navy/60">(optional)</span>
             </label>
             <input
+              key={`companyName-${state?.attempt ?? 0}`}
               id="companyName"
               name="companyName"
               type="text"
               autoComplete="organization"
+              defaultValue={state?.values?.companyName}
               className={`mt-2 ${field}`}
             />
           </div>
@@ -331,11 +340,13 @@ export function AuthForm({
                 Email
               </label>
               <input
+                key={`email-${state?.attempt ?? 0}`}
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
+                defaultValue={state?.values?.email}
                 className={`mt-2 ${field}`}
               />
             </div>

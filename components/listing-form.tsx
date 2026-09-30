@@ -201,6 +201,19 @@ export function ListingForm({
     else stepRefs.current[step]?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   });
 
+  /*
+    Saved: load the "submitted" page as a new page rather than swapping this
+    one in place, which would count as a layout shift (lib/listing-actions.ts
+    says why). The form stays as it is, showing "Submitting…", until then.
+  */
+  useEffect(() => {
+    if (state.status !== "success") return;
+    // A full page load is the point here (router.push would be the soft
+    // navigation that shifts the layout), so the rule does not apply.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/list-your-product?submitted=1");
+  }, [state.status]);
+
   /* After a server answer: the first bad field, or the message if none. */
   useEffect(() => {
     if (attempt === 0) return;
@@ -269,6 +282,8 @@ export function ListingForm({
       return;
     }
     const data = new FormData(event.currentTarget);
+    /* The server returns instead of redirecting; see the effect below. */
+    data.set("navigate", "client");
     /* Dispatched by hand, so React does not reset the form afterwards. */
     startTransition(() => formAction(data));
   }
@@ -697,8 +712,12 @@ export function ListingForm({
             own `inline-flex` would win over `hidden` on the same element.
           */}
           <span data-listing-submit className={step === 3 ? "contents" : "hidden"}>
-            <button type="submit" disabled={pending} className={primaryButton}>
-              {pending ? copy.submitting : copy.submit}
+            <button
+              type="submit"
+              disabled={pending || state.status === "success"}
+              className={primaryButton}
+            >
+              {pending || state.status === "success" ? copy.submitting : copy.submit}
             </button>
           </span>
         </div>

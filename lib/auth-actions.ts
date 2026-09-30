@@ -20,10 +20,21 @@ import { isProviderType } from "@/lib/provider-listing";
  * the error strings returned to the client never echo one back.
  */
 
-export type FormState = { error?: string } | undefined;
+/**
+ * What a rejected sign-up or login sends back: the message, a counter the
+ * form remounts on, and what was typed — never the password — so the form
+ * comes back filled in rather than empty.
+ */
+export type FormState =
+  | {
+      error?: string;
+      attempt?: number;
+      values?: { name?: string; email?: string; companyName?: string };
+    }
+  | undefined;
 
 export async function signUp(
-  _prev: FormState,
+  prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const name = String(formData.get("name") ?? "").trim();
@@ -33,11 +44,16 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
   const companyName = String(formData.get("companyName") ?? "").trim();
   const roleInput = String(formData.get("role") ?? "");
+  const reject = (error: string): FormState => ({
+    error,
+    attempt: (prev?.attempt ?? 0) + 1,
+    values: { name, email, companyName },
+  });
 
-  if (!name) return { error: "Enter your name." };
-  if (!email.includes("@")) return { error: "Enter a valid email address." };
+  if (!name) return reject("Enter your name.");
+  if (!email.includes("@")) return reject("Enter a valid email address.");
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Use at least ${MIN_PASSWORD_LENGTH} characters.` };
+    return reject(`Use at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   /*
     /sign-up makes BUYERS, and only buyers.
@@ -50,7 +66,7 @@ export async function signUp(
     and nothing else; "admin" is not selectable either — admins are promoted
     directly in the database until there is an admin UI to do it properly.
   */
-  if (roleInput !== "buyer") return { error: siteCopy.signUp.providerRoute.body };
+  if (roleInput !== "buyer") return reject(siteCopy.signUp.providerRoute.body);
   const role: UserRole = "buyer";
 
   const [taken] = await db
@@ -58,7 +74,7 @@ export async function signUp(
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
-  if (taken) return { error: siteCopy.account.emailTaken };
+  if (taken) return reject(siteCopy.account.emailTaken);
 
   const passwordHash = await hashPassword(password);
 
@@ -83,7 +99,7 @@ export async function signUp(
 }
 
 export async function logIn(
-  _prev: FormState,
+  prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const email = String(formData.get("email") ?? "")
@@ -91,7 +107,13 @@ export async function logIn(
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) return { error: "Enter your email and password." };
+  const reject = (error: string): FormState => ({
+    error,
+    attempt: (prev?.attempt ?? 0) + 1,
+    values: { email },
+  });
+
+  if (!email || !password) return reject("Enter your email and password.");
 
   try {
     await signIn("credentials", { email, password, redirect: false });
@@ -100,7 +122,7 @@ export async function logIn(
       One message for "no such user" and "wrong password" alike — telling them
       apart would confirm which emails have accounts.
     */
-    if (error instanceof AuthError) return { error: "Email or password is incorrect." };
+    if (error instanceof AuthError) return reject("Email or password is incorrect.");
     throw error;
   }
 
