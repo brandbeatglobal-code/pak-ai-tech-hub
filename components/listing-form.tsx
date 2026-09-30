@@ -373,6 +373,10 @@ export function ListingForm({
         noValidate
         className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm sm:p-10"
       >
+        {/* Which form this is, so the server can tell if the session changed
+            since it was rendered (lib/listing-actions.ts). */}
+        <input type="hidden" name="formFor" value={signedIn ? "account" : "new"} />
+
         {/* ---------------- Step 1: Account (signed out only) ---------------- */}
         {signedIn ? null : (
           <div

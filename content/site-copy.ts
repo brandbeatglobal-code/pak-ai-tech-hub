@@ -582,6 +582,8 @@ export const siteCopy = {
         featured: {
           eyebrow: "Featured",
           headline: "Browse all {count} AI products",
+          /* Exactly one listed: "all 1 AI products" would read as a slip. */
+          headlineOne: "Browse 1 AI product",
           headlineNoCount: "Browse AI products",
           body: "AI products from independent providers, each reviewed before it lists.",
         },
@@ -1775,6 +1777,10 @@ export const siteCopy = {
       /* Word for word what /sign-up says — see `emailTakenMessage`. */
       emailTaken: emailTakenMessage,
       notBuyer: "This account cannot apply to list products.",
+      /* The form was opened signed in, and the session ended before submit. */
+      signedOut: "You are no longer signed in. Log in again, then submit your application.",
+      /* The form was opened signed out, and someone signed in meanwhile. */
+      signedInMeanwhile: "You signed in while filling this in. Reload the page to continue with that account.",
       alreadyPending: "You already have an application under review.",
       alreadyApproved: "Your application has already been approved.",
       write: "We could not save that. Please try again.",

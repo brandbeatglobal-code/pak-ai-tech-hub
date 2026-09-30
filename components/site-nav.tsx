@@ -92,9 +92,11 @@ function marketplacePanel(listings: Listing[] | null): Panel {
     featured: {
       eyebrow: menus.marketplace.featured.eyebrow,
       /* Counted from the listings, so the headline cannot overstate them. */
-      headline: listings?.length
-        ? menus.marketplace.featured.headline.replace("{count}", String(listings.length))
-        : menus.marketplace.featured.headlineNoCount,
+      headline: !listings?.length
+        ? menus.marketplace.featured.headlineNoCount
+        : listings.length === 1
+          ? menus.marketplace.featured.headlineOne
+          : menus.marketplace.featured.headline.replace("{count}", String(listings.length)),
       body: menus.marketplace.featured.body,
       href: "/marketplace",
       art: <FlagshipArt className="h-full w-auto" />,
@@ -263,19 +265,31 @@ export function SiteNav({
      deliberate action — click, key, blur, outside click — cancels it, so a
      timer started by the mouse can never undo what the person just did. */
   const hoverTimer = useRef<{ id?: number }>({});
+  /*
+    Which panel the mouse opened by resting on its trigger, if any. A mouse
+    user who hovers a trigger usually clicks it too; without this, that click
+    toggled the panel the hover had just opened straight back shut. A click
+    on a hover-opened panel keeps it open instead — the next click closes it,
+    as before. Touch never hovers, so taps still toggle.
+  */
+  const hoverOpened = useRef<NavMenuSource | null>(null);
   function cancelHover() {
     window.clearTimeout(hoverTimer.current.id);
     hoverTimer.current.id = undefined;
   }
   function hoverTo(next: NavMenuSource | null, delay: number) {
     cancelHover();
-    if (delay === 0) {
+    const apply = () => {
+      hoverOpened.current = next;
       setOpenMenu(next);
+    };
+    if (delay === 0) {
+      apply();
       return;
     }
     hoverTimer.current.id = window.setTimeout(() => {
       hoverTimer.current.id = undefined;
-      setOpenMenu(next);
+      apply();
     }, delay);
   }
   /* Nothing may fire after the nav unmounts. */
@@ -555,6 +569,12 @@ export function SiteNav({
                   aria-controls={`nav-panel-${source}`}
                   onClick={() => {
                     cancelHover();
+                    /* The hover already opened it: the click keeps it open. */
+                    if (open && hoverOpened.current === source) {
+                      hoverOpened.current = null;
+                      return;
+                    }
+                    hoverOpened.current = null;
                     setOpenMenu(open ? null : source);
                   }}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3 ${

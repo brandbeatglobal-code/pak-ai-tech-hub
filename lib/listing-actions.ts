@@ -88,6 +88,21 @@ export async function submitListing(
   const session = await auth();
   const account = session?.user ?? null;
 
+  /*
+    Which form was filled in — with step 1 (for a new account) or without it
+    (for the signed-in account). If the session changed since the page was
+    rendered, say so instead of acting on a form that no longer fits: a
+    signed-out submit of a step-2 form has no account fields to use, and a
+    new-account form must not be attached to whoever signed in meanwhile.
+  */
+  const formFor = text("formFor");
+  if (formFor === "account" && !account) {
+    return { status: "error", attempt, message: copy.errors.signedOut, values };
+  }
+  if (formFor === "new" && account) {
+    return { status: "error", attempt, message: copy.errors.signedInMeanwhile, values };
+  }
+
   if (account && account.role !== "buyer") {
     return { status: "error", attempt, message: copy.errors.notBuyer, values };
   }
