@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { HoverScale } from "@/components/motion/hover-scale";
@@ -10,10 +11,12 @@ import { CategoryIcon, TierIcon } from "@/components/nav-icons";
 import { NavSearch } from "@/components/nav-search";
 import { FlagshipArt } from "@/components/visuals/flagship-art";
 import { logOut } from "@/lib/auth-actions";
+import { resolveHomeTab } from "@/lib/home-tabs";
 import {
   siteCopy,
   type NavMenuSource,
   type CategoryFilter,
+  type HomeTabId,
   type Listing,
   type ProductCategory,
 } from "@/content/site-copy";
@@ -198,8 +201,18 @@ function Chevron({ open }: { open: boolean }) {
  * nothing notifies, so either one would be an affordance with nothing behind
  * it. Do not add them before the feature they imply exists.
  *
- * Marketplace and Academy open a dropdown; Pricing and About are plain links
- * because no sub-content exists for them. The dropdowns follow the disclosure
+ * Row 2 opens with the homepage's three views — For Businesses, For AI
+ * Providers, Categories — on every page. They are LINKS, not ARIA tabs: each
+ * view is its own URL (`/`, `/?tab=providers`, `/?tab=categories`), choosing
+ * one is a navigation, Back and Forward move between them, and the one on
+ * show carries `aria-current="page"` — announced as "current page". The
+ * ARIA tab pattern is for switching panels in place without a URL change,
+ * and would make them arrow-key widgets inside a nav of Tab-key links. On
+ * any other page none of them is current, and each simply goes home to that
+ * view.
+ *
+ * AI Solutions and Academy open a dropdown; About is a plain link because no
+ * sub-content exists for it. The dropdowns follow the disclosure
  * pattern rather than `role="menu"`: the trigger is a real button carrying
  * `aria-expanded`/`aria-controls` and the panel is an ordinary list of links,
  * so Tab, Shift+Tab and screen-reader link navigation keep working as they
@@ -226,6 +239,11 @@ export function SiteNav({
   account: Account;
 }) {
   const [openMenu, setOpenMenu] = useState<NavMenuSource | null>(null);
+  /* Which homepage view is on show — only on the homepage itself. */
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab: HomeTabId | null =
+    pathname === "/" ? resolveHomeTab(searchParams.get("tab")) : null;
   const panels = useMemo<Record<NavMenuSource, Panel>>(
     () => ({ marketplace: marketplacePanel(listings), academy: ACADEMY_PANEL }),
     [listings],
@@ -479,6 +497,13 @@ export function SiteNav({
           data-nav-menus
           className="relative hidden items-center gap-1 md:flex lg:gap-2"
         >
+          {nav.homeTabs.map((tab) => (
+            <li key={tab.id} className="py-1">
+              <HomeTabLink tab={tab} current={currentTab === tab.id} />
+            </li>
+          ))}
+          {/* Divides the homepage's views from the site's sections. */}
+          <li aria-hidden className="mx-1 h-5 w-px bg-black/10 lg:mx-2" />
           {nav.items.map((item) => {
             const source = item.menu;
 
@@ -651,56 +676,110 @@ export function SiteNav({
           })}
         </ul>
 
-        {/* Compact link row for narrow screens. Plain links, no panels — the
-            dropdowns above are desktop-only and this row is untouched by their
-            state. A `<noscript>` rule in the root layout also shows this row at
-            every width, so the nav still works with JavaScript disabled. */}
-        <ul
-          data-nav-plain
-          className="flex items-center gap-5 overflow-x-auto py-2 md:hidden"
-        >
-          {nav.items.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
-          {/* Appended rather than added to `nav.items`, which would also put
-              the auth links in the desktop menu row, where they do not belong
-              — row 1 carries them at those widths. Signed in: log out only.
-              Sign in and Sign up only just fit this row at 390px; a name
-              beside log out, even a short one, pushed log out off its edge.
-              The name is row 1's, from `lg`. */}
-          {account ? (
-            <li>
-              <form action={logOut}>
-                <button
-                  type="submit"
-                  className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
-                >
-                  {nav.account.logOut}
-                </button>
-              </form>
-            </li>
-          ) : (
-            [nav.signIn, nav.signUp].map((link) => (
-              <li key={link.href}>
+        {/* Compact rows for narrow screens. Plain links, no panels — the
+            dropdowns above are desktop-only and these rows are untouched by
+            their state. A `<noscript>` rule in the root layout also shows
+            them at every width, so the nav still works with JavaScript
+            disabled.
+
+            Two lines: the homepage's three views on their own line first,
+            then the sections and the auth links as before. One line of eight
+            links would scroll sideways at 390px and hide the auth links off
+            its edge. */}
+        <div data-nav-plain className="flex flex-col md:hidden">
+          <ul className="flex items-center justify-between gap-3 border-b border-black/5 py-1 sm:justify-start sm:gap-6">
+            {nav.homeTabs.map((tab) => (
+              <li key={tab.id}>
+                <HomeTabLink tab={tab} current={currentTab === tab.id} compact />
+              </li>
+            ))}
+          </ul>
+          <ul className="flex items-center gap-5 overflow-x-auto py-2">
+            {nav.items.map((item) => (
+              <li key={item.href}>
                 <Link
-                  href={link.href}
+                  href={item.href}
                   className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
                 >
-                  {link.label}
+                  {item.label}
                 </Link>
               </li>
-            ))
-          )}
-        </ul>
+            ))}
+            {/* Appended rather than added to `nav.items`, which would also put
+                the auth links in the desktop menu row, where they do not belong
+                — row 1 carries them at those widths. Signed in: log out only.
+                Sign in and Sign up only just fit this row at 390px; a name
+                beside log out, even a short one, pushed log out off its edge.
+                The name is row 1's, from `lg`. */}
+            {account ? (
+              <li>
+                <form action={logOut}>
+                  <button
+                    type="submit"
+                    className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                  >
+                    {nav.account.logOut}
+                  </button>
+                </form>
+              </li>
+            ) : (
+              [nav.signIn, nav.signUp].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="whitespace-nowrap text-sm font-medium text-brand-navy/70"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
       </nav>
     </header>
+  );
+}
+
+/**
+ * One of the homepage's three views, as a link in the menu row.
+ *
+ * `aria-current="page"` on the view on show, and a gradient bar under it as
+ * the visible equivalent — colour is not the only signal, the label also
+ * turns bold.
+ */
+function HomeTabLink({
+  tab,
+  current,
+  compact = false,
+}: {
+  tab: { id: HomeTabId; label: string; href: string };
+  current: boolean;
+  /** The phone row: no side padding, the bar sits on that row's border. */
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={tab.href}
+      aria-current={current ? "page" : undefined}
+      className={`relative inline-flex rounded-lg py-2 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy ${
+        compact ? "" : "px-2 lg:px-3"
+      } ${
+        current
+          ? "font-semibold text-brand-navy"
+          : "font-medium text-brand-navy/70 hover:text-brand-navy"
+      }`}
+    >
+      {tab.label}
+      {current ? (
+        <span
+          aria-hidden
+          className={`absolute -bottom-1 h-0.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-green ${
+            compact ? "inset-x-0" : "inset-x-2 lg:inset-x-3"
+          }`}
+        />
+      ) : null}
+    </Link>
   );
 }
 

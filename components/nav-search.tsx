@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { ListingsEmpty } from "@/components/listings-empty";
+import { SearchGlyph } from "@/components/nav-icons";
 import { siteCopy, type Listing } from "@/content/site-copy";
 import {
   ALL_CATEGORIES,
@@ -19,32 +20,13 @@ const { search } = nav;
 /** How many matches the dropdown shows before it stops listing them. */
 const MAX_RESULTS = 6;
 
-function SearchGlyph() {
-  return (
-    <svg
-      aria-hidden
-      focusable="false"
-      viewBox="0 0 20 20"
-      className="h-4 w-4 shrink-0 text-brand-navy/45"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-    >
-      <circle cx="9" cy="9" r="5.5" />
-      <path d="m13.2 13.2 3.3 3.3" />
-    </svg>
-  );
-}
-
 /**
  * The marketplace search in the nav bar.
  *
  * A real filter over the marketplace's approved listings, not a decorative
  * field. `listings` is the same read the grid on /marketplace renders
- * (lib/listings.ts), passed down by the root layout; the matching is shared
- * with the hero's search (see lib/product-search.ts) so the two controls
- * always agree.
+ * (lib/listings.ts), passed down by the root layout; the matching lives in
+ * lib/product-search.ts.
  *
  * There is no search results page, so a result points at the marketplace
  * filtered to that listing's category — the nearest destination that actually
@@ -59,8 +41,8 @@ function SearchGlyph() {
  * can be clicked, middle-clicked and opened in a new tab as usual.
  *
  * Filtering needs JavaScript. The listings themselves are server-rendered on
- * the homepage and the marketplace, so nothing is hidden behind this — without
- * scripting the field simply does not narrow anything.
+ * /marketplace, so nothing is hidden behind this — without scripting the
+ * field simply does not narrow anything.
  */
 export function NavSearch({
   listings,
@@ -151,7 +133,7 @@ export function NavSearch({
           Category first, matching the order of the sentence the control reads
           as: "in <category>, find <query>". Hidden on the narrowest screens,
           where the field itself needs the whole width — the homepage's
-          category bar is the full-width way to narrow by category there.
+          Categories view is the full-width way to narrow by category there.
         */}
         <label htmlFor={`${uid}-category`} className="sr-only">
           {search.categoryLabel}

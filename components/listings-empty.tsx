@@ -7,8 +7,8 @@ const { emptyState } = siteCopy.marketplace.products;
 /**
  * What a listing surface shows when it has nothing to list.
  *
- * One component for every surface — the /marketplace grid, the homepage and
- * the nav search panel — so the launch message and its two actions are the
+ * One component for every surface — the /marketplace grid and the nav search
+ * panel — so the launch message and its two actions are the
  * same wherever a visitor meets them. Copy: `marketplace.products.emptyState`.
  *
  *   "launch"   — nothing is listed anywhere yet.

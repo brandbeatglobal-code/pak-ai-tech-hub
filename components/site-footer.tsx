@@ -89,4 +89,44 @@ export function SiteFooter() {
   );
 }
 
+/**
+ * The homepage's footer: one line, copyright and the site links.
+ *
+ * The homepage's views are one screen each from 1024×700 up, and the full
+ * footer is taller than the room a view leaves. So the homepage gets this
+ * instead (components/site-frame.tsx). The links are the full footer's
+ * columns, flattened, each destination once — "Start free trial" goes to the
+ * same /marketplace as "AI Solutions", so it is left out. The logo, tagline
+ * and Connect block (whose profile links are still "#") are on every other
+ * page's footer.
+ */
+export function SiteFooterSlim() {
+  const { footer } = siteCopy;
+  const links = footer.columns
+    .flatMap((column) => column.links)
+    .filter((link, index, all) => all.findIndex((other) => other.href === link.href) === index);
+
+  return (
+    <footer className="border-t border-black/5 bg-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2 px-4 py-4 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+        <p className="text-sm text-brand-navy/65">{footer.copyright}</p>
+        <nav aria-label={footer.slimLabel}>
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-1">
+            {links.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-sm text-brand-navy/70 transition-colors hover:text-brand-navy"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
 export default SiteFooter;

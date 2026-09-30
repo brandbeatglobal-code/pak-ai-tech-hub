@@ -203,8 +203,8 @@ export function MarketplaceProducts({
                 </p>
 
                 {/*
-                  Disabled, on every card, exactly as on the homepage card:
-                  there is no checkout, so no listing can be bought yet.
+                  Disabled, on every card: there is no checkout, so no listing
+                  can be bought yet.
 
                   `relative z-10` lifts it above the stretched link's overlay,
                   so pressing it does nothing — rather than following the

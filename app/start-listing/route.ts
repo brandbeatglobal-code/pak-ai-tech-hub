@@ -5,9 +5,9 @@ import { auth } from "@/auth";
 /**
  * Where "list your product" goes, decided when the link is followed.
  *
- * Every provider CTA on the site — `startListingCta` in the homepage's "How it
- * works" and provider band, the nav's "List your product" button, the contact
- * page card — points here rather than at a fixed page, because the right
+ * Every provider CTA on the site — `startListingCta` in the homepage's For AI
+ * Providers view, the nav's "List your product" button, the listings empty
+ * state, the contact page card — points here rather than at a fixed page, because the right
  * destination depends on who clicks:
  *
  *   signed out -> /sign-up?role=provider. Sign-up creates a buyer account and,

@@ -21,8 +21,9 @@ import { products, providers } from "@/db/schema";
  * house listings are ever wanted back, they return here — and CLAUDE.md §5.4
  * then requires them to be badged as examples again.
  *
- * THE ONE READ. /marketplace, the homepage grid, the nav (its counts and its
- * search) and the contact form's product dropdown — and the contact form's
+ * THE ONE READ. /marketplace, the homepage's Categories view (its counts), the
+ * nav (its counts and its search) and the contact form's product dropdown —
+ * and the contact form's
  * server-side check of that dropdown — all call `getListings()`. A nav that
  * says "8 products" is counting the same rows the grid shows.
  *

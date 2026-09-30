@@ -5,9 +5,10 @@ import {
 } from "@/content/site-copy";
 
 /**
- * The search behind the nav field and the hero field.
+ * The search behind the nav field.
  *
- * Both controls run this, so they can never disagree about what matches. It is
+ * One function, so every control that filters listings agrees about what
+ * matches. It is
  * a plain function over the listings the page was rendered with — the approved
  * products from lib/listings.ts, handed to the client as props. There is no
  * index and no request per keystroke: at this catalogue size the whole list is

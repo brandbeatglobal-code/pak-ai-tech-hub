@@ -22,8 +22,8 @@ export type NavLink = {
  * own list puts it in the nav with no second edit and no chance of the two
  * drifting apart.
  *
- * Items with no `menu` are plain links. Pricing and About have no sub-content
- * to show, so they stay that way — do not invent panel rows for them.
+ * Items with no `menu` are plain links. About has no sub-content to show, so
+ * it stays that way — do not invent panel rows for it.
  */
 export type NavMenuSource = "marketplace" | "academy";
 
@@ -35,7 +35,7 @@ export type Step = {
   number: string;
   title: string;
   /**
-   * One line of supporting detail, revealed when the step is expanded.
+   * One line of supporting detail, shown under the step's title.
    *
    * Required, so a step cannot be added without saying what it means. Every
    * one of these restates something the site already establishes elsewhere —
@@ -46,29 +46,12 @@ export type Step = {
   detail: string;
 };
 
-/** One column of "How it works" — the buyer's journey or the provider's. */
-export type HowItWorksSide = {
-  id: "buyers" | "providers";
-  title: string;
-  steps: Step[];
-  /**
-   * The action the column ends on, shown as a button under its last step.
-   *
-   * Each side's CTA is the shared object for that action, not a label typed
-   * again here — see `browseProductsCta` and `startListingCta`.
-   */
-  cta: NavLink;
-};
+/**
+ * The homepage's three views. Each is its own URL — see `nav.homeTabs`.
+ */
+export type HomeTabId = "businesses" | "providers" | "categories";
 
-export type OfferingTab = {
-  /** Stable key used for tab/panel ids and as the React key. */
-  id: string;
-  /** Short label shown on the tab itself. */
-  label: string;
-  headline: string;
-  body: string;
-  link: NavLink;
-};
+export type HomeTab = NavLink & { id: HomeTabId };
 
 export type ValueCard = {
   headline: string;
@@ -144,7 +127,8 @@ export type TeamMember = {
  * A union rather than `string` so that adding one is a compile error until a
  * glyph is chosen for it in components/nav-icons.tsx. The list itself — ids,
  * labels and order — is `marketplace.products.categories`; everything else
- * (filters, forms, the homepage grid, the header menu, the search select)
+ * (filters, forms, the homepage Categories view, the header menu, the search
+ * select)
  * derives from that one list.
  *
  * Categories are plain text in the database (`products.category`,
@@ -307,11 +291,11 @@ const leadership = [
  *
  * THIS IS THE ONLY PLACE THE COMMISSION SPLIT SHOULD BE WRITTEN.
  *
- * Two surfaces state it: the last step of the provider column in `howItWorks`,
- * and the body of the `providerCta` band. They previously carried the same
- * sentence typed out twice, which is exactly how the founder content drifted
- * before it was consolidated. Both now read from here, so changing the split
- * is a one-line edit and the two cannot disagree.
+ * The homepage's For AI Providers view states it (`home.providers.intro`).
+ * It used to be typed out twice, in the old "How it works" provider column
+ * and in the provider band, which is exactly how the founder content drifted
+ * before it was consolidated. Everything reads from here, so changing the
+ * split is a one-line edit and no two surfaces can disagree.
  *
  * It is a real term of the marketplace, not a projection. Do not add payout
  * timings, fee tiers or minimums — none of those are settled.
@@ -324,22 +308,21 @@ const commissionTerms =
  *
  * THESE ARE THE ONLY PLACES THEIR LABELS SHOULD BE WRITTEN.
  *
- * "Browse AI products" was typed out five times — the flagship banner and the
- * pricing, about and contact pages — and "Start listing — it's free" twice,
- * once in the provider band and once in the provider column of `howItWorks`.
- * Same label, same href, same action each time, which is a copy change waiting
- * to half-land. Every one of them now reads from here.
+ * The browse action was once typed out five times, and "Start listing — it's
+ * free" twice. Same label, same href, same action each time, which is a copy
+ * change waiting to half-land. Every one of them now reads from here.
  *
  * Reusing one action's wording everywhere is the point: a visitor should not
- * meet "Browse AI products", "Browse the marketplace" and "See all products"
- * for the same click. If the wording changes, change it here.
+ * meet "Browse AI Solutions", "Browse the marketplace" and "See all products"
+ * for the same click. If the wording changes, change it here. (It became
+ * "Browse AI Solutions" when the menu's "Marketplace" became "AI Solutions".)
  *
  * Not every marketplace link belongs to these — `contact.reachUs` says "Browse
  * the marketplace" in a sentence-like card, which is deliberately its own
  * phrasing rather than a button label.
  */
 const browseProductsCta = {
-  label: "Browse AI products",
+  label: "Browse AI Solutions",
   href: "/marketplace",
 } satisfies NavLink;
 
@@ -420,9 +403,8 @@ const contactEmail = "hello@pakaitechub.com";
 /**
  * The one sentence that says nothing on the marketplace can be bought.
  *
- * THIS IS THE ONLY PLACE TO WRITE IT. Three surfaces read it: the listings
- * intro on the homepage, the same intro on /marketplace, and the footnote
- * under the nav search's results. The listings are real approved products
+ * THIS IS THE ONLY PLACE TO WRITE IT. Two surfaces read it: the listings
+ * intro on /marketplace and the footnote under the nav search's results. The listings are real approved products
  * now, but there is still no checkout — every card's buy button stays
  * disabled, and this sentence is what explains why. Remove it only when
  * checkout exists, and remove it here, once.
@@ -502,8 +484,26 @@ export const siteCopy = {
   },
 
   nav: {
+    /*
+     * The homepage's three views, first in the menu row on every page.
+     *
+     * Each is its own URL — `/` (the default view), `/?tab=providers`,
+     * `/?tab=categories` — so a view can be linked to, reloaded, and reached
+     * with Back and Forward. They are links, not ARIA tabs: choosing one
+     * changes the address, which is navigation, and the one on show carries
+     * `aria-current="page"`. See components/site-nav.tsx.
+     */
+    homeTabs: [
+      { id: "businesses", label: "For Businesses", href: "/" },
+      { id: "providers", label: "For AI Providers", href: "/?tab=providers" },
+      { id: "categories", label: "Categories", href: "/?tab=categories" },
+    ] satisfies HomeTab[],
+    /*
+     * "AI Solutions" is the marketplace. The URL stays /marketplace — it is
+     * linked from emails, the redirect in next.config.ts and outside the site.
+     */
     items: [
-      { label: "Marketplace", href: "/marketplace", menu: "marketplace" },
+      { label: "AI Solutions", href: "/marketplace", menu: "marketplace" },
       { label: "Academy", href: "/academy", menu: "academy" },
       { label: "About", href: "/about" },
     ] satisfies NavItem[],
@@ -515,7 +515,7 @@ export const siteCopy = {
     menus: {
       marketplace: {
         heading: "Browse by category",
-        viewAll: "All products",
+        viewAll: "All AI Solutions",
         /**
          * {count} is substituted with the number of listed products in that
          * category — counted from the same listings /marketplace renders.
@@ -592,14 +592,13 @@ export const siteCopy = {
      */
     cta: listProductCta,
     /*
-     * Copy for the search field in the nav, and for the larger one in the
-     * hero, which is the same control at a different size.
+     * Copy for the search field in the nav, and for the homepage's larger
+     * one, which submits to AI Solutions (/marketplace?q=…).
      *
      * The search is real: it filters the approved listings the page was
      * rendered with (lib/listings.ts) by name, description and category.
-     * It filters in the browser — it does not query as you type — and there
-     * is no search results page behind it, so do not write copy here that
-     * promises either.
+     * It filters in the browser — it does not query as you type — so do
+     * not write copy here that promises that.
      */
     search: {
       label: "Search AI products",
@@ -649,163 +648,150 @@ export const siteCopy = {
      * than typing the same sentence twice.
      *
      * "every product reviewed before it lists" is not a new claim — it is the
-     * review gate already stated in `whyPakai`, `flagship.body` and
-     * `about.different`.
+     * review gate already stated in `whyPakai` and `about.different`.
      */
     subhead:
       "One marketplace, every product reviewed before it lists — browse, test, and buy with confidence.",
-    /** Same trial terms the pricing page states — not a new claim. */
+    /**
+     * The same trial terms as the "Try free" step in `home.businesses`.
+     * NEEDS OWNER CONFIRMATION: no trial mechanism exists yet (there is no
+     * checkout), so this promise is not backed by anything the site does.
+     * Left as written on request; do not reword it without the owner.
+     */
     reassurance: "7-day free trial, no card required.",
   },
 
-  trustStrip: {
-    items: [
-      "Every product reviewed",
-      "Free trials included",
-      "Providers worldwide",
-      "New products added regularly",
-    ],
+  /*
+   * The homepage: three views, one per tab in the menu row (`nav.homeTabs`).
+   * The hero copy the first view opens with is `hero`, above.
+   *
+   * ONE SCREEN EACH. From 1024×700 up, a view fits between the header and
+   * the slim homepage footer with no page scroll — measured, not assumed.
+   * If copy here grows, cut something rather than shrinking the type; that
+   * is the rule the layout was built to.
+   *
+   * None of the step details is a new claim: each restates the trial terms,
+   * the review gate, the provider agreement or the commission split.
+   */
+  home: {
+    businesses: {
+      /** The search submits to /marketplace?q=… — the AI Solutions search. */
+      searchSubmit: "Search",
+      stepsHeading: "How it works",
+      /*
+       * The buyer's three steps. "Subscribe to a monthly plan" and "We
+       * handle support and updates" were dropped from an earlier version on
+       * purpose — there is no billing to describe and no support rota behind
+       * a 24/7 claim. Do not reinstate either here.
+       */
+      steps: [
+        {
+          number: "1",
+          title: "Browse",
+          detail: "Search or filter by category to find AI tools for your business.",
+        },
+        {
+          number: "2",
+          title: "Try free",
+          /*
+           * NEEDS OWNER CONFIRMATION, like `hero.reassurance`: the trial
+           * terms are not backed by anything built yet. Left as written.
+           */
+          detail: "Every listing includes a 7-day free trial, no card required.",
+        },
+        {
+          number: "3",
+          title: "Use it",
+          detail: "Put it to work — no long procurement process.",
+        },
+      ] satisfies Step[],
+      cta: browseProductsCta,
+    },
+    providers: {
+      metaTitle: `For AI Providers — ${brandName}`,
+      heading: `List your AI product on ${brandName}`,
+      /* "Free to list." plus the one commission sentence — see `commissionTerms`. */
+      intro: `Free to list. ${commissionTerms}`,
+      stepsHeading: "How listing works",
+      /*
+       * The provider's four steps, in the order the listing form and the
+       * review queue actually run. Step 2 is the agreement the listing form's
+       * consent box names; nothing is listed before it is signed. Do not
+       * promise a review turnaround — no SLA is agreed.
+       */
+      steps: [
+        {
+          number: "1",
+          title: "Fill in the listing form",
+          detail: "Your account, your details and your company, in one short form.",
+        },
+        {
+          number: "2",
+          title: "Sign the provider agreement with us",
+          detail: "We contact you to sign it before any product is listed.",
+        },
+        {
+          number: "3",
+          title: "We review and list your product",
+          detail: "Our team reviews every product before it goes live.",
+        },
+        {
+          number: "4",
+          title: "Reach buyers",
+          detail: "Get discovered by businesses searching the marketplace.",
+        },
+      ] satisfies Step[],
+      /*
+       * NEEDS OWNER CONFIRMATION: the 80% is `commissionTerms`, the one
+       * settled economic term — but when and how providers are paid is not
+       * settled. Left exactly as written; it used to title the last step of
+       * the old "How it works" provider column.
+       */
+      payout: "Get paid, keep 80%",
+      cta: startListingCta,
+    },
+    categories: {
+      metaTitle: `Browse by category — ${brandName}`,
+      heading: "Browse by category",
+      intro: "Every AI solution on the marketplace sits in one of these eight categories.",
+      viewAll: { label: "See all AI Solutions", href: "/marketplace" },
+    },
   },
 
   /*
-   * REMOVED: the `audience` block ("Who PAK AI TechHub is built for").
+   * REMOVED from the homepage when it became three tabbed views, and from
+   * this file with it. Where each piece went:
    *
-   * It held two tiles, "For businesses" and "For AI providers", saying what
-   * each side of the marketplace gets. `howItWorks` below now says the same
-   * thing in more detail and in the same two-column shape, so the tiles were
-   * repeating the section directly beneath them.
-   *
-   * Do not reinstate it. If a point is missing, it belongs in the matching
-   * side of `howItWorks`, not in a second block that has to be kept in step
-   * with it.
-   *
-   * Its caption for the illustration ("AI for modern business") moved to
-   * `providerCta.figureCaption`, which is where that artwork now sits, and
-   * carries the same constraint with it.
+   *   - `trustStrip` ("Every product reviewed", "Free trials included",
+   *     "Providers worldwide", "New products added regularly"). The first
+   *     three are said elsewhere: the review gate on /about and in the
+   *     steps, the trial in "Try free", "Worldwide marketplace" in the
+   *     /about facts. "New products added regularly" was dropped: at launch
+   *     nothing is listed, so it was not true.
+   *   - `flagship` (the dark "A marketplace built on trust" banner). Every
+   *     claim in it was already made elsewhere — /about says "a marketplace
+   *     built on trust" in so many words. Its artwork still leads the nav's
+   *     AI Solutions panel.
+   *   - `howItWorks`. The buyer steps are `home.businesses.steps`, word for
+   *     word. The provider steps were replaced by the four in
+   *     `home.providers.steps`; the old last step's title is
+   *     `home.providers.payout`.
+   *   - `providerCta` (the provider band). Its heading and body are
+   *     `home.providers.heading` and `.intro`; the skyline illustration and
+   *     its caption "AI for modern business" were dropped.
+   *   - `categoryBrowse`. The grid is the Categories view,
+   *     `home.categories`; the category bar under the hero went with the
+   *     homepage listings grid, which /marketplace already shows.
+   *   - `offering` ("What you get": Marketplace and Industry Solutions tabs).
+   *     The Marketplace tab restated the flagship banner. The Industry
+   *     Solutions tab described healthcare, agriculture, education and
+   *     retail solutions that nothing on the marketplace currently offers.
+   *   - `finalCta` ("Ready to bring AI into your business?" / Get started).
+   *     The For Businesses view ends on the same action.
+   *   - `whyPakai` and `academyTeaser` moved to /marketplace, under the
+   *     grid; `resources` moved to /academy; `worksWith` was already on
+   *     /marketplace and stays there.
    */
-
-  /**
-   * Full-width banner introducing the platform as a whole.
-   *
-   * Every claim in `body` is one the site already makes elsewhere — tools
-   * from independent providers (`offering`), review before listing
-   * and a free trial on every listing (`about.different`), training with
-   * every subscription (`pricing.included`). Do not add a new claim here;
-   * add it to the section that owns it first.
-   *
-   * The headline must NOT repeat the hero's. The hero owns "Find AI. Try it
-   * free. Put it to work."; this banner sits on the same page. (It previously
-   * owned "One place to find, try, and run AI" — if you are grepping for that
-   * string after a copy change, this comment is why it used to appear twice.)
-   */
-  flagship: {
-    eyebrow: `The ${brandName} platform`,
-    headline: "A marketplace built on trust",
-    body: "AI tools from independent providers in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
-    primaryCta: browseProductsCta,
-    secondaryCta: { label: "See how it works", href: "#how-it-works" },
-    /**
-     * The three-up row under the banner is rendered from `offering.tabs` —
-     * same labels, same one-liners, linking down to that section. Do not
-     * retype them here.
-     */
-    linksLabel: "What's on the platform",
-  },
-
-  /*
-   * How it works, split by which side of the marketplace you are on.
-   *
-   * This used to be one five-step row written entirely from the buyer's point
-   * of view, which left the provider journey unstated anywhere on the page.
-   *
-   * The buyer steps are the same commitments the old row made, minus two that
-   * were platform admin rather than steps a buyer takes ("Subscribe to a
-   * monthly plan", "We handle support and updates"). Those used to be stated
-   * on /pricing; that page is gone, so neither is stated anywhere on the site
-   * now. That is deliberate rather than an oversight — there is no billing to
-   * describe yet and no support rota behind a 24/7 claim. Do not reinstate
-   * either here; put it on the page that owns it when one exists.
-   */
-  howItWorks: {
-    heading: "How it works",
-    /**
-     * Each step carries a `detail` line, revealed when the step is expanded.
-     *
-     * None of them is a new claim — every one restates something the site
-     * already establishes, noted per step below. Step 1 of each column is the
-     * one open by default, so the section says something before anyone
-     * interacts with it.
-     */
-    sides: [
-      {
-        id: "buyers",
-        title: "For buyers",
-        steps: [
-          {
-            number: "1",
-            title: "Browse",
-            /* The search field and category bar directly above this section. */
-            detail:
-              "Search or filter by category to find AI tools for your business.",
-          },
-          {
-            number: "2",
-            title: "Try free",
-            /* Same trial terms as `hero.reassurance`. */
-            detail:
-              "Every listing includes a 7-day free trial, no card required.",
-          },
-          {
-            number: "3",
-            title: "Use it",
-            /* The no-procurement point the audience tiles used to carry. */
-            detail: "Put it to work — no long procurement process.",
-          },
-        ],
-        /* Where the buyer journey lands: the marketplace itself. */
-        cta: browseProductsCta,
-      },
-      {
-        id: "providers",
-        title: "For providers",
-        steps: [
-          {
-            number: "1",
-            title: "Sign up and apply",
-            /*
-              Providers are approved, not self-declared: signing up creates an
-              account, and the application at /dashboard/apply is what gets
-              reviewed. This step used to promise "a provider account in a
-              couple of minutes", which stopped being true when that review
-              gate was added. Do not promise a review turnaround here — no SLA
-              has been agreed.
-            */
-            detail: "Create a free account and tell us about your business.",
-          },
-          {
-            number: "2",
-            title: "List your product",
-            /* The review gate stated in `whyPakai` and `about.different`. */
-            detail: "Submit it for review by our team before it goes live.",
-          },
-          {
-            number: "3",
-            title: "Reach buyers worldwide",
-            /* The marketplace search this page now leads with. */
-            detail: "Get discovered by businesses searching the marketplace.",
-          },
-          {
-            number: "4",
-            title: "Get paid, keep 80%",
-            /* Read from the shared constant — see `commissionTerms`. */
-            detail: commissionTerms,
-          },
-        ],
-        /* The same action, and the same button, as the provider band below. */
-        cta: startListingCta,
-      },
-    ] satisfies HowItWorksSide[],
-  },
 
   /*
    * REMOVED: the `stats` block and the dark stat bar it fed.
@@ -818,44 +804,11 @@ export const siteCopy = {
    * Do not replace it with other figures. There is no honest number to put
    * above the fold on this page today: every count available is a count of
    * placeholder data. The one true economic fact the marketplace has is the
-   * commission split, and that is stated in words in `howItWorks` and
-   * `providerCta` rather than dressed up as a metric.
+   * commission split, and that is stated in words in `home.providers`
+   * rather than dressed up as a metric.
    */
 
-  /*
-   * The provider recruitment band.
-   *
-   * `body` is "Free to list." plus the shared `commissionTerms` sentence —
-   * the same words the last step of the provider column in `howItWorks`
-   * shows, read from one constant rather than typed out in both places. See
-   * the note on `commissionTerms` for what must not be added to it.
-   */
-  providerCta: {
-    heading: `List your AI product on ${brandName}`,
-    body: `Free to list. ${commissionTerms}`,
-    cta: startListingCta,
-    /* See the note on the removed `audience` block: keep this generic. */
-    figureCaption: "AI for modern business",
-  },
-
-  /*
-   * The eight browse categories, rendered as the category bar under the hero
-   * and as the grid further down.
-   *
-   * Name only, by design. At launch every count would be "0", which says the
-   * marketplace is empty rather than that it is new. Add counts when the
-   * counts are worth showing.
-   *
-   * The list itself is `browseCategories` below, derived from
-   * `marketplace.products.categories` — there is no second list to keep in
-   * step.
-   */
-  categoryBrowse: {
-    heading: "Browse by category",
-    /** Accessible name for the horizontally scrolling bar under the hero. */
-    barLabel: "Browse by category",
-  },
-
+  /** On /academy — learning material is the Academy's to promise. */
   resources: {
     heading: "Resources",
     intro: "Guides and updates on putting AI to work — coming soon.",
@@ -872,36 +825,7 @@ export const siteCopy = {
     ] satisfies ResourceSlot[],
   },
 
-  offering: {
-    heading: `What you get with ${brandName}`,
-    /**
-     * Tab 2 deliberately avoids naming any marketplace partner. Do not add
-     * CustomGPT, BotPenguin, TruBot or any other provider here until that
-     * partnership is confirmed the same way KladAI's was — see `worksWith`.
-     */
-    tabs: [
-      /*
-        REMOVED: the "Own AI Products" tab ("Ready to deploy, built in-house").
-        The marketplace lists third-party providers only, so there are no
-        in-house products on it to describe.
-      */
-      {
-        id: "marketplace",
-        label: "Marketplace",
-        headline: "Browse trusted AI tools from our partners",
-        body: "Access vetted AI products from independent providers — one marketplace, one bill, one place to manage them all.",
-        link: { label: "Learn more", href: "#" },
-      },
-      {
-        id: "industry-solutions",
-        label: "Industry Solutions",
-        headline: "Built for how your industry actually works",
-        body: "Healthcare, agriculture, education, and retail solutions shaped around the way those industries actually run — not generic tools bent to fit.",
-        link: { label: "Learn more", href: "#" },
-      },
-    ] satisfies OfferingTab[],
-  },
-
+  /** Buyer-facing reasons, on /marketplace under the grid. */
   whyPakai: {
     heading: `Why ${brandName}`,
     cards: [
@@ -1020,7 +944,8 @@ export const siteCopy = {
        * to /sign-up — the nearest destination that actually does something.
        */
       primaryCta: { label: "Start free trial", href: "/sign-up" },
-      secondaryCta: { label: "How it works", href: "/#how-it-works" },
+      /* The buyer steps are the homepage's default view now. */
+      secondaryCta: { label: "How it works", href: "/" },
     },
     products: {
       /*
@@ -1067,8 +992,8 @@ export const siteCopy = {
       resultCountOther: "{count} products shown",
       /*
        * THE EMPTY LAUNCH STATE — components/listings-empty.tsx, on every
-       * surface that lists products (the /marketplace grid, the homepage,
-       * the nav search).
+       * surface that lists products (the /marketplace grid and the nav
+       * search).
        *
        * At launch nothing is listed: the house provider's products are left
        * out, and no provider has been approved yet. That is said plainly, as
@@ -1143,8 +1068,8 @@ export const siteCopy = {
     partners: {
       heading: "Marketplace partners",
       /*
-       * The partner list itself is shared with the homepage `worksWith`
-       * section, so both stay in step. The same constraint applies here: only
+       * The partner list itself is `worksWith` (it used to be shown on the
+       * homepage too). The same constraint applies here: only
        * confirmed partners get a name and a link. Do not add a named partner
        * until that partnership is confirmed the way KladAI's was.
        */
@@ -1169,17 +1094,12 @@ export const siteCopy = {
    * restating them — that was the point of the earlier refactor.
    */
 
-  /** Homepage teaser that points at the Academy page. */
+  /** Teaser that points at the Academy page, under the AI Solutions grid. */
   academyTeaser: {
     heading: "Every product comes with training.",
     body:
       "Get certified through TechHub Academy — workshops, courses, and certifications included with your subscription.",
     cta: { label: "Explore the academy", href: "/academy" },
-  },
-
-  finalCta: {
-    heading: "Ready to bring AI into your business?",
-    cta: { label: "Get started", href: "/marketplace" },
   },
 
   footer: {
@@ -1194,7 +1114,7 @@ export const siteCopy = {
       {
         heading: "Product",
         links: [
-          { label: "Marketplace", href: "/marketplace" },
+          { label: "AI Solutions", href: "/marketplace" },
           { label: "Academy", href: "/academy" },
         ],
       },
@@ -1220,6 +1140,8 @@ export const siteCopy = {
       ] satisfies SocialLink[],
     },
     copyright: `© ${new Date().getFullYear()} ${brandName}. All rights reserved.`,
+    /** Accessible name of the homepage's one-line footer links. */
+    slimLabel: "Site links",
   },
 
   about: {
@@ -1257,8 +1179,9 @@ export const siteCopy = {
     values: {
       heading: "Our values",
       /**
-       * Deliberately terser than the homepage `whyPakai` cards — this is a
-       * quick-glance badge row, not a second telling of the same argument.
+       * Deliberately terser than the `whyPakai` cards (now on /marketplace) —
+       * this is a quick-glance badge row, not a second telling of the same
+       * argument.
        */
       items: [
         { label: "Accessibility", body: "AI for every budget" },
@@ -1586,7 +1509,7 @@ export const siteCopy = {
    * The category options are NOT listed here. They are derived from
    * `marketplace.products.categories` by the form component, so the dropdown
    * cannot offer a category the marketplace has no filter for. The commission
-   * line reads `commissionTerms`, the same constant the homepage bands use —
+   * line reads `commissionTerms`, the same constant the homepage uses —
    * do not retype the split.
    *
    * Nothing here may promise a review turnaround. No SLA has been agreed, and
@@ -1983,7 +1906,8 @@ export const siteCopy = {
  * The eight browse categories, in the order they are shown.
  *
  * Derived, not written: `marketplace.products.categories` without its "All"
- * reset. The homepage grid, the nav's category menu and its search select all
+ * reset. The homepage Categories view, the nav's category menu and its search
+ * select all
  * read this, so a category cannot appear on one surface and not another. Do
  * not hand-write a parallel list — an earlier version mixed in four
  * industries no product could be filed under, and they showed as permanently

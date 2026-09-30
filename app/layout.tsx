@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { auth } from "@/auth";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteFooter, SiteFooterSlim } from "@/components/site-footer";
 import { SiteFrame } from "@/components/site-frame";
 import { SiteNav } from "@/components/site-nav";
 import { siteCopy } from "@/content/site-copy";
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   /*
-    The nav's Marketplace panel counts these and its search field filters
+    The nav's AI Solutions panel counts these and its search field filters
     them, so they are read here, once, for every page. Same read as the grid
     on /marketplace (lib/listings.ts): the count in the nav is the number of
     listings the marketplace actually shows. Cached — this is not a database
@@ -90,9 +90,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
              Motion. With JavaScript disabled that never happens, so force
              them to their final state.
           2. The desktop nav's dropdown triggers are buttons, which do nothing
-             without JavaScript. Fall back to the plain link row — normally
-             the narrow-screen nav — at every width, so Marketplace and
-             Academy stay reachable.
+             without JavaScript. Fall back to the plain link rows — normally
+             the narrow-screen nav — at every width, so AI Solutions and
+             Academy stay reachable. The homepage tabs are plain links in
+             both and work either way.
         */}
         <noscript>
           <style>{`[data-reveal]{opacity:1!important;transform:none!important}[data-nav-menus]{display:none!important}[data-nav-plain]{display:flex!important}`}</style>
@@ -104,6 +105,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SiteFrame
           nav={<SiteNav listings={listings} account={account} />}
           footer={<SiteFooter />}
+          slimFooter={<SiteFooterSlim />}
         >
           {children}
         </SiteFrame>

@@ -17,6 +17,11 @@ import { usePathname } from "next/navigation";
  * into several sections, that restructure becomes worth doing and this
  * component goes away.
  *
+ * THE HOMEPAGE is framed too, but with the slim footer: its three views are
+ * one screen each from 1024×700 up (see app/page.tsx), and the full footer
+ * alone is taller than the room left under a view. `<main>` becomes a flex
+ * column there so a view can fill the height between header and footer.
+ *
  * `usePathname` is available during server rendering, so the server HTML and
  * the first client render agree — no flash of the marketing nav, no hydration
  * mismatch.
@@ -30,21 +35,26 @@ function hasOwnShell(pathname: string): boolean {
 export function SiteFrame({
   nav,
   footer,
+  slimFooter,
   children,
 }: {
   nav: React.ReactNode;
   footer: React.ReactNode;
+  /** The homepage's one-line footer. */
+  slimFooter: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
 
   if (hasOwnShell(pathname)) return <>{children}</>;
 
+  const isHome = pathname === "/";
+
   return (
     <>
       {nav}
-      <main className="flex-1">{children}</main>
-      {footer}
+      <main className={isHome ? "flex flex-1 flex-col" : "flex-1"}>{children}</main>
+      {isHome ? slimFooter : footer}
     </>
   );
 }

@@ -10,14 +10,14 @@ import { SectionGlow } from "@/components/motion/section-glow";
 import { siteCopy } from "@/content/site-copy";
 import { getListings } from "@/lib/listings";
 
-const { marketplace, worksWith } = siteCopy;
+const { marketplace, worksWith, whyPakai, academyTeaser } = siteCopy;
 
 export const metadata: Metadata = {
   title: marketplace.meta.title,
   description: marketplace.meta.description,
 };
 
-/** Matches the homepage section headline treatment. */
+/** The site's section headline treatment. */
 const sectionHeading =
   "text-3xl font-extrabold tracking-tight text-brand-navy sm:text-4xl lg:text-display";
 
@@ -50,7 +50,7 @@ export default async function MarketplacePage({
 
   return (
     <>
-      {/* 1. Hero — same backdrop treatment as the homepage hero. */}
+      {/* 1. Hero — same backdrop treatment as the homepage. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
@@ -118,7 +118,7 @@ export default async function MarketplacePage({
         </div>
       </section>
 
-      {/* 3. Marketplace partners — same list and constraint as the homepage. */}
+      {/* 3. Marketplace partners — only confirmed partners get a name. */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="right" />
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
@@ -173,6 +173,49 @@ export default async function MarketplacePage({
             </ul>
           </Reveal>
         </div>
+      </section>
+
+      {/* 4. Why PAK AI TechHub — moved here from the old long homepage. */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+        <Reveal>
+          <h2 className={sectionHeading}>{whyPakai.heading}</h2>
+          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {whyPakai.cards.map((card) => (
+              <HoverLift
+                key={card.headline}
+                as="li"
+                className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm"
+              >
+                <h3 className="text-xl font-bold tracking-tight text-brand-navy">
+                  {card.headline}
+                </h3>
+                <p className="mt-4 text-sm leading-relaxed text-brand-navy/70">{card.body}</p>
+              </HoverLift>
+            ))}
+          </ul>
+        </Reveal>
+      </section>
+
+      {/* 5. Academy teaser — moved here from the old long homepage. */}
+      <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="flex flex-col gap-6 rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-12 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">
+                {academyTeaser.heading}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-brand-navy/70">
+                {academyTeaser.body}
+              </p>
+            </div>
+            <Link
+              href={academyTeaser.cta.href}
+              className="inline-flex shrink-0 items-center justify-center self-start rounded-full bg-brand-navy px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 lg:self-center"
+            >
+              {academyTeaser.cta.label}
+            </Link>
+          </div>
+        </Reveal>
       </section>
     </>
   );

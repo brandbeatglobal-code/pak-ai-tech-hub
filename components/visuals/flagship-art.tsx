@@ -1,12 +1,13 @@
 /**
- * Abstract artwork for the flagship platform banner.
+ * Abstract artwork for the nav's AI Solutions panel, on its navy featured
+ * card. (It was drawn for the homepage's flagship banner, which went when the
+ * homepage became three views.)
  *
  * Generated, not photographed — it extends the same blue/green language as
- * `HeroBackdrop` into a single hard-edged form that reads against the navy
- * band. Built from concentric rotated ellipses rather than a bitmap, so it
+ * `HeroBackdrop` into a single hard-edged form that reads against navy. Built from concentric rotated ellipses rather than a bitmap, so it
  * scales to any width, weighs nothing, and needs no network request.
  *
- * Purely decorative: the banner's meaning is entirely in its text, so this is
+ * Purely decorative: the card's meaning is entirely in its text, so this is
  * hidden from assistive technology.
  */
 

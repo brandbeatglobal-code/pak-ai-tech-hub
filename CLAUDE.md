@@ -49,9 +49,10 @@ place, the `commissionTerms` constant:
 
 > We take a 20% commission only when you make a sale — nothing upfront.
 
-Provider keeps 80%. The provider column of "How it works" titles its last step
-"Get paid, keep 80%", and `providerCta.body` is `` `Free to list. ${commissionTerms}` ``.
-Both read the constant. Do not retype the sentence, and do not add payout
+Provider keeps 80%. The homepage's For AI Providers view shows
+`home.providers.payout` ("Get paid, keep 80%") and `home.providers.intro`, which
+is `` `Free to list. ${commissionTerms}` ``.
+The intro reads the constant. Do not retype the sentence, and do not add payout
 timings, fee tiers or minimums — none of those are settled.
 
 ---
@@ -252,7 +253,13 @@ one was left materially false.
 ### Built
 
 - All marketing pages: `/`, `/marketplace`, `/about`, `/academy`, `/contact`
-- Nav with working search and category typeahead; homepage browse experience
+- Nav with working search and category typeahead. Row 2 opens with the
+  homepage's three views — For Businesses (`/`), For AI Providers
+  (`/?tab=providers`), Categories (`/?tab=categories`) — as links with
+  `aria-current`, then AI Solutions (`/marketplace`), Academy and About
+- Homepage: one view at a time, each one screen from 1024×700 up (measured
+  document height; the homepage uses a one-line footer for this). Cut content
+  rather than shrinking type if a view grows
 - Auth end to end: `/sign-up`, `/login`, logout, role-gated `/dashboard`
 - Contact form delivering real email through Resend
 - `/pricing` **removed**; a 308 redirect to `/marketplace` lives in

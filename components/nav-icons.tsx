@@ -93,6 +93,28 @@ export function CategoryIcon({
   );
 }
 
+/**
+ * Magnifier for the search fields — the nav's and the homepage's. Sized by
+ * the caller; drawn on the same 20×20 grid as the category glyphs.
+ */
+export function SearchGlyph({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      focusable="false"
+      viewBox="0 0 20 20"
+      className={`shrink-0 text-brand-navy/45 ${className}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    >
+      <circle cx="9" cy="9" r="5.5" />
+      <path d="m13.2 13.2 3.3 3.3" />
+    </svg>
+  );
+}
+
 /** Bar count in the tier glyph — one per training tier. */
 const BARS = 5;
 
