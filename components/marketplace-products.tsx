@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 
+import { ListingsEmpty, listingsEmptyHeading } from "@/components/listings-empty";
 import { HoverLift } from "@/components/motion/hover-lift";
 import type { CategoryFilter, Listing } from "@/content/site-copy";
 
@@ -23,7 +24,6 @@ type MarketplaceProductsProps = {
   labels: {
     filterLegend: string;
     trainingBadge: string;
-    emptyMessage: string;
     unavailableMessage: string;
     resultCountOne: string;
     resultCountOther: string;
@@ -31,8 +31,6 @@ type MarketplaceProductsProps = {
     pricePrefix: string;
     /** "by {provider}". */
     byProvider: string;
-    /** Shown on a card only when `listing.example` is true. */
-    exampleBadge: string;
     /** The permanently disabled buy button — there is no checkout. */
     buyLabel: string;
   };
@@ -72,16 +70,29 @@ export function MarketplaceProducts({
   }, [listings, selected]);
 
   const categoryLabels = useMemo(
-    () => new Map(categories.map((category) => [category.id, category.label])),
+    () =>
+      new Map<string, string>(
+        categories.map((category) => [category.id, category.label]),
+      ),
     [categories],
   );
+
+  /* Which empty state applies, when one does — shown below and announced. */
+  const empty =
+    listings === null || visible.length > 0
+      ? null
+      : listings.length === 0
+        ? ({ variant: "launch" } as const)
+        : ({ variant: "category", category: categoryLabels.get(selected) ?? selected } as const);
 
   const countMessage =
     listings === null
       ? labels.unavailableMessage
-      : visible.length === 1
-        ? labels.resultCountOne
-        : labels.resultCountOther.replace("{count}", String(visible.length));
+      : empty
+        ? listingsEmptyHeading(empty)
+        : visible.length === 1
+          ? labels.resultCountOne
+          : labels.resultCountOther.replace("{count}", String(visible.length));
 
   return (
     <div className="mt-10 grid gap-8 lg:grid-cols-[13rem_1fr] lg:gap-12">
@@ -138,8 +149,8 @@ export function MarketplaceProducts({
 
         {listings === null ? (
           <p className="text-brand-navy/65">{labels.unavailableMessage}</p>
-        ) : visible.length === 0 ? (
-          <p className="text-brand-navy/65">{labels.emptyMessage}</p>
+        ) : empty ? (
+          <ListingsEmpty {...empty} />
         ) : (
           <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((product) => (
@@ -153,16 +164,6 @@ export function MarketplaceProducts({
                   <span className="inline-flex rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
                     {categoryLabels.get(product.category) ?? product.category}
                   </span>
-                  {/*
-                    Only on example listings (`Listing.example`, decided once
-                    in lib/listings.ts) — never on a real provider's product.
-                    Same dashed treatment as the homepage card's badge.
-                  */}
-                  {product.example ? (
-                    <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
-                      {labels.exampleBadge}
-                    </span>
-                  ) : null}
                 </div>
 
                 <h3 className="mt-4 text-lg font-bold tracking-tight text-brand-navy">
@@ -203,8 +204,7 @@ export function MarketplaceProducts({
 
                 {/*
                   Disabled, on every card, exactly as on the homepage card:
-                  there is no checkout. CLAUDE.md requires it on an example
-                  listing, and a real listing cannot be bought either.
+                  there is no checkout, so no listing can be bought yet.
 
                   `relative z-10` lifts it above the stretched link's overlay,
                   so pressing it does nothing — rather than following the

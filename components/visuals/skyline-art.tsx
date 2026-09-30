@@ -14,7 +14,7 @@
  * To swap in the real photo later: save it to `public/images/`, replace this
  * component's usage in `app/page.tsx` with `next/image`, keep the wrapper's
  * aspect ratio so layout does not shift, and keep the caption generic — it
- * describes a subject, not a location PAKAI operates in or a customer it
+ * describes a subject, not a location PAK AI TechHub operates in or a customer it
  * serves.
  * ─────────────────────────────────────────────────────────────────────────
  *

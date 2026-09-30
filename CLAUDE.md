@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# PAKAI TechHub — project conventions
+# PAK AI TechHub — project conventions
 
 Written for a Claude Code session starting cold. Every fact below was read out
 of this repository, the live Neon database, the Vercel project record or the
@@ -15,19 +15,27 @@ dropping the import silently loses the Next.js version warning it carries.
 ## 1. What this is
 
 A **two-sided AI product marketplace**. Buyers browse, try and buy AI products;
-providers list products for sale; PAKAI TechHub takes a commission on sales.
+providers list products for sale; PAK AI TechHub takes a commission on sales.
 
 The positioning language, verbatim from `content/site-copy.ts` — use these
 strings rather than paraphrases:
 
 | Field | Value |
 |---|---|
-| `brand.name` | PAKAI TechHub |
+| `brand.name` | PAK AI TechHub |
 | `brand.tagline` | AI for every business, everywhere. |
 | `hero.headline` (the `<h1>` on `/`) | Find AI. Try it free. Put it to work. |
 | `hero.subhead` | One marketplace, every product reviewed before it lists — browse, test, and buy with confidence. |
 | `hero.reassurance` | 7-day free trial, no card required. |
 | `meta.description` | Browse AI products from providers worldwide, try them free, and put them to work — all in one place. |
+
+**The display name is "PAK AI TechHub"** (renamed 2026-09-30). It is written
+once, as `brandName` in `content/site-copy.ts`. Identifiers keep the old
+spelling and must not be "fixed": the domain `pakaitechub.com`, every email
+address, the `@pakaitechub` handle, the repo, package, Vercel and Neon names,
+the logo artwork (`public/brand/logo.png`, which still reads "PAKAI"), and the
+house provider's stored `company_name` "PAKAI TechHub", which `db/seed.ts`
+looks up by that exact string.
 
 `meta.description` **deliberately differs** from `hero.subhead`. They are
 separate fields read by different files (`app/layout.tsx` and `app/page.tsx`);
@@ -191,8 +199,12 @@ through one. See `types/next-auth.d.ts`.
 `content/site-copy.ts` is the single source of truth for all user-facing copy.
 Any string appearing on more than one surface gets hoisted to a module-scope
 constant with a comment saying it is the only place to write it. Existing ones:
-`founder`, `commissionTerms`, `browseProductsCta`, `startListingCta`,
-`contactEmail`. Follow the pattern rather than retyping a literal.
+`brandName`, `leadership`, `commissionTerms`, `browseProductsCta`,
+`startListingCta`, `listProductCta`, `tellUsCta`, `contactEmail`. Follow the
+pattern rather than retyping a literal.
+
+The eight product categories are written once, in
+`marketplace.products.categories`; every category surface derives from it.
 
 Comments in this file are load-bearing guard-rails. When you change something,
 update the comments that describe it — several have gone stale mid-refactor and
@@ -210,9 +222,16 @@ one was left materially false.
    every number available today would be placeholder data.
 3. **When given a competitor site or reference design, take structural and UX
    patterns only.** Never copy real content, names or claims from it.
-4. Example listings must carry a visible "Example" badge and a disabled "Coming
-   soon" action. No star ratings, no review counts, no cart or notification
-   badges, no language or currency selectors.
+4. **The marketplace lists third-party providers only.** `lib/listings.ts`
+   leaves out, in its one query, every product whose provider has no linked
+   user (`providers.user_id` null — the house provider and its eight seeded
+   rows), so no surface can show them; the rows stay in the database. Every
+   listing carries a disabled "Coming soon" action — there is no checkout.
+   With nothing to list, surfaces show the shared empty state
+   (`components/listings-empty.tsx`), never stand-in products. No star
+   ratings, no review counts, no cart or notification badges, no language or
+   currency selectors. If house listings are ever shown again, they must carry
+   a visible "Example" badge.
 5. **Never use "vendor"** anywhere in copy or code. The term is "provider".
    `git grep -i vendor -- . ':!CLAUDE.md'` must return nothing. (This file is
    excluded because the rule itself spells the word; nothing else may.)
@@ -226,8 +245,9 @@ one was left materially false.
 - `user_role`: `buyer` | `provider` | `admin` — default `buyer`
 - `product_status`: `pending` | `approved` | `rejected` — default `pending`
 - Tables: `users`, `providers`, `products` (+ Drizzle relations)
-- `providers.user_id` is **nullable on purpose**: PAKAI TechHub is itself a
-  provider with no person to sign in as. Null means first-party.
+- `providers.user_id` is **nullable on purpose**: PAK AI TechHub is itself a
+  provider with no person to sign in as. Null means first-party, and
+  first-party products are not listed (§5.4).
 
 ### Built
 

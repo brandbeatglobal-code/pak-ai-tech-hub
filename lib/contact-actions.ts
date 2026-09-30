@@ -141,7 +141,7 @@ export async function submitContact(
     values.message || "(none)",
     "",
     "—",
-    "Sent from the PAKAI TechHub contact form.",
+    `Sent from the ${siteCopy.brand.name} contact form.`,
   ].join("\n");
 
   try {

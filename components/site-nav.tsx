@@ -68,9 +68,13 @@ function isCategory(
  *
  * The marketplace panel's numbers are counted from `listings` — the same read
  * (lib/listings.ts) that fills the grid on /marketplace — so "4 products"
- * here is the four cards a visitor finds there. `listings` is null when the
- * database could not be read; the panel then shows no numbers at all rather
- * than zeros, which would say the marketplace is empty.
+ * here is the four cards a visitor finds there.
+ *
+ * NO ZEROS. A category with nothing listed shows its name and no number, and
+ * with nothing listed at all the featured headline drops its count too:
+ * "0 products" reads as a dead marketplace rather than a new one. The same
+ * goes when `listings` is null (the database could not be read) — no numbers
+ * at all rather than wrong ones.
  */
 function marketplacePanel(listings: Listing[] | null): Panel {
   const { menus } = nav;
@@ -85,24 +89,26 @@ function marketplacePanel(listings: Listing[] | null): Panel {
     featured: {
       eyebrow: menus.marketplace.featured.eyebrow,
       /* Counted from the listings, so the headline cannot overstate them. */
-      headline: listings
+      headline: listings?.length
         ? menus.marketplace.featured.headline.replace("{count}", String(listings.length))
         : menus.marketplace.featured.headlineNoCount,
       body: menus.marketplace.featured.body,
       href: "/marketplace",
       art: <FlagshipArt className="h-full w-auto" />,
     },
-    rows: marketplace.products.categories.filter(isCategory).map((category) => ({
-      key: category.id,
-      href: `/marketplace?category=${category.id}`,
-      label: category.label,
+    rows: marketplace.products.categories.filter(isCategory).map((category) => {
       /* Both sides are filter IDs: lib/listings.ts converted the table's
          label before these ever reached the client. */
-      detail: listings
-        ? countLabel(listings.filter((product) => product.category === category.id).length)
-        : undefined,
-      icon: <CategoryIcon category={category.id} />,
-    })),
+      const count =
+        listings?.filter((product) => product.category === category.id).length ?? 0;
+      return {
+        key: category.id,
+        href: `/marketplace?category=${category.id}`,
+        label: category.label,
+        detail: count > 0 ? countLabel(count) : undefined,
+        icon: <CategoryIcon category={category.id} />,
+      };
+    }),
   };
 }
 

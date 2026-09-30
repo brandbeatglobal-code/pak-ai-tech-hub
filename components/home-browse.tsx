@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
 
+import { ListingsEmpty, listingsEmptyHeading } from "@/components/listings-empty";
 import { HoverLift } from "@/components/motion/hover-lift";
 import { CategoryIcon } from "@/components/nav-icons";
 import { browseCategories, siteCopy, type Listing } from "@/content/site-copy";
@@ -150,8 +151,8 @@ export function HeroSearch() {
 /**
  * The horizontally scrolling category bar.
  *
- * All nine categories, including those with nothing listed yet. Selecting an
- * empty one shows the grid's empty message, which is the honest answer — the
+ * All eight categories, including those with nothing listed yet. Selecting an
+ * empty one shows the grid's empty state, which is the honest answer — the
  * category is real, no approved product is in it yet.
  *
  * A radio group rather than buttons: arrow keys move between options and the
@@ -225,12 +226,14 @@ export function CategoryBar() {
  * hero search and the category bar.
  *
  * Every card carries a disabled "Coming soon" button. It is not decoration:
- * there is no checkout, so nothing here can be bought. An EXAMPLE listing
- * (`Listing.example` — the house provider's placeholder-priced products) also
- * carries the "Example" badge; a real provider's listing never does. Do not
- * enable the button, do not show the badge on anything but an example, and do
- * not add a rating, a review count or an add-to-cart control — there is no
- * data behind any of them.
+ * there is no checkout, so nothing here can be bought. Do not enable the
+ * button, and do not add a rating, a review count or an add-to-cart control —
+ * there is no data behind any of them.
+ *
+ * Nothing to show gets the shared empty state (components/listings-empty.tsx):
+ * the launch message when nothing is listed at all, otherwise the one that
+ * matches what narrowed the grid to nothing — the search if there is a query,
+ * the category if not.
  */
 export function ProductListings() {
   const { listings, query, categoryId, listingsRef } = useBrowse();
@@ -240,12 +243,28 @@ export function ProductListings() {
     [listings, query, categoryId],
   );
 
+  /* Which empty state applies, when one does — shown below and announced. */
+  const empty =
+    listings === null || visible.length > 0
+      ? null
+      : listings.length === 0
+        ? ({ variant: "launch" } as const)
+        : query.trim()
+          ? ({ variant: "search", query: query.trim() } as const)
+          : ({
+              variant: "category",
+              category: browseCategories.find((category) => category.id === categoryId)
+                ?.label,
+            } as const);
+
   const countMessage =
     listings === null
       ? products.unavailableMessage
-      : visible.length === 1
-        ? products.resultCountOne
-        : products.resultCountOther.replace("{count}", String(visible.length));
+      : empty
+        ? listingsEmptyHeading(empty)
+        : visible.length === 1
+          ? products.resultCountOne
+          : products.resultCountOther.replace("{count}", String(visible.length));
 
   return (
     <div ref={listingsRef} className="scroll-mt-40">
@@ -254,11 +273,13 @@ export function ProductListings() {
         {countMessage}
       </p>
 
-      {visible.length === 0 ? (
+      {listings === null ? (
+        /* "Could not check" is not "nothing listed": say which one. */
         <p className="rounded-3xl border border-dashed border-brand-navy/15 bg-white/60 px-6 py-12 text-center text-brand-navy/65">
-          {/* "Could not check" is not "nothing listed": say which one. */}
-          {listings === null ? products.unavailableMessage : products.emptyMessage}
+          {products.unavailableMessage}
         </p>
+      ) : empty ? (
+        <ListingsEmpty {...empty} />
       ) : (
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((product) => (
@@ -272,17 +293,6 @@ export function ProductListings() {
                 <span className="inline-flex rounded-full bg-brand-navy/[0.06] px-3 py-1 text-xs font-semibold text-brand-navy/65">
                   {categoryLabelFor(product)}
                 </span>
-                {/*
-                  Only on example listings, decided once in lib/listings.ts.
-                  A dashed outline rather than a solid fill, like the other
-                  "not yet" markers on the page, so it reads as a status and
-                  not as a product attribute.
-                */}
-                {product.example ? (
-                  <span className="inline-flex rounded-full border border-dashed border-brand-navy/30 px-3 py-1 text-xs font-semibold text-brand-navy/65">
-                    {products.exampleBadge}
-                  </span>
-                ) : null}
               </div>
 
               {/* Not a link. Product pages do not exist, and the card's own
@@ -320,11 +330,11 @@ export function ProductListings() {
 }
 
 /**
- * The category browse grid — the same nine categories as the bar, as icon and
- * name only.
+ * The category browse grid — the same eight categories as the bar, as icon
+ * and name only.
  *
- * No product counts. Five of the nine would read "0" and three of the rest
- * "1", which says the marketplace is empty rather than that it is new.
+ * No product counts. At launch every one would read "0", which says the
+ * marketplace is empty rather than that it is new.
  *
  * Each card selects that category in the bar above and scrolls the listings
  * back into view, so the grid is a way into the listings rather than a static

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 
 import { googleSignInEnabled } from "@/auth";
 import { AuthForm, AuthLink } from "@/components/auth-form";
+import { siteCopy } from "@/content/site-copy";
 import { signInWithGoogle, signUp } from "@/lib/auth-actions";
 
 export const metadata: Metadata = {
-  title: "Sign up — PAKAI TechHub",
-  description: "Create a PAKAI TechHub account as a buyer or an AI provider.",
+  title: `Sign up — ${siteCopy.brand.name}`,
+  description: `Create a ${siteCopy.brand.name} account as a buyer or an AI provider.`,
 };
 
 /**

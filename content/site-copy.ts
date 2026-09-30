@@ -85,11 +85,8 @@ export type ValueBadge = {
 };
 
 /**
- * Every industry in the taxonomy.
- *
- * A union rather than `string` so that adding one is a compile error until a
- * glyph is chosen for it in components/nav-icons.tsx — which is what stops a
- * new category rendering as a blank mark in the browse grid.
+ * Every industry in the taxonomy — what the contact form asks a visitor
+ * about their own business. Not a product category (see `ProductCategory`).
  */
 export type IndustryId =
   | "healthcare"
@@ -103,9 +100,9 @@ export type IndustryId =
 
 export type Industry = {
   /**
-   * Stable slug. Used as the browse-category id on the homepage and, for the
-   * four industries that have products, it matches the `ProductCategory` of
-   * those products — which is what lets a category chip filter the grid.
+   * Stable slug. The contact form's Industry select posts it. It is the
+   * visitor's industry, not a product category — the browse categories are
+   * `marketplace.products.categories`, and four ids happen to be shared.
    */
   id: IndustryId;
   name: string;
@@ -124,6 +121,12 @@ export type WorksWithItem = {
   confirmed: boolean;
 };
 
+/** One person in the About page's Leadership section. */
+export type LeadershipMember = {
+  name: string;
+  role: string;
+};
+
 export type TeamMember = {
   /**
    * Only set where a real person has been confirmed. Roles that are still
@@ -136,18 +139,27 @@ export type TeamMember = {
 };
 
 /**
- * Category ids used by the marketplace filter.
+ * The eight product categories, as ids.
  *
- * Only industries that actually have a product appear here. Banking & Finance,
- * Manufacturing, Logistics and Real Estate are deliberately absent — adding a
- * filter for them would show an empty grid. Add one when a product ships.
+ * A union rather than `string` so that adding one is a compile error until a
+ * glyph is chosen for it in components/nav-icons.tsx. The list itself — ids,
+ * labels and order — is `marketplace.products.categories`; everything else
+ * (filters, forms, the homepage grid, the header menu, the search select)
+ * derives from that one list.
+ *
+ * Categories are plain text in the database (`products.category`,
+ * `providers.category`) and checked in code, so adding one needs no schema
+ * change.
  */
 export type ProductCategory =
-  | "cross-industry"
   | "healthcare"
   | "agriculture"
   | "education"
-  | "retail";
+  | "retail"
+  | "cross-industry"
+  | "chatbots"
+  | "ai-agents"
+  | "ai-voice-agents";
 
 export type CategoryFilter = {
   /** "all" is the reset option; every other id must match a ProductCategory. */
@@ -180,10 +192,10 @@ export type Product = {
    * the marketplace's convention, NOT stored data — the table has no
    * billing-period column (see `products.priceAmount` in db/schema.ts).
    *
-   * The eight first-party rows still carry the INTERIM figures they were
-   * seeded with (converted from PKR at roughly 277 PKR/USD and rounded).
-   * Provider submissions carry the provider's own price, in USD only. Do not
-   * add a currency switcher on top of either.
+   * Provider submissions carry the provider's own price, in USD only. (The
+   * eight first-party rows carry interim figures converted from PKR, but they
+   * are no longer listed — see lib/listings.ts.) Do not add a currency
+   * switcher.
    */
   price: string;
   /** Individual product pages do not exist yet. */
@@ -193,24 +205,12 @@ export type Product = {
 /**
  * A product as the marketplace lists it: an approved row from the `products`
  * table, in the `Product` shape the cards and the search already use, plus
- * the name of the provider that lists it. Built only by lib/listings.ts.
+ * the name of the provider that lists it. Built only by lib/listings.ts,
+ * which lists third-party providers only — so there is no "example" flag any
+ * more: every listing is a real provider's reviewed product.
  */
 export type Listing = Product & {
   provider: string;
-  /**
-   * An EXAMPLE listing: shown, but not a real listing yet — its price is a
-   * placeholder. Every surface that renders a listing shows
-   * `marketplace.products.exampleBadge` when this is true, and only then.
-   *
-   * Structural, set in one place (lib/listings.ts): true exactly when the
-   * listing's provider has no linked user account (`providers.user_id` is
-   * null). Today that is the first-party house provider and its eight seeded
-   * products; it would also be any in-house demo listing added later. A
-   * provider with a real account — someone who applied and was approved — is
-   * never an example, whoever they are. Do not re-derive this per surface,
-   * and do not replace it with a list of names or ids.
-   */
-  example: boolean;
 };
 
 export type TrainingTier = {
@@ -244,19 +244,13 @@ export type Curriculum = {
 };
 
 /**
- * One of the nine categories a visitor can browse by.
- *
- * `productCategory` is set only where products actually exist under that
- * category, which is what lets a chip filter the listings grid. The five
- * without it are real parts of the taxonomy that have nothing listed yet —
- * selecting one shows the empty-state message rather than a broken grid.
+ * One of the eight categories a visitor can browse by — the product
+ * categories, and nothing else. (It used to be nine, mixing in industries
+ * that no product could be filed under; see `browseCategories`.)
  */
-export type BrowseCategoryId = "cross-industry" | IndustryId;
-
 export type BrowseCategory = {
-  id: BrowseCategoryId;
+  id: ProductCategory;
   label: string;
-  productCategory?: ProductCategory;
 };
 
 /** Placeholder card for a resource that does not exist yet. */
@@ -278,22 +272,35 @@ export type FooterColumn = {
 };
 
 /**
- * Founder details, supplied by the team.
+ * The brand's display name.
  *
- * THIS IS THE ONLY PLACE FOUNDER CONTENT SHOULD BE WRITTEN.
+ * THE ONLY PLACE TO WRITE IT. "PAK AI TechHub", with a space between PAK and
+ * AI. Every page title, heading, email subject and alt text below reads it,
+ * so a rename is this one line.
  *
- * Both pages that show the founder read from this object — the homepage (`/`)
- * as a compact summary card, the About page (`/about`) as the fuller team
- * card with an initials mark. The two differ in presentation only. To change
- * the name, title or bio, change it here; do not restate any of it in
- * `siteCopy.founder`, `siteCopy.about.team.founder`, or a component, or the
- * pages will drift apart the way they previously did.
+ * Display name only. The domain (pakaitechub.com), email addresses, env var
+ * names, the package and repo names and every database identifier keep the
+ * old run-together spelling on purpose — changing any of those breaks
+ * delivery or lookups. db/seed.ts in particular finds the house provider by
+ * its STORED name, which is still "PAK AI TechHub"; see the note there.
  */
-const founder = {
-  name: "NK",
-  title: "Founder & CEO",
-  bio: "Visionary leader driving AI adoption worldwide. Customer care operations expert.",
-};
+const brandName = "PAK AI TechHub";
+
+/**
+ * The leadership team, exactly as the owners supplied it.
+ *
+ * THIS IS THE ONLY PLACE LEADERSHIP CONTENT SHOULD BE WRITTEN. Shown on
+ * /about under "Leadership". Name and role only — no bios, photos, initials
+ * marks or other detail. Add a person or a line here when the owners confirm
+ * it; do not fill gaps.
+ *
+ * It replaces the earlier `founder` block ("NK — Founder & CEO", with a bio,
+ * shown on the homepage and /about), which these roles contradict.
+ */
+const leadership = [
+  { name: "Abdul Rehman", role: "CEO" },
+  { name: "NK", role: "Co-founder" },
+] satisfies LeadershipMember[];
 
 /**
  * The commission model, in one sentence.
@@ -355,6 +362,29 @@ const browseProductsCta = {
 const startListingCta = {
   label: "Start listing — it's free",
   href: "/start-listing",
+} satisfies NavLink;
+
+/**
+ * "List your product" — the nav button and the listings empty state.
+ *
+ * THE ONLY PLACE TO WRITE THE LABEL. Same destination as `startListingCta`
+ * (the state-aware /start-listing), different words: this one is the short
+ * button label, that one the longer invitation used in the provider bands.
+ */
+const listProductCta = {
+  label: "List your product",
+  href: startListingCta.href,
+} satisfies NavLink;
+
+/**
+ * "Tell us what you need" — for a buyer who cannot find what they are after.
+ *
+ * THE ONLY PLACE TO WRITE IT. The listings empty state and the "Have an AI
+ * challenge?" card both read it; it goes to the contact form.
+ */
+const tellUsCta = {
+  label: "Tell us what you need",
+  href: "/contact",
 } satisfies NavLink;
 
 /*
@@ -449,10 +479,10 @@ export const siteCopy = {
   },
 
   brand: {
-    name: "PAKAI TechHub",
+    name: brandName,
     tagline: "AI for every business, everywhere.",
-    logoAlt: "PAKAI TechHub — AI for every business, everywhere.",
-    brandmarkAlt: "PAKAI TechHub",
+    logoAlt: `${brandName} — AI for every business, everywhere.`,
+    brandmarkAlt: brandName,
   },
 
   /*
@@ -466,7 +496,7 @@ export const siteCopy = {
    * and are now meant to differ.
    */
   meta: {
-    title: "PAKAI TechHub — AI for every business, everywhere.",
+    title: `${brandName} — AI for every business, everywhere.`,
     description:
       "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
   },
@@ -489,6 +519,7 @@ export const siteCopy = {
         /**
          * {count} is substituted with the number of listed products in that
          * category — counted from the same listings /marketplace renders.
+         * Never shown as zero: an empty category shows its name only.
          */
         countOne: "1 product",
         countOther: "{count} products",
@@ -500,14 +531,15 @@ export const siteCopy = {
          * headline cannot claim a count the marketplace does not have. Do not
          * hard-code a number here.
          *
-         * `headlineNoCount` is used when the listings could not be read. The
-         * panel then shows no counts at all rather than a wrong one.
+         * `headlineNoCount` is used when nothing is listed yet, or when the
+         * listings could not be read — the panel then shows no counts at all,
+         * rather than "0" or a wrong one.
          */
         featured: {
           eyebrow: "Featured",
           headline: "Browse all {count} AI products",
           headlineNoCount: "Browse AI products",
-          body: "Built in-house or vetted from trusted partners, managed in one place.",
+          body: "AI products from independent providers, each reviewed before it lists.",
         },
       },
       academy: {
@@ -558,7 +590,7 @@ export const siteCopy = {
      * `/start-listing` redirect. It used to point straight at
      * `/sign-up?role=provider`, which sent a signed-in buyer to a sign-up form.
      */
-    cta: { label: "List your product", href: startListingCta.href },
+    cta: listProductCta,
     /*
      * Copy for the search field in the nav, and for the larger one in the
      * hero, which is the same control at a different size.
@@ -636,7 +668,7 @@ export const siteCopy = {
   },
 
   /*
-   * REMOVED: the `audience` block ("Who PAKAI TechHub is built for").
+   * REMOVED: the `audience` block ("Who PAK AI TechHub is built for").
    *
    * It held two tiles, "For businesses" and "For AI providers", saying what
    * each side of the marketplace gets. `howItWorks` below now says the same
@@ -655,8 +687,8 @@ export const siteCopy = {
   /**
    * Full-width banner introducing the platform as a whole.
    *
-   * Every claim in `body` is one the site already makes elsewhere — own
-   * products plus vetted partner tools (`offering`), review before listing
+   * Every claim in `body` is one the site already makes elsewhere — tools
+   * from independent providers (`offering`), review before listing
    * and a free trial on every listing (`about.different`), training with
    * every subscription (`pricing.included`). Do not add a new claim here;
    * add it to the section that owns it first.
@@ -667,9 +699,9 @@ export const siteCopy = {
    * string after a copy change, this comment is why it used to appear twice.)
    */
   flagship: {
-    eyebrow: "The PAKAI TechHub platform",
+    eyebrow: `The ${brandName} platform`,
     headline: "A marketplace built on trust",
-    body: "Our own products and vetted partner tools in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
+    body: "AI tools from independent providers in a single marketplace — every listing reviewed before it goes live, every one with a free trial and AI Academy training included.",
     primaryCta: browseProductsCta,
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
     /**
@@ -799,7 +831,7 @@ export const siteCopy = {
    * the note on `commissionTerms` for what must not be added to it.
    */
   providerCta: {
-    heading: "List your AI product on PAKAI TechHub",
+    heading: `List your AI product on ${brandName}`,
     body: `Free to list. ${commissionTerms}`,
     cta: startListingCta,
     /* See the note on the removed `audience` block: keep this generic. */
@@ -807,15 +839,16 @@ export const siteCopy = {
   },
 
   /*
-   * The nine browse categories, rendered as the category bar under the hero
+   * The eight browse categories, rendered as the category bar under the hero
    * and as the grid further down.
    *
-   * Name only, by design. A product count would read "0" for five of the nine
-   * and "1" for three of the rest, which says the marketplace is empty rather
-   * than that it is new. Add counts when the counts are worth showing.
+   * Name only, by design. At launch every count would be "0", which says the
+   * marketplace is empty rather than that it is new. Add counts when the
+   * counts are worth showing.
    *
-   * The list itself is derived in `browseCategories` below, from the industry
-   * taxonomy — there is no second list of categories to keep in step.
+   * The list itself is `browseCategories` below, derived from
+   * `marketplace.products.categories` — there is no second list to keep in
+   * step.
    */
   categoryBrowse: {
     heading: "Browse by category",
@@ -840,43 +873,23 @@ export const siteCopy = {
   },
 
   offering: {
-    heading: "What you get with PAKAI TechHub",
+    heading: `What you get with ${brandName}`,
     /**
      * Tab 2 deliberately avoids naming any marketplace partner. Do not add
      * CustomGPT, BotPenguin, TruBot or any other provider here until that
      * partnership is confirmed the same way KladAI's was — see `worksWith`.
      */
     tabs: [
-      {
-        id: "own-products",
-        label: "Own AI Products",
-        headline: "Ready to deploy, built in-house",
-        /*
-         * Describes the in-house products without naming them. They used to be
-         * listed here by name, which meant renaming one left this sentence
-         * quoting a product that no longer existed. The names live in the
-         * `products` table (read through lib/listings.ts); if this line needs
-         * them, read them from there rather than typing them here.
-         *
-         * NOT A CONTRADICTION with the "Example" badge — confirmed on
-         * 2026-09-24. The products this tab describes (support, analytics,
-         * content, CRM) are built and deployable, so "built in-house" and
-         * "ready to deploy" are accurate as written. What is not final is
-         * their MARKETPLACE LISTINGS: the house provider's listings carry the
-         * "Example" badge because the listing is not live yet and its price is
-         * a placeholder (`marketplace.products.exampleNote`), not because the
-         * product does not exist. Keep the two meanings apart: if either one
-         * changes — the products, or the state of their listings — revisit
-         * this tab and `exampleNote` together.
-         */
-        body: "Customer support, analytics, content, and CRM products — built by our team, with training included from day one.",
-        link: { label: "Learn more", href: "#" },
-      },
+      /*
+        REMOVED: the "Own AI Products" tab ("Ready to deploy, built in-house").
+        The marketplace lists third-party providers only, so there are no
+        in-house products on it to describe.
+      */
       {
         id: "marketplace",
         label: "Marketplace",
         headline: "Browse trusted AI tools from our partners",
-        body: "Access vetted third-party AI products alongside our own — one marketplace, one bill, one place to manage them all.",
+        body: "Access vetted AI products from independent providers — one marketplace, one bill, one place to manage them all.",
         link: { label: "Learn more", href: "#" },
       },
       {
@@ -890,7 +903,7 @@ export const siteCopy = {
   },
 
   whyPakai: {
-    heading: "Why PAKAI TechHub",
+    heading: `Why ${brandName}`,
     cards: [
       {
         headline: "Affordable by design",
@@ -916,15 +929,18 @@ export const siteCopy = {
   },
 
   /**
-   * The industry taxonomy, and the source of record for the browse categories
-   * below. Nothing else may define an industry list.
+   * The industry taxonomy. Nothing else may define an industry list.
    *
-   * The homepage no longer renders this as its own section — the category
-   * browse grid and the category bar took that over, and both show name only.
+   * Read by the contact form's Industry select (and its server-side check):
+   * the visitor's own industry. It is NOT the browse categories — those are
+   * `marketplace.products.categories`, since a visitor browses by what can
+   * actually be listed. Banking & Finance, Manufacturing, Logistics and Real
+   * Estate used to appear as browse categories no product could be filed
+   * under; they remain here, as industries a business can be in.
+   *
    * The descriptions are kept because they are the only written account of
    * what each industry covers, and the next surface that needs one (an
-   * industry page, a category landing page) should read them from here rather
-   * than write new ones.
+   * industry page) should read them from here rather than write new ones.
    */
   industries: {
     heading: "Industries we cover",
@@ -971,7 +987,7 @@ export const siteCopy = {
       {
         name: "KladAI",
         description:
-          "An autonomous AI agent that handles documents, data, research, and presentations — available now through the PAKAI TechHub marketplace.",
+          `An autonomous AI agent that handles documents, data, research, and presentations — available now through the ${brandName} marketplace.`,
         href: "https://kladai.com",
         confirmed: true,
       },
@@ -989,14 +1005,14 @@ export const siteCopy = {
 
   marketplace: {
     meta: {
-      title: "Marketplace — PAKAI TechHub",
+      title: `Marketplace — ${brandName}`,
       description:
-        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+        "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
     },
     hero: {
       headline: "Every AI product your business needs, in one place",
       subhead:
-        "Built in-house or vetted from trusted partners — browse, compare, and start a free trial in minutes.",
+        "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
       /*
        * NOT /marketplace. This button sits on /marketplace, so pointing it
        * there would make the page's own primary call to action reload the page
@@ -1014,7 +1030,7 @@ export const siteCopy = {
        * the review queue.
        *
        * "Listed products", not "Our products", "Featured" or "Popular":
-       * providers other than PAKAI TechHub list here, and nothing measures
+       * providers other than PAK AI TechHub list here, and nothing measures
        * popularity or picks features. It used to read "Example listings" when
        * the grid was eight illustrative entries in this file; the heading and
        * the intro changed when the grid started reading the table.
@@ -1022,37 +1038,18 @@ export const siteCopy = {
        * Still not buyable. There is no checkout, so every card's buy button is
        * disabled (`buyLabel`) and the intro says why (`notBuyableYet`).
        *
-       * Some listings are EXAMPLES (`Listing.example`): the first-party
-       * products, which are not real listings yet — their prices are
-       * placeholders. Those, and only those, carry `exampleBadge`, and
-       * `exampleNote` says what the badge means wherever one is on show. A
-       * real provider's approved product never carries it.
+       * Third-party only: lib/listings.ts leaves out the house provider's
+       * seeded products, so every listing here is an independent provider's
+       * reviewed product. There is no "Example" badge any more because there
+       * is nothing left to badge.
        */
       heading: "Listed products",
-      intro: `Products listed by providers on PAKAI TechHub. ${notBuyableYet}`,
-      /**
-       * Badge on every EXAMPLE listing card, and on its row in the nav
-       * search results. Dashed outline, like the other "not yet" markers, so
-       * it reads as a status rather than a product attribute.
-       */
-      exampleBadge: "Example",
-      /*
-       * Shown under the intro, only when at least one listing is an example.
-       *
-       * Deliberately narrow: it says the LISTING is not live and the PRICE is
-       * a placeholder — nothing about the product itself. The in-house
-       * products are built and deployable (confirmed 2026-09-24), which is
-       * what the "Own AI Products" tab in `offering` says; this line must not
-       * be widened into suggesting otherwise. If that tab changes, revisit
-       * this line.
-       */
-      exampleNote: "Listings marked Example are not live yet — their prices are placeholders.",
+      intro: `Products listed by providers on ${brandName}. ${notBuyableYet}`,
       /*
        * The buy button on each card, permanently disabled. There is no
        * checkout, so a working-looking button would be a lie; a disabled one
-       * that says why is not. Do not wire this to a cart. It stays disabled
-       * whether a listing is first-party or a provider's — that is about
-       * checkout, not about whether the data is real.
+       * that says why is not. Do not wire this to a cart. It is about
+       * checkout, not about whether the listing is real — every listing is.
        */
       buyLabel: "Coming soon",
       /** Under the nav search's results. Same sentence as the intro. */
@@ -1069,11 +1066,33 @@ export const siteCopy = {
       resultCountOne: "1 product shown",
       resultCountOther: "{count} products shown",
       /*
-       * Shown when a category has no approved listing — which is true of
-       * several right now, and is the honest answer: the category is real,
-       * nothing is listed in it yet.
+       * THE EMPTY LAUNCH STATE — components/listings-empty.tsx, on every
+       * surface that lists products (the /marketplace grid, the homepage,
+       * the nav search).
+       *
+       * At launch nothing is listed: the house provider's products are left
+       * out, and no provider has been approved yet. That is said plainly, as
+       * news rather than as an error, with the two things a visitor can do
+       * about it. It makes no claim about how many providers are in review —
+       * nothing counts that publicly.
+       *
+       * `categoryHeading` / `categoryBody` are for a filter narrowed to one
+       * category with nothing in it while other categories have listings.
+       * {category} is the category's label.
+       *
+       * `searchHeading` is for a search that matched nothing while listings
+       * exist. {query} is what was typed.
        */
-      emptyMessage: "No products in this category yet.",
+      emptyState: {
+        heading: "Providers are joining",
+        body: "Every AI product is reviewed before it lists, so the first listings appear here as providers pass review. Have a product to list, or a problem you want AI to solve?",
+        categoryHeading: "Nothing in {category} yet",
+        categoryBody: "Providers are joining and this category is open. List your product here, or tell us what you need.",
+        searchHeading: "No products match {query}",
+        searchBody: "Try another word or category, or tell us what you need.",
+        listProduct: listProductCta,
+        tellUs: tellUsCta,
+      },
       /*
        * Shown instead of the grid when the listings could not be read (the
        * database is unreachable or not configured). Not the empty message:
@@ -1092,11 +1111,22 @@ export const siteCopy = {
        */
       pricePeriod: "/mo",
       /*
-       * The filter list, and the one map between the two category
-       * vocabularies: `id` is what `Product.category` and every filter hold,
-       * `label` is what the `products.category` column holds. lib/listings.ts
-       * converts label to id through this list; lib/product-submission.ts
-       * takes its allowed labels from it.
+       * THE CATEGORY LIST — the only place categories are written.
+       *
+       * Every category surface derives from it: the /marketplace filter, the
+       * homepage category grid, the nav's category menu and search select
+       * (via `browseCategories`), the product-submission and provider
+       * listing forms (lib/product-submission.ts), and lib/listings.ts's
+       * label-to-id map. Add a category here and to the `ProductCategory`
+       * union, then give it a glyph in components/nav-icons.tsx — the build
+       * fails until you do.
+       *
+       * It is also the one map between the two category vocabularies: `id`
+       * is what `Product.category` and every filter hold, `label` is what the
+       * `products.category` and `providers.category` columns hold. Both are
+       * plain text columns, so a new category needs no migration. Never
+       * rename a label once rows use it: lib/listings.ts matches stored
+       * labels against this list, and a renamed one would drop those rows.
        */
       categories: [
         { id: "all", label: "All" },
@@ -1105,6 +1135,9 @@ export const siteCopy = {
         { id: "education", label: "Education" },
         { id: "retail", label: "Retail" },
         { id: "cross-industry", label: "Cross-Industry" },
+        { id: "chatbots", label: "Chatbots" },
+        { id: "ai-agents", label: "AI Agents" },
+        { id: "ai-voice-agents", label: "AI Voice Agents" },
       ] satisfies CategoryFilter[],
     },
     partners: {
@@ -1116,7 +1149,7 @@ export const siteCopy = {
        * until that partnership is confirmed the way KladAI's was.
        */
       intro:
-        "Third-party AI products available alongside our own, billed and managed in one place.",
+        "AI products from independent providers, billed and managed in one place.",
     },
   },
 
@@ -1135,12 +1168,6 @@ export const siteCopy = {
    * page returns, it reads products from lib/listings.ts rather than
    * restating them — that was the point of the earlier refactor.
    */
-
-  /** Homepage founder section. Values come from the shared `founder` source. */
-  founder: {
-    heading: "Who is behind PAKAI TechHub",
-    ...founder,
-  },
 
   /** Homepage teaser that points at the Academy page. */
   academyTeaser: {
@@ -1192,12 +1219,12 @@ export const siteCopy = {
         { label: "Instagram", icon: "instagram", href: "#" },
       ] satisfies SocialLink[],
     },
-    copyright: `© ${new Date().getFullYear()} PAKAI TechHub. All rights reserved.`,
+    copyright: `© ${new Date().getFullYear()} ${brandName}. All rights reserved.`,
   },
 
   about: {
     meta: {
-      title: "About — PAKAI TechHub",
+      title: `About — ${brandName}`,
       description:
         "Founded in 2026 to close the gap between what AI can do and what most businesses can actually access.",
     },
@@ -1210,11 +1237,11 @@ export const siteCopy = {
     },
     story: {
       heading: "Our story",
-      body: "PAKAI TechHub was born from a simple observation: businesses everywhere want to use AI, but finding the right tool, trusting it actually works, and getting it running is still too hard. We built PAKAI TechHub to fix that — a single marketplace where any business can discover AI products, try them before committing, and any AI provider can reach customers worldwide.",
+      body: `${brandName} was born from a simple observation: businesses everywhere want to use AI, but finding the right tool, trusting it actually works, and getting it running is still too hard. We built ${brandName} to fix that — a single marketplace where any business can discover AI products, try them before committing, and any AI provider can reach customers worldwide.`,
     },
     different: {
       heading: "What makes us different",
-      body: "We're not just another software directory. PAKAI TechHub is a marketplace built on trust — every product is evaluated by our team before it goes live, every listing includes a free trial, and providers only pay when they make a sale.",
+      body: `We're not just another software directory. ${brandName} is a marketplace built on trust — every product is evaluated by our team before it goes live, every listing includes a free trial, and providers only pay when they make a sale.`,
     },
     facts: {
       label: "Company facts",
@@ -1256,13 +1283,13 @@ export const siteCopy = {
      * data is sourced later, add it back with a citation — do not restore this
      * section from memory or estimate it.
      */
+    /* Read from the shared `leadership` source at the top of this file. */
+    leadership: {
+      heading: "Leadership",
+      people: leadership,
+    },
     team: {
       heading: "Our team",
-      /**
-       * The same object the homepage renders — see the shared `founder` source
-       * at the top of this file. Do not re-declare the values here.
-       */
-      founder,
       /**
        * Open roles. These are intentionally name-less until a hire is
        * confirmed — do not invent a name, the way partner names are not
@@ -1283,7 +1310,7 @@ export const siteCopy = {
         {
           role: "Head of Academy",
           roleDetail: "Training & Education",
-          bio: "AI educator building the PAKAI TechHub training curriculum.",
+          bio: `AI educator building the ${brandName} training curriculum.`,
         },
       ] satisfies TeamMember[],
       keyHires: {
@@ -1306,14 +1333,14 @@ export const siteCopy = {
       },
     },
     closingCta: {
-      heading: "Questions about PAKAI TechHub?",
+      heading: `Questions about ${brandName}?`,
       cta: { label: "Contact us", href: "/contact" },
     },
   },
 
   academy: {
     meta: {
-      title: "Academy — PAKAI TechHub",
+      title: `Academy — ${brandName}`,
       description:
         "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
     },
@@ -1428,14 +1455,14 @@ export const siteCopy = {
 
   contact: {
     meta: {
-      title: "Contact — PAKAI TechHub",
+      title: `Contact — ${brandName}`,
       description:
-        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+        `Questions about pricing, a product, or partnering with ${brandName} — reach out directly.`,
     },
     hero: {
       headline: "Let's talk",
       subhead:
-        "Questions about pricing, a product, or partnering with PAKAI TechHub — reach out directly.",
+        `Questions about pricing, a product, or partnering with ${brandName} — reach out directly.`,
       reach: "We work with businesses and AI providers worldwide.",
       /* Opens the visitor's mail client. See the note on `details` below. */
       primaryCta: { label: "Email us", href: `mailto:${contactEmail}` },
@@ -1567,7 +1594,7 @@ export const siteCopy = {
    */
   providerSubmit: {
     meta: {
-      title: "Submit a product — PAKAI TechHub",
+      title: `Submit a product — ${brandName}`,
     },
     heading: "Submit a product for review",
     /** Label on the link into this page from the provider dashboard panel. */
@@ -1644,7 +1671,7 @@ export const siteCopy = {
    */
   providerApplication: {
     meta: {
-      title: "Apply to become a provider — PAKAI TechHub",
+      title: `Apply to become a provider — ${brandName}`,
     },
     heading: "Apply to become a provider",
     intro:
@@ -1658,7 +1685,7 @@ export const siteCopy = {
       description: "What does your business do?",
       category: "Category",
       website: "Website",
-      reason: "Why do you want to list on PAKAI TechHub?",
+      reason: `Why do you want to list on ${brandName}?`,
     },
     selectPlaceholder: "Select a category",
     optionalLabel: "optional",
@@ -1720,7 +1747,7 @@ export const siteCopy = {
      * panel, which already links to product submission.
      */
     dashboard: {
-      heading: "Sell on PAKAI TechHub",
+      heading: `Sell on ${brandName}`,
       none: {
         body: "Apply to become a provider and list your AI products in the marketplace.",
         cta: "Apply to become a provider",
@@ -1755,7 +1782,7 @@ export const siteCopy = {
    */
   adminReview: {
     meta: {
-      title: "Review queue — PAKAI TechHub admin",
+      title: `Review queue — ${brandName} admin`,
     },
     /* The admin panel on /dashboard, which is where an admin lands after
        logging in, and its way into the queue. */
@@ -1894,24 +1921,24 @@ export const siteCopy = {
    * person rather than the no-reply sender.
    */
   reviewEmails: {
-    signOff: "PAKAI TechHub",
+    signOff: brandName,
     providerApproved: {
-      subject: "Your PAKAI TechHub provider application was approved",
+      subject: `Your ${brandName} provider application was approved`,
       body: [
         "Hi {name},",
         "",
-        "Your application to list {business} on PAKAI TechHub has been approved. You can now submit products for review:",
+        `Your application to list {business} on ${brandName} has been approved. You can now submit products for review:`,
         "{link}",
         "",
         commissionTerms,
       ],
     },
     providerDeclined: {
-      subject: "Your PAKAI TechHub provider application was not approved",
+      subject: `Your ${brandName} provider application was not approved`,
       body: [
         "Hi {name},",
         "",
-        "We have reviewed your application to list {business} on PAKAI TechHub and have not approved it.",
+        `We have reviewed your application to list {business} on ${brandName} and have not approved it.`,
         "",
         "Reason: {reason}",
         "",
@@ -1922,11 +1949,11 @@ export const siteCopy = {
       ],
     },
     productApproved: {
-      subject: "{product} passed review on PAKAI TechHub",
+      subject: `{product} passed review on ${brandName}`,
       body: [
         "Hi {name},",
         "",
-        "{product} has been reviewed and approved, and is now listed on the PAKAI TechHub marketplace. It usually shows there straight away; some pages can take up to about an hour to catch up.",
+        `{product} has been reviewed and approved, and is now listed on the ${brandName} marketplace. It usually shows there straight away; some pages can take up to about an hour to catch up.`,
         "",
         "It cannot be bought yet: checkout is still being built.",
         "",
@@ -1935,7 +1962,7 @@ export const siteCopy = {
       ],
     },
     productDeclined: {
-      subject: "{product} was not approved on PAKAI TechHub",
+      subject: `{product} was not approved on ${brandName}`,
       body: [
         "Hi {name},",
         "",
@@ -1953,41 +1980,18 @@ export const siteCopy = {
 };
 
 /**
- * The nine browse categories, in the order they are shown.
+ * The eight browse categories, in the order they are shown.
  *
- * Derived, not written. "Cross-Industry" comes off the marketplace filter list
- * — it is a product category that spans every industry rather than an industry
- * in its own right, so it leads — and the other eight are the industry
- * taxonomy in `industries.items`, in its order.
- *
- * Deriving it is the point: there is exactly one place to add an industry, and
- * a category cannot appear in the bar, the grid or the nav's category select
- * without existing in the taxonomy first. Do not hand-write a parallel list,
- * and do not add a category here that no part of the site recognises — the
- * previous version of this page invented categories that matched nothing.
- *
- * `productCategory` is set where the id is also a real `ProductCategory`, and
- * that is what a chip filters on. The five without it — Banking & Finance,
- * Manufacturing, Logistics, Real Estate, and any industry added later — are
- * honest empty categories: selecting one says nothing is listed yet.
+ * Derived, not written: `marketplace.products.categories` without its "All"
+ * reset. The homepage grid, the nav's category menu and its search select all
+ * read this, so a category cannot appear on one surface and not another. Do
+ * not hand-write a parallel list — an earlier version mixed in four
+ * industries no product could be filed under, and they showed as permanently
+ * empty categories.
  */
-const PRODUCT_CATEGORY_IDS = new Set<string>(
-  siteCopy.marketplace.products.categories
-    .filter((category) => category.id !== "all")
-    .map((category) => category.id),
-);
-
-function asProductCategory(id: string): ProductCategory | undefined {
-  return PRODUCT_CATEGORY_IDS.has(id) ? (id as ProductCategory) : undefined;
-}
-
-export const browseCategories: BrowseCategory[] = [
-  { id: "cross-industry", label: "Cross-Industry", productCategory: "cross-industry" },
-  ...siteCopy.industries.items.map((industry) => ({
-    id: industry.id,
-    label: industry.name,
-    productCategory: asProductCategory(industry.id),
-  })),
-];
+export const browseCategories: BrowseCategory[] =
+  siteCopy.marketplace.products.categories.flatMap((category) =>
+    category.id === "all" ? [] : [{ id: category.id, label: category.label }],
+  );
 
 export default siteCopy;

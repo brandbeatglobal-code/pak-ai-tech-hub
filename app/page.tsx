@@ -47,7 +47,6 @@ export default async function Home() {
     offering,
     whyPakai,
     worksWith,
-    founder,
     resources,
     academyTeaser,
     finalCta,
@@ -116,12 +115,6 @@ export default async function Home() {
             <p className="mt-3 max-w-2xl leading-relaxed text-brand-navy/70">
               {marketplace.products.intro}
             </p>
-            {/* What the Example badge means — only when one is on show. */}
-            {listings?.some((listing) => listing.example) ? (
-              <p className="mt-2 max-w-2xl leading-relaxed text-brand-navy/70">
-                {marketplace.products.exampleNote}
-              </p>
-            ) : null}
             <div className="mt-8">
               <ProductListings />
             </div>
@@ -131,7 +124,7 @@ export default async function Home() {
 
       {/* 3. Trust strip */}
       <section
-        aria-label="Why PAKAI TechHub"
+        aria-label={whyPakai.heading}
         className="border-y border-black/5 bg-brand-navy/[0.02]"
       >
         <Reveal>
@@ -234,7 +227,7 @@ export default async function Home() {
 
       {/* 7. Flagship platform banner */}
       {/*
-        Full-width dark band introducing the platform as a whole. The three-up
+        Full-width dark band introducing the platform as a whole. The row
         row underneath is rendered from `offering.tabs` and links down to that
         section, so the banner previews what is on the platform without
         restating it.
@@ -282,7 +275,7 @@ export default async function Home() {
 
             <div className="mt-16 border-t border-white/10 pt-10">
               <h3 className="sr-only">{flagship.linksLabel}</h3>
-              <ul className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+              <ul className="grid gap-8 sm:grid-cols-2 sm:gap-10">
                 {offering.tabs.map((tab) => (
                   <li key={tab.id}>
                     <Link href="#what-you-get" className="group block">
@@ -325,7 +318,7 @@ export default async function Home() {
         </Reveal>
       </section>
 
-      {/* 9. Why PAKAI TechHub */}
+      {/* 9. Why PAK AI TechHub */}
       <section className="relative isolate border-y border-black/5 bg-brand-navy/[0.02]">
         <SectionGlow placement="left" />
         <div className={`relative ${container}`}>
@@ -418,26 +411,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 11. Founder */}
-      <section className={container}>
-        <Reveal>
-          <h2 className={sectionHeading}>{founder.heading}</h2>
-          {/*
-            Deliberately lighter than the founder card on /about: no initials
-            mark, smaller type, plain shadow. The about page is where the team
-            is introduced properly — this is a summary that points there.
-          */}
-          <article className="mt-12 max-w-3xl rounded-3xl border border-black/5 bg-white p-8 shadow-sm sm:p-10">
-            <h3 className="text-xl font-bold tracking-tight text-brand-navy">
-              {founder.name}
-            </h3>
-            <p className="mt-1 text-sm font-bold tracking-wide text-brand-navy/65 uppercase">
-              {founder.title}
-            </p>
-            <p className="mt-5 leading-relaxed text-brand-navy/70">{founder.bio}</p>
-          </article>
-        </Reveal>
-      </section>
+      {/*
+        REMOVED: the founder card ("NK — Founder & CEO", with a bio). The
+        leadership is now "Abdul Rehman — CEO" and "NK — Co-founder", shown on
+        /about only; see `leadership` in content/site-copy.ts.
+      */}
 
       {/* 12. Resources */}
       {/*

@@ -22,6 +22,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: siteCopy.meta.title,
   description: siteCopy.meta.description,
+  /*
+    What a shared link previews as (WhatsApp, LinkedIn, Slack). Without it
+    those fall back to whatever they scrape, which is how an old spelling of
+    the brand lingers in previews. Next merges metadata per top-level key, so
+    every page inherits this block as-is — a page's own `title` does not
+    change `openGraph.title`. A page that wants its own preview title sets its
+    own `openGraph`.
+  */
+  openGraph: {
+    siteName: siteCopy.brand.name,
+    title: siteCopy.meta.title,
+    description: siteCopy.meta.description,
+    type: "website",
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

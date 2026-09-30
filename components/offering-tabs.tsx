@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { FeatureVisual } from "@/components/visuals/feature-visual";
-import type { OfferingTab } from "@/content/site-copy";
+import { siteCopy, type OfferingTab } from "@/content/site-copy";
 
 type OfferingTabsProps = {
   tabs: OfferingTab[];
@@ -64,7 +64,7 @@ export function OfferingTabs({ tabs }: OfferingTabsProps) {
     <div className="mt-10">
       <div
         role="tablist"
-        aria-label="What you get with PAKAI TechHub"
+        aria-label={siteCopy.offering.heading}
         className="flex flex-wrap gap-x-2 border-b border-black/10 pb-px"
       >
         {tabs.map((tab, index) => {

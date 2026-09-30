@@ -9,7 +9,7 @@ import { logOut } from "@/lib/auth-actions";
 import type { ProviderStatus, UserRole } from "@/db/schema";
 
 export const metadata: Metadata = {
-  title: "Dashboard — PAKAI TechHub",
+  title: `Dashboard — ${siteCopy.brand.name}`,
 };
 
 /**

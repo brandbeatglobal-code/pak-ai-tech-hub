@@ -1,6 +1,6 @@
-# PAKAI TechHub
+# PAK AI TechHub
 
-Marketing site for PAKAI TechHub — AI for every business, everywhere.
+Marketing site for PAK AI TechHub — AI for every business, everywhere.
 
 Built with [Next.js](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4,
 and ESLint.

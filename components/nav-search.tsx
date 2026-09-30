@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { ListingsEmpty } from "@/components/listings-empty";
 import { siteCopy, type Listing } from "@/content/site-copy";
 import {
   ALL_CATEGORIES,
@@ -86,12 +87,19 @@ export function NavSearch({
     0,
     MAX_RESULTS,
   );
-  /* "Could not check" is not "nothing matches": say which one it is. */
+  /*
+    Three different empties, said differently: "could not check" (the read
+    failed), "nothing is listed yet" (launch — the shared empty state) and
+    "nothing matches what you typed".
+  */
   const emptyMessage =
     listings === null
       ? marketplace.products.unavailableMessage
-      : search.noResults.replace("{query}", query);
+      : listings.length === 0
+        ? marketplace.products.emptyState.heading
+        : search.noResults.replace("{query}", query);
   const showPanel = open && query.trim().length > 0;
+  const hasResults = listings !== null && results.length > 0;
 
   /* A click outside the control dismisses the results, like any other popup. */
   useEffect(() => {
@@ -174,8 +182,13 @@ export function NavSearch({
           type="search"
           role="combobox"
           autoComplete="off"
-          aria-expanded={showPanel}
-          aria-controls={listboxId}
+          /*
+            Expanded only while the listbox exists. An empty state or an
+            error message is not a listbox, and `aria-controls` naming an id
+            that is not in the page is an ARIA error.
+          */
+          aria-expanded={showPanel && hasResults}
+          aria-controls={showPanel && hasResults ? listboxId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={
             showPanel && activeIndex >= 0 ? optionId(activeIndex) : undefined
@@ -200,8 +213,12 @@ export function NavSearch({
             {results.length === 0 ? emptyMessage : countMessage}
           </p>
 
-          {results.length === 0 ? (
+          {listings === null ? (
             <p className="px-4 py-3.5 text-sm text-brand-navy/65">{emptyMessage}</p>
+          ) : listings.length === 0 ? (
+            <ListingsEmpty variant="launch" compact />
+          ) : results.length === 0 ? (
+            <ListingsEmpty variant="search" query={query.trim()} compact />
           ) : (
             <ul id={listboxId} role="listbox" aria-label={search.resultsLabel}>
               {results.map((product, index) => (
@@ -220,20 +237,8 @@ export function NavSearch({
                       index === activeIndex ? "bg-brand-navy/[0.06]" : ""
                     }`}
                   >
-                    {/*
-                      The "Example" badge sits with the name, as it does on
-                      the grid cards, and only on example listings (decided
-                      once in lib/listings.ts). Beside the name rather than the
-                      category so that, in the narrow panel on a phone, it
-                      wraps under the name instead of squeezing it.
-                    */}
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-semibold text-brand-navy">{product.name}</span>
-                      {product.example ? (
-                        <span className="rounded-full border border-dashed border-brand-navy/30 px-2 py-0.5 text-xs font-semibold text-brand-navy/65">
-                          {marketplace.products.exampleBadge}
-                        </span>
-                      ) : null}
+                    <span className="min-w-0 font-semibold text-brand-navy">
+                      {product.name}
                     </span>
                     <span className="shrink-0 text-xs text-brand-navy/60">
                       {categoryLabelFor(product)}
@@ -247,11 +252,15 @@ export function NavSearch({
           {/*
             The listings are real but not purchasable — there is no checkout —
             so the panel says so rather than letting a tidy result list imply
-            a working catalogue. Same sentence as the listings intro.
+            a working catalogue. Same sentence as the listings intro. Only
+            under results: under an empty state it would be a note about
+            nothing.
           */}
-          <p className="border-t border-black/5 bg-brand-navy/[0.02] px-4 py-2.5 text-xs text-brand-navy/60">
-            {marketplace.products.searchFootnote}
-          </p>
+          {results.length > 0 ? (
+            <p className="border-t border-black/5 bg-brand-navy/[0.02] px-4 py-2.5 text-xs text-brand-navy/60">
+              {marketplace.products.searchFootnote}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

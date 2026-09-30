@@ -1,4 +1,4 @@
-import type { BrowseCategoryId } from "@/content/site-copy";
+import type { ProductCategory } from "@/content/site-copy";
 
 /**
  * Glyphs for the navigation dropdown rows and the category browse grid.
@@ -8,14 +8,15 @@ import type { BrowseCategoryId } from "@/content/site-copy";
  */
 
 /**
- * Keyed by `BrowseCategoryId`, which covers every `ProductCategory` plus the
- * industries that have no product yet.
+ * Keyed by `ProductCategory` — the eight categories in
+ * `marketplace.products.categories`.
  *
- * The exhaustive `Record` is the point: adding an industry to the taxonomy
- * fails the build here until a glyph is chosen for it, rather than silently
- * rendering a blank mark in the browse grid.
+ * The exhaustive `Record` is the point: adding a category fails the build
+ * here until a glyph is chosen for it, rather than silently rendering a blank
+ * mark in the browse grid. A zero-length path (`h.01`) draws a dot, because
+ * the round line cap gives it the stroke's width.
  */
-const CATEGORY_PATHS: Record<BrowseCategoryId, React.ReactNode> = {
+const CATEGORY_PATHS: Record<ProductCategory, React.ReactNode> = {
   "cross-industry": (
     <>
       <path d="M10 2.5 17.5 6.5 10 10.5 2.5 6.5Z" />
@@ -42,36 +43,27 @@ const CATEGORY_PATHS: Record<BrowseCategoryId, React.ReactNode> = {
       <circle cx="6.3" cy="6.3" r="1.2" />
     </>
   ),
-  /* Columned facade, for banking. */
-  "banking-finance": (
+  /* Speech bubble with a typing row, for chatbots. */
+  chatbots: (
     <>
-      <path d="M2.5 7.5 10 3.5l7.5 4" />
-      <path d="M4.5 7.5v7M8.2 7.5v7M11.8 7.5v7M15.5 7.5v7" />
-      <path d="M2.5 16.5h15" />
+      <path d="M4 3.5h12A1.5 1.5 0 0 1 17.5 5v7a1.5 1.5 0 0 1-1.5 1.5H9.5L5.5 17v-3.5H4A1.5 1.5 0 0 1 2.5 12V5A1.5 1.5 0 0 1 4 3.5Z" />
+      <path d="M6.5 8.5h.01M10 8.5h.01M13.5 8.5h.01" />
     </>
   ),
-  /* Plant and stack, for manufacturing. */
-  manufacturing: (
+  /* Robot head with an antenna, for AI agents. */
+  "ai-agents": (
     <>
-      <path d="M2.5 16.5v-7l4.5 3v-3l4.5 3v-3l5 3v4Z" />
-      <path d="M13.5 9.5v-6h3v6" />
+      <path d="M5 7.5h10A1.5 1.5 0 0 1 16.5 9v6A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V9A1.5 1.5 0 0 1 5 7.5Z" />
+      <path d="M10 7.5v-3M10 3h.01" />
+      <path d="M7.5 11.5h.01M12.5 11.5h.01M8 14h4" />
     </>
   ),
-  /* Box van, for logistics. */
-  logistics: (
+  /* Microphone on a stand, for AI voice agents. */
+  "ai-voice-agents": (
     <>
-      <path d="M1.5 5.5h9v8h-9Z" />
-      <path d="M10.5 8.5h3.6l2.9 3v2h-6.5Z" />
-      <circle cx="5" cy="15" r="1.6" />
-      <circle cx="13.5" cy="15" r="1.6" />
-    </>
-  ),
-  /* House with a key line, for real estate. */
-  "real-estate": (
-    <>
-      <path d="M2.5 9 10 3l7.5 6" />
-      <path d="M4.5 10.5v6h11v-6" />
-      <path d="M8.5 16.5v-4h3v4" />
+      <path d="M10 2.5A2.5 2.5 0 0 1 12.5 5v4.5a2.5 2.5 0 0 1-5 0V5A2.5 2.5 0 0 1 10 2.5Z" />
+      <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0" />
+      <path d="M10 15v2.5M7.5 17.5h5" />
     </>
   ),
 };
@@ -80,7 +72,7 @@ export function CategoryIcon({
   category,
   className = "h-5 w-5",
 }: {
-  category: BrowseCategoryId;
+  category: ProductCategory;
   /** Sized up in the browse grid, where the glyph leads the card. */
   className?: string;
 }) {

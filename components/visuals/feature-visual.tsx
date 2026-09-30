@@ -1,5 +1,5 @@
 /**
- * Supporting visual for each tab in "What you get with PAKAI TechHub".
+ * Supporting visual for each tab in "What you get with PAK AI TechHub".
  *
  * Abstract and diagrammatic on purpose. These are NOT product screenshots and
  * must never become them: no interface exists yet, so a picture of one would

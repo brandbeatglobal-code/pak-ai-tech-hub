@@ -129,15 +129,15 @@ export const providers = pgTable("providers", {
   /**
    * Nullable on purpose.
    *
-   * PAKAI TechHub is itself a provider — it lists its own eight products — but
-   * it has no person to sign in as. A null `user_id` means a first-party
-   * provider rather than a signed-up one, which is cleaner than inventing a
-   * placeholder user row that could then be logged into.
+   * PAK AI TechHub is itself a provider — its eight seeded products belong to
+   * it — but it has no person to sign in as. A null `user_id` means a
+   * first-party provider rather than a signed-up one, which is cleaner than
+   * inventing a placeholder user row that could then be logged into.
    *
-   * It also decides the "Example" badge: a null here makes every product of
-   * this provider an example listing on the site (`Listing.example`, set in
-   * lib/listings.ts). Linking a user to the house provider would silently
-   * turn its eight placeholder-priced products into real-looking listings.
+   * It also decides what the site lists: lib/listings.ts shows only products
+   * whose provider has a user, so a null here keeps every product of this
+   * provider off every surface. Linking a user to the house provider would
+   * silently put its eight placeholder-priced products on the marketplace.
    */
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })
