@@ -805,7 +805,10 @@ export function SiteNav({
               </li>
             ))}
           </ul>
-          <ul className="flex items-center gap-5 overflow-x-auto py-2">
+          {/* gap-3, not wider: signed in, "AI Solutions Academy About
+              Dashboard Log out" needs 300px of text in the 358px a 390px
+              screen leaves; at gap-5 Log out ran off the edge (measured). */}
+          <ul className="flex items-center gap-3 overflow-x-auto py-2">
             {nav.items.map((item) => (
               <li key={item.href}>
                 <Link
