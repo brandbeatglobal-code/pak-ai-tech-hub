@@ -315,11 +315,11 @@ still lives in `content/site-copy.ts`; products do not.
 > old code against a migrated one kept working (checked for 0003, against a
 > migrated local database).
 
-Queried live via Neon MCP:
-
-- `users`: **0 rows** (no admin account exists anywhere)
-- `providers`: 1 row — the first-party provider, `user_id` NULL
-- `products`: 8 rows, all `approved`, prices correct
+Queried live via Neon MCP (read-only, 2026-09-30): 4 rows in
+`drizzle.__drizzle_migrations` (0004's columns absent), `users`: 3 rows, one
+third-party provider row, and **no approved third-party product** — so the
+live marketplace shows the launch empty state. Earlier (2026-09-16): the
+first-party provider (`user_id` NULL) and its 8 `approved` products.
 
 **The product names are stale.** The hosted rows still carry the old
 `TechHub …` names that were replaced site-wide during the marketplace redesign:
@@ -355,12 +355,11 @@ file, not a wish-list.
    `components/site-footer.tsx` and `app/contact/page.tsx` both repeat the
    warning; the contact page reuses `footer.connect`, so fixing it once fixes
    both. **Do not guess a URL from the handle.**
-2. **`README.md` is stale.** It still lists a `pricing/` route (removed) and
-   describes `marketplace/`, `academy/`, `about/` and `contact/` as "Placeholder
-   route", which they have not been for many merges.
-3. **One stale comment survives the pricing removal.** `content/site-copy.ts`,
-   on `hero.reassurance`: *"Same trial terms the pricing page states"* — that
-   page no longer exists.
+2. ~~`README.md` is stale.~~ **Resolved 2026-09-30:** its route list and
+   database note were brought up to date.
+3. ~~One stale comment survives the pricing removal.~~ **Resolved 2026-09-30:**
+   the `hero.reassurance` comment now says what it is — and flags the trial
+   wording as needing the owner's confirmation, since no trial exists yet.
 4. **`products` has no billing-period column.** The site quotes "$55/mo" but the
    schema stores only an amount and a currency; `db/seed.ts` drops the "/mo".
    Add a period column before anything bills off this table. Noted on
@@ -382,3 +381,10 @@ file, not a wish-list.
    verified, and `www.pakaitechub.com` and `pak-ai-tech-hub.vercel.app` both
    301 to it. It is therefore the one production origin to register with
    Google: `https://pakaitechub.com/api/auth/callback/google`.
+8. **The production sender name still says "PAKAI".** Read on 2026-09-30
+   (plain variable, no decryption): `CONTACT_FROM_EMAIL` is
+   `PAKAI TechHub <noreply@pakaitechub.com>` for Production and Preview, so
+   every contact-form and review email shows that sender name. The display
+   name is not a code string; changing it to `PAK AI TechHub <…>` (same
+   address) is a Vercel setting for the owner. `.env.example` already shows
+   the new form.

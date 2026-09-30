@@ -1,6 +1,6 @@
 # PAK AI TechHub
 
-Marketing site for PAK AI TechHub — AI for every business, everywhere.
+AI product marketplace for PAK AI TechHub — AI for every business, everywhere.
 
 Built with [Next.js](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4,
 and ESLint.
@@ -26,19 +26,26 @@ npm run lint    # ESLint
 
 ```
 app/                 App Router routes
-  page.tsx           Homepage
+  page.tsx           Homepage: three views by ?tab= (For Businesses,
+                     For AI Providers, Categories), one screen each
   layout.tsx         Root layout (nav + footer + metadata)
   globals.css        Tailwind entry point and brand theme tokens
   icon.png           App icon, generated from the brandmark
   apple-icon.png     Apple touch icon, generated from the brandmark
-  marketplace/       Placeholder route
-  academy/           Placeholder route
-  pricing/           Placeholder route
-  about/             Placeholder route
-  contact/           Placeholder route
-components/          Shared UI (nav, footer, placeholder shell, tabs)
+  marketplace/       AI Solutions: search, category chips, sort, cards
+  academy/           Training tiers, curricula, resources
+  about/             Story, leadership, team
+  contact/           Contact form, delivered through Resend
+  list-your-product/ Provider listing form (Account, Personal, Company)
+  sign-up/, login/   Buyer accounts; Google sign-in when configured
+  dashboard/         Role-gated dashboard: apply/, products/new/, admin/
+  start-listing/     Route handler: where every "List your product" goes
+                     (/pricing redirects to /marketplace, next.config.ts)
+components/          Shared UI
   motion/            Animation primitives (see below)
 content/site-copy.ts All user-facing copy
+lib/                 Server actions, the one listings read, shared rules
+db/                  Drizzle schema, migrations, seed
 public/brand/        Final brand assets
 ```
 
@@ -68,8 +75,9 @@ Two rules keep this safe:
 
 ## Platform (database + auth)
 
-The marketing pages are static and need none of this. `/sign-up`, `/login` and
-`/dashboard` need a Postgres database.
+Every page renders per request. Without a database the site still builds and
+serves: listings then show an "unavailable" message instead of products, while
+`/sign-up`, `/login`, `/list-your-product` and `/dashboard` need Postgres.
 
 ### Two setup steps that have to be done by hand
 
