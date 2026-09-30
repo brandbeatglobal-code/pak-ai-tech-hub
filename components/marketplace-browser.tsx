@@ -241,7 +241,7 @@ export function MarketplaceBrowser({
 
                 <div className="mt-5 flex items-center justify-between gap-3 border-t border-black/5 pt-4">
                   <p className="text-sm font-bold text-brand-navy">
-                    {products.pricePrefix} {product.price}
+                    {product.price}
                   </p>
                   {/*
                     Disabled on every card: there is no checkout, so no listing

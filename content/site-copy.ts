@@ -164,12 +164,10 @@ export type Product = {
   category: ProductCategory;
   description: string;
   /**
-   * The bare amount, e.g. "$55/mo" — no "from" prefix baked in.
-   *
-   * The cards that show it prepend `marketplace.products.pricePrefix`, so the
-   * prefix is presentation and the number is data. Every surface that shows a
-   * price reads this same field, which is what stops them quoting different
-   * prices.
+   * The amount as shown, e.g. "$55/mo" — no "from" prefix (owner confirmed,
+   * 2026-09-30: one amount is stored, so there are no tiers to be "from").
+   * Every surface that shows a price reads this same field, which is what
+   * stops them quoting different prices.
    *
    * For a listing it is built by lib/listings.ts from `price_amount` and
    * `price_currency`, plus `marketplace.products.pricePeriod`. The "/mo" is
@@ -408,6 +406,24 @@ const tellUsCta = {
   href: "/contact",
 } satisfies NavLink;
 
+/**
+ * The trial promise, in the owner's words (confirmed 2026-09-30).
+ *
+ * THIS IS THE ONLY PLACE THE TRIAL WORDING SHOULD BE WRITTEN.
+ *
+ * It replaced "Try free" / "7-day free trial, no card required" everywhere:
+ * no trial mechanism exists yet, and a trial is the provider's to offer, not
+ * the marketplace's to promise. Do not reintroduce a length ("7-day"), "free"
+ * or "no card required" unless the owner settles those terms.
+ *
+ * `tryBeforeYouBuy` is the step title on the For Businesses view and the
+ * label of the calls to action that used to say "Start free trial";
+ * `trialTerms` is the one sentence that says what it means.
+ */
+const tryBeforeYouBuy = "Try before you buy";
+const trialTerms = "A trial is available where the provider offers one.";
+const tryBeforeYouBuyCta = { label: tryBeforeYouBuy, href: "/marketplace" } satisfies NavLink;
+
 /*
  * The way into product submission, for someone who is already a provider.
  *
@@ -532,7 +548,7 @@ export const siteCopy = {
   meta: {
     title: `${brandName} — AI for every business, everywhere.`,
     description:
-      "Browse AI products from providers worldwide, try them free, and put them to work — all in one place.",
+      "Browse AI products from providers worldwide, try before you buy, and put them to work — all in one place.",
   },
 
   nav: {
@@ -688,7 +704,7 @@ export const siteCopy = {
    * be, further down this file.
    */
   hero: {
-    headline: "Find AI. Try it free. Put it to work.",
+    headline: `Find AI. ${tryBeforeYouBuy}. Put it to work.`,
     /*
      * Deliberately NOT the same string as `meta.description`.
      *
@@ -709,12 +725,12 @@ export const siteCopy = {
     subhead:
       "One marketplace, every product reviewed before it lists — browse, test, and buy with confidence.",
     /**
-     * The same trial terms as the "Try free" step in `home.businesses`.
-     * NEEDS OWNER CONFIRMATION: no trial mechanism exists yet (there is no
-     * checkout), so this promise is not backed by anything the site does.
-     * Left as written on request; do not reword it without the owner.
+     * The trial terms under the search. Owner confirmed (2026-09-30): it was
+     * "7-day free trial, no card required.", a promise nothing on the site
+     * backed. Now `trialTerms`, the same sentence as the "Try before you buy"
+     * step in `home.businesses`.
      */
-    reassurance: "7-day free trial, no card required.",
+    reassurance: trialTerms,
   },
 
   /*
@@ -748,12 +764,10 @@ export const siteCopy = {
         },
         {
           number: "2",
-          title: "Try free",
-          /*
-           * NEEDS OWNER CONFIRMATION, like `hero.reassurance`: the trial
-           * terms are not backed by anything built yet. Left as written.
-           */
-          detail: "Every listing includes a 7-day free trial, no card required.",
+          /* Owner confirmed (2026-09-30); was "Try free" / "Every listing
+             includes a 7-day free trial, no card required." */
+          title: tryBeforeYouBuy,
+          detail: trialTerms,
         },
         {
           number: "3",
@@ -798,10 +812,10 @@ export const siteCopy = {
         },
       ] satisfies Step[],
       /*
-       * NEEDS OWNER CONFIRMATION: the 80% is `commissionTerms`, the one
-       * settled economic term — but when and how providers are paid is not
-       * settled. Left exactly as written; it used to title the last step of
-       * the old "How it works" provider column.
+       * Owner confirmed (2026-09-30): keep exactly as written. The 80% is
+       * `commissionTerms`, the one settled economic term; when and how
+       * providers are paid is still not settled, so add nothing to it. It
+       * used to title the last step of the old "How it works" provider column.
        */
       payout: "Get paid, keep 80%",
       cta: startListingCta,
@@ -821,7 +835,7 @@ export const siteCopy = {
    *   - `trustStrip` ("Every product reviewed", "Free trials included",
    *     "Providers worldwide", "New products added regularly"). The first
    *     three are said elsewhere: the review gate on /about and in the
-   *     steps, the trial in "Try free", "Worldwide marketplace" in the
+   *     steps, the trial in "Try before you buy", "Worldwide marketplace" in the
    *     /about facts. "New products added regularly" was dropped: at launch
    *     nothing is listed, so it was not true.
    *   - `flagship` (the dark "A marketplace built on trust" banner). Every
@@ -899,7 +913,7 @@ export const siteCopy = {
       },
       {
         headline: "Training comes standard",
-        body: "Every subscription includes AI Academy access, so your team learns to use it, not just switch it on.",
+        body: `Every subscription includes ${brandName} Academy access, so your team learns to use it, not just switch it on.`,
       },
       {
         headline: "Transparent pricing, always",
@@ -971,7 +985,8 @@ export const siteCopy = {
          * "— available now through the PAK AI TechHub marketplace" was cut:
          * the marketplace lists only third-party providers' reviewed
          * products and, at launch, none — the grid on the same page says so.
-         * NEEDS OWNER CONFIRMATION before it goes back in.
+         * Owner confirmed (2026-09-30): KladAI stays in "Works with" only, not
+         * as a listing, and the clause stays cut.
          */
         description:
           "An autonomous AI agent that handles documents, data, research, and presentations.",
@@ -994,7 +1009,7 @@ export const siteCopy = {
     meta: {
       title: `AI Solutions — ${brandName}`,
       description:
-        "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
+        "AI products from vetted independent providers — browse, compare, and try before you buy.",
     },
     /*
      * The page's title block. "Browse AI Solutions", to match the menu item
@@ -1004,12 +1019,12 @@ export const siteCopy = {
      * needs, in one place" and the two hero buttons — "Start free trial"
      * (-> /sign-up) and "How it works" (-> /). The page now opens on the
      * search and the filters; the buyer steps are the homepage's default
-     * view, and there is still no trial to start (see `hero.reassurance`).
+     * view, and a trial is the provider's to offer (see `trialTerms`).
      */
     hero: {
       headline: "Browse AI Solutions",
       subhead:
-        "AI products from vetted independent providers — browse, compare, and start a free trial in minutes.",
+        "AI products from vetted independent providers — browse, compare, and try before you buy.",
     },
     products: {
       /*
@@ -1112,8 +1127,11 @@ export const siteCopy = {
        * description, price — and the Academy teaser under the grid says that
        * every product comes with training.
        */
-      /** Prepended to `Product.price` on the marketplace cards only. */
-      pricePrefix: "from",
+      /*
+       * REMOVED: `pricePrefix` ("from"). Owner confirmed (2026-09-30): a price
+       * reads "$X/mo". Only one amount is stored per product, so "from"
+       * suggested tiers that do not exist.
+       */
       /*
        * Appended to every price lib/listings.ts formats. A MARKETPLACE-WIDE
        * CONVENTION, not stored data: `products` has an amount and a currency
@@ -1160,7 +1178,7 @@ export const siteCopy = {
        * until that partnership is confirmed the way KladAI's was.
        */
       intro:
-        "AI products from independent providers, billed and managed in one place.",
+        "AI products from independent providers, managed in one place.",
     },
   },
 
@@ -1184,9 +1202,9 @@ export const siteCopy = {
   academyTeaser: {
     heading: "Every product comes with training.",
     body:
-      /* "TechHub Academy" before the rename. NEEDS OWNER CONFIRMATION: the
-         Academy is also called "AI Academy" (`whyPakai`) and just "Academy"
-         on its own page — which is its name? */
+      /* Owner confirmed (2026-09-30): the name is "PAK AI TechHub Academy"
+         ("TechHub Academy" before the rename). `whyPakai` uses it too; the
+         Academy's own page and the menu say "Academy" for short. */
       `Get certified through the ${brandName} Academy — workshops, courses, and certifications included with your subscription.`,
     cta: { label: "Explore the academy", href: "/academy" },
   },
@@ -1209,7 +1227,7 @@ export const siteCopy = {
       },
       {
         heading: "Get started",
-        links: [{ label: "Start free trial", href: "/marketplace" }],
+        links: [tryBeforeYouBuyCta],
       },
     ] satisfies FooterColumn[],
     connect: {
@@ -1252,7 +1270,7 @@ export const siteCopy = {
     },
     different: {
       heading: "What makes us different",
-      body: `We're not just another software directory. ${brandName} is a marketplace built on trust — every product is evaluated by our team before it goes live, every listing includes a free trial, and providers only pay when they make a sale.`,
+      body: `We're not just another software directory. ${brandName} is a marketplace built on trust — every product is evaluated by our team before it goes live, you can try before you buy where the provider offers a trial, and providers only pay when they make a sale.`,
     },
     facts: {
       label: "Company facts",
@@ -1278,7 +1296,8 @@ export const siteCopy = {
         { label: "Trust & Safety", body: "Every product reviewed before listing" },
         { label: "Training First", body: "Every product + training" },
         { label: "Transparency", body: "Clear pricing, no tricks" },
-        { label: "Innovation", body: "First to market, always" },
+        /* REMOVED: "Innovation — First to market, always", on the owner's
+           instruction (2026-09-30). */
       ] satisfies ValueBadge[],
     },
     /*
@@ -1360,7 +1379,7 @@ export const siteCopy = {
       headline: "AI training for every level of your team",
       subhead:
         "From a free one-day intro to a 30-day certification for trainers — structured learning that turns AI adoption into real capability.",
-      primaryCta: { label: "Start free trial", href: "/marketplace" },
+      primaryCta: tryBeforeYouBuyCta,
       secondaryCta: { label: "Talk to us", href: "/contact" },
     },
     tiers: {
@@ -1461,7 +1480,7 @@ export const siteCopy = {
     },
     closingCta: {
       heading: "Ready to build AI skills on your team?",
-      cta: { label: "Start free trial", href: "/marketplace" },
+      cta: tryBeforeYouBuyCta,
     },
   },
 

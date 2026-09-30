@@ -24,10 +24,10 @@ strings rather than paraphrases:
 |---|---|
 | `brand.name` | PAK AI TechHub |
 | `brand.tagline` | AI for every business, everywhere. |
-| `hero.headline` (the `<h1>` on `/`) | Find AI. Try it free. Put it to work. |
+| `hero.headline` (the `<h1>` on `/`) | Find AI. Try before you buy. Put it to work. |
 | `hero.subhead` | One marketplace, every product reviewed before it lists — browse, test, and buy with confidence. |
-| `hero.reassurance` | 7-day free trial, no card required. |
-| `meta.description` | Browse AI products from providers worldwide, try them free, and put them to work — all in one place. |
+| `hero.reassurance` | A trial is available where the provider offers one. (`trialTerms`) |
+| `meta.description` | Browse AI products from providers worldwide, try before you buy, and put them to work — all in one place. |
 
 **The display name is "PAK AI TechHub"** (renamed 2026-09-30). It is written
 once, as `brandName` in `content/site-copy.ts`. Identifiers keep the old
@@ -214,7 +214,8 @@ through one. See `types/next-auth.d.ts`.
 Any string appearing on more than one surface gets hoisted to a module-scope
 constant with a comment saying it is the only place to write it. Existing ones:
 `brandName`, `leadership`, `commissionTerms`, `browseProductsCta`,
-`startListingCta`, `listProductCta`, `tellUsCta`, `contactEmail`. Follow the
+`startListingCta`, `listProductCta`, `tellUsCta`, `tryBeforeYouBuy` /
+`trialTerms` / `tryBeforeYouBuyCta`, `contactEmail`. Follow the
 pattern rather than retyping a literal.
 
 The eight product categories are written once, in
@@ -371,8 +372,11 @@ file, not a wish-list.
 2. ~~`README.md` is stale.~~ **Resolved 2026-09-30:** its route list and
    database note were brought up to date.
 3. ~~One stale comment survives the pricing removal.~~ **Resolved 2026-09-30:**
-   the `hero.reassurance` comment now says what it is — and flags the trial
-   wording as needing the owner's confirmation, since no trial exists yet.
+   the owner settled the trial wording. "Try free" / "7-day free trial, no card
+   required" became "Try before you buy" / "A trial is available where the
+   provider offers one." everywhere (`tryBeforeYouBuy`, `trialTerms`). Do not
+   bring back a trial length, "free" or "no card required" unless the owner
+   settles those terms.
 4. **`products` has no billing-period column.** The site quotes "$55/mo" but the
    schema stores only an amount and a currency; `db/seed.ts` drops the "/mo".
    Add a period column before anything bills off this table. Noted on

@@ -116,11 +116,17 @@ export default function AboutPage() {
       <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className={sectionHeading}>{values.heading}</h2>
-          <ul className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            Two a row from sm, three from lg — and whatever is left over in the
+            last row grows to fill it (flex-grow), so no count leaves a hole or
+            a lone card at the edge. Five values today: 2+2+1 wide at sm, 3+2
+            at lg.
+          */}
+          <ul className="mt-10 flex flex-wrap gap-3">
             {values.items.map((value) => (
               <li
                 key={value.label}
-                className="flex items-baseline gap-3 rounded-xl border border-black/5 bg-white px-5 py-4"
+                className="flex grow basis-full items-baseline gap-3 rounded-xl border border-black/5 bg-white px-5 py-4 sm:basis-[calc(50%-0.375rem)] lg:basis-[calc(33.33%-0.5rem)]"
               >
                 <span
                   aria-hidden
