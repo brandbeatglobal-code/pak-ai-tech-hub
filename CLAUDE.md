@@ -162,6 +162,10 @@ rediscovering them:
   stored or logged in plaintext. `equalizeTiming()` pays the bcrypt cost on a
   missing user so response time does not reveal whether an email has an account.
 - **Resend 6.27.0**, TypeScript 5, ESLint 9 + `eslint-config-next`.
+- **Fonts: Geist and Geist Mono via `next/font/google`, `display: "optional"`**
+  (`app/layout.tsx`). Do not switch back to the default `swap`: a late font
+  swap re-wrapped lines on every page, CLS up to 0.58 with the fonts held back
+  800ms (measured 2026-09-30); with `optional` it is 0.
 
 Module augmentation for `session.user.role` targets **`@auth/core/jwt`**, not
 `next-auth/jwt` — the latter is a re-export barrel and TypeScript cannot augment

@@ -9,14 +9,25 @@ import { SiteNav } from "@/components/site-nav";
 import { siteCopy } from "@/content/site-copy";
 import { getListings } from "@/lib/listings";
 
+/*
+  display "optional", not the default "swap": if a font file is not in within
+  the browser's short block period, that page view keeps the fallback instead
+  of swapping. A swap re-wraps lines — the fallback's metrics are close to
+  Geist's, not equal — and every page moved when it happened: measured CLS up
+  to 0.58 with the fonts held back 800ms (2026-09-30). The files are preloaded,
+  so an ordinary load has them before first paint and shows Geist; a slow first
+  visit shows the fallback until the next page, and nothing moves.
+*/
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "optional",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "optional",
 });
 
 export const metadata: Metadata = {
